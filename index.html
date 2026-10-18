@@ -158,6 +158,9 @@
         #memberSection .card-header h3 { font-size: 1rem; }
         #memberSection .card-header i { color: var(--primary); }
         #memberTabs .dtab.active { background: #eff6ff; border-radius: 8px 8px 0 0; }
+        .avatar { border-radius: 50%; object-fit: cover; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; flex: 0 0 auto; vertical-align: middle; border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18); }
+        .hero-id { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; }
+        .photo-box { display: flex; align-items: center; gap: 14px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px dashed var(--border); flex-wrap: wrap; }
         .rules { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; }
         .rules li { padding: 7px 0 7px 22px; border-bottom: 1px dashed var(--border); position: relative; line-height: 1.4; }
         .rules li:last-child { border-bottom: none; }
@@ -909,9 +912,12 @@
         <div id="memberDataWrap">
             <div class="mpanel" id="mp-accueil">
                 <div class="hero">
+                    <div class="hero-id">
+                    <div id="heroAvatar"></div>
                     <div>
                         <div class="hero-hi" id="heroHi">Bonjour</div>
                         <div class="hero-sub" id="heroSub"></div>
+                    </div>
                     </div>
                     <div class="hero-actions">
                         <button type="button" onclick="showMemberTab('demandes')"><i class="fa-solid fa-paper-plane"></i> Faire une demande</button>
@@ -1105,6 +1111,17 @@
             <div class="compte-grid">
                 <section class="card" id="memberProfileSection">
                 <div class="card-header"><i class="fa-solid fa-id-card"></i><h3>Mon profil</h3></div>
+                <div class="photo-box">
+                    <div id="pfAvatar"></div>
+                    <div>
+                        <div style="font-weight:700;">Ma photo de profil</div>
+                        <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:6px;">Une photo de votre visage aide le groupe à vous reconnaître.</div>
+                        <input type="file" id="pfPhotoFile" accept="image/*" class="hidden" onchange="handlePhoto(this)">
+                        <button type="button" class="btn-small" onclick="document.getElementById('pfPhotoFile').click()"><i class="fa-solid fa-camera"></i> Choisir une photo</button>
+                        <button type="button" class="btn-small danger hidden" id="pfPhotoDel" onclick="removePhoto()"><i class="fa-solid fa-trash"></i> Retirer</button>
+                        <div id="pfPhotoMsg" style="font-size:0.82rem;margin-top:4px;"></div>
+                    </div>
+                </div>
                 <p id="pfProgress" style="font-size:0.88rem;color:var(--text-muted);margin-bottom:10px;"></p>
                 <form onsubmit="handleSaveProfile(event)">
                     <div id="memberProfileForm" class="detail-grid"></div>
@@ -2206,7 +2223,7 @@
                     : '<span class="badge badge-due">Pas d\'accès</span>';
                 rows += '<tr>' +
                     '<td><strong>' + idAttr + '</strong></td>' +
-                    '<td><a href="#" class="member-link" onclick="openMemberDetail(\'' + idAttr + '\'); return false;">' + escapeHtml(m.name) + '</a><br><small style="color:var(--text-muted);">' + escapeHtml(m.phone || '') + '</small><br>' + accessBadge + '</td>' +
+                    '<td>' + avatarHtml(m, 30) + ' <a href="#" class="member-link" onclick="openMemberDetail(\'' + idAttr + '\'); return false;">' + escapeHtml(m.name) + '</a><br><small style="color:var(--text-muted);">' + escapeHtml(m.phone || '') + '</small><br>' + accessBadge + '</td>' +
                     '<td><strong>' + fmt(epargne) + '</strong><br><span style="font-weight:600;color:var(--text-muted);">' + fmt(sav(m, 'FC'), 'FC') + '</span></td>' +
                     '<td>' + creditsListHtml + '</td>' +
                     '<td style="white-space:nowrap;">' +
@@ -2287,6 +2304,50 @@
             ['kinPhone', 'Téléphone de cette personne', 25, 'text'],
             ['note', 'Autres informations', 300, 'text']
         ];
+        // ---------- Photo de profil (réduite dans le navigateur puis gardée dans la fiche de profil) ----------
+        function avatarHtml(m, size) {
+            const p = memberProfiles[m.id];
+            const sz = 'width:' + size + 'px;height:' + size + 'px;';
+            if (p && typeof p.photo === 'string' && p.photo.indexOf('data:image/jpeg;base64,') === 0)
+                return '<img class="avatar" alt="" src="' + p.photo + '" style="' + sz + '">';
+            const colors = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#059669', '#0891b2'];
+            let h = 0; String(m.id || '').split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) % 997; });
+            const ini = String(m.name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w.charAt(0).toUpperCase()).join('');
+            return '<span class="avatar" style="' + sz + 'font-size:' + Math.round(size * 0.4) + 'px;background:' + colors[h % colors.length] + ';">' + escapeHtml(ini) + '</span>';
+        }
+        function savePhotoValue(photo) {
+            const msg = document.getElementById('pfPhotoMsg');
+            if (!currentUser || currentUser.role !== 'member') return;
+            const id = currentUser.memberId;
+            const data = Object.assign({}, memberProfiles[id] || {}, { memberId: id, updatedAt: new Date().toISOString() });
+            if (photo) data.photo = photo; else delete data.photo;
+            const ok = () => { memberProfiles[id] = data; if (!CLOUD) store.set('avec_mprofiles', memberProfiles); if (msg) { msg.style.color = 'var(--success)'; msg.textContent = photo ? 'Photo enregistrée.' : 'Photo retirée.'; } renderMemberPortal(); };
+            if (CLOUD && F()) F().saveMemberProfile(id, data).then(ok).catch(err => { if (msg) { msg.style.color = 'var(--danger)'; msg.textContent = 'Enregistrement impossible : ' + errText(err); } });
+            else ok();
+        }
+        function handlePhoto(input) {
+            const msg = document.getElementById('pfPhotoMsg');
+            const f = input && input.files && input.files[0];
+            if (!f) return;
+            if (!/^image\//.test(f.type)) { msg.style.color = 'var(--danger)'; msg.textContent = 'Choisissez une image.'; return; }
+            const img = new Image();
+            const url = URL.createObjectURL(f);
+            img.onload = () => {
+                try {
+                    const S = 200, cv = document.createElement('canvas');
+                    cv.width = cv.height = S;
+                    const side = Math.min(img.width, img.height);
+                    cv.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S);
+                    const out = cv.toDataURL('image/jpeg', 0.8);
+                    URL.revokeObjectURL(url);
+                    savePhotoValue(out);
+                } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = 'Photo illisible.'; }
+            };
+            img.onerror = () => { msg.style.color = 'var(--danger)'; msg.textContent = 'Photo illisible.'; };
+            img.src = url;
+            input.value = '';
+        }
+        function removePhoto() { if (confirm('Retirer votre photo de profil ?')) savePhotoValue(''); }
         let profileDirty = false;
         let detailMemberId = null;
         function profileCount(p) { return PROFILE_FIELDS.filter(f => p && String(p[f[0]] || '').trim()).length; }
@@ -2310,6 +2371,7 @@
             const box = document.getElementById('pfResultBox');
             if (!currentUser || currentUser.role !== 'member') return;
             const data = { memberId: currentUser.memberId, updatedAt: new Date().toISOString() };
+            const keepPhoto = (memberProfiles[currentUser.memberId] || {}).photo; if (keepPhoto) data.photo = keepPhoto;
             PROFILE_FIELDS.forEach(f => { const el = document.getElementById('pf_' + f[0]); data[f[0]] = el ? String(el.value || '').trim().slice(0, f[2]) : ''; });
             if (data.birth && !/^\d{4}-\d{2}-\d{2}$/.test(data.birth)) { box.className = 'alert alert-error'; box.textContent = 'Date de naissance invalide.'; return; }
             if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) { box.className = 'alert alert-error'; box.textContent = 'Adresse e-mail invalide.'; return; }
@@ -2407,7 +2469,7 @@
             const hasAccess = CLOUD ? !!m.authUid : users.some(x => x.role === 'member' && x.memberId === m.id);
             const p = memberProfiles[m.id] || null;
             // 1. Identité
-            const head = detailCard('fa-id-badge', escapeHtml(m.name) + ' <small style="color:var(--text-muted);font-weight:500;">(' + id + ')</small>',
+            const head = detailCard('fa-id-badge', avatarHtml(m, 40) + ' ' + escapeHtml(m.name) + ' <small style="color:var(--text-muted);font-weight:500;">(' + id + ')</small>',
                 kv('Téléphone', escapeHtml(m.phone || '—')) +
                 kv('Accès au compte', hasAccess ? '<span class="badge badge-ok">Actif</span>' : '<span class="badge badge-due">Pas d\'accès</span>') +
                 kv('Cotisation cas sociaux depuis', m.socialSince ? escapeHtml(formatISOtoFR(m.socialSince)) : 'à définir') +
@@ -3496,6 +3558,9 @@
             const hi = document.getElementById('heroHi'), hs = document.getElementById('heroSub');
             if (hi) hi.textContent = (hh < 18 ? 'Bonjour ' : 'Bonsoir ') + first + ' 👋';
             if (hs) hs.textContent = 'Membre ' + m.id + ' · situation au ' + formatISOtoFR(today);
+            const ha = document.getElementById('heroAvatar'); if (ha) ha.innerHTML = avatarHtml(m, 64);
+            const pa = document.getElementById('pfAvatar'); if (pa) pa.innerHTML = avatarHtml(m, 84);
+            const has = !!((memberProfiles[m.id] || {}).photo); setHidden('pfPhotoDel', !has);
             const pg = document.getElementById('mProgress');
             if (pg) {
                 let bars = '';

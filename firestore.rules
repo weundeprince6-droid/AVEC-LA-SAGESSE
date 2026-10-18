@@ -98,7 +98,7 @@ service cloud.firestore {
     match /memberProfiles/{profileId} {
       allow read: if isStaff() || (hasProfile() && myMemberId() == profileId);
       allow create, update: if hasProfile() && myMemberId() == profileId
-        && request.resource.data.keys().hasOnly(['memberId', 'address', 'birth', 'profession', 'email', 'kinName', 'kinPhone', 'note', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['memberId', 'address', 'birth', 'profession', 'email', 'kinName', 'kinPhone', 'note', 'photo', 'updatedAt'])
         && request.resource.data.memberId == profileId
         && okText(request.resource.data.get('address', ''), 120)
         && okText(request.resource.data.get('birth', ''), 10)
@@ -106,7 +106,10 @@ service cloud.firestore {
         && okText(request.resource.data.get('email', ''), 80)
         && okText(request.resource.data.get('kinName', ''), 80)
         && okText(request.resource.data.get('kinPhone', ''), 25)
-        && okText(request.resource.data.get('note', ''), 300);
+        && okText(request.resource.data.get('note', ''), 300)
+        && (!('photo' in request.resource.data) || (request.resource.data.photo is string
+            && request.resource.data.photo.size() <= 60000
+            && request.resource.data.photo.matches('^data:image/jpeg;base64,.*')));
       allow delete: if isAdmin();
     }
 
