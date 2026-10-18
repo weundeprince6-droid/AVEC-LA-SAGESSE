@@ -159,6 +159,8 @@
         #memberSection .card-header i { color: var(--primary); }
         #memberTabs .dtab.active { background: #eff6ff; border-radius: 8px 8px 0 0; }
         .avatar { border-radius: 50%; object-fit: cover; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; flex: 0 0 auto; vertical-align: middle; border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18); }
+        .avatar-click { cursor: pointer; position: relative; }
+        .avatar-click:hover .avatar { filter: brightness(0.85); }
         .hero-id { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; }
         .photo-box { display: flex; align-items: center; gap: 14px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px dashed var(--border); flex-wrap: wrap; }
         .rules { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; }
@@ -913,7 +915,7 @@
             <div class="mpanel" id="mp-accueil">
                 <div class="hero">
                     <div class="hero-id">
-                    <div id="heroAvatar"></div>
+                    <div id="heroAvatar" class="avatar-click" title="Changer ma photo" onclick="showMemberTab('compte')"></div>
                     <div>
                         <div class="hero-hi" id="heroHi">Bonjour</div>
                         <div class="hero-sub" id="heroSub"></div>
@@ -1112,12 +1114,12 @@
                 <section class="card" id="memberProfileSection">
                 <div class="card-header"><i class="fa-solid fa-id-card"></i><h3>Mon profil</h3></div>
                 <div class="photo-box">
-                    <div id="pfAvatar"></div>
+                    <div id="pfAvatar" class="avatar-click" title="Changer la photo" onclick="document.getElementById('pfPhotoFile').click()"></div>
                     <div>
                         <div style="font-weight:700;">Ma photo de profil</div>
                         <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:6px;">Une photo de votre visage aide le groupe à vous reconnaître.</div>
                         <input type="file" id="pfPhotoFile" accept="image/*" class="hidden" onchange="handlePhoto(this)">
-                        <button type="button" class="btn-small" onclick="document.getElementById('pfPhotoFile').click()"><i class="fa-solid fa-camera"></i> Choisir une photo</button>
+                        <button type="button" class="btn-small" onclick="document.getElementById('pfPhotoFile').click()"><i class="fa-solid fa-camera"></i> Choisir une photo (téléphone ou ordinateur)</button>
                         <button type="button" class="btn-small danger hidden" id="pfPhotoDel" onclick="removePhoto()"><i class="fa-solid fa-trash"></i> Retirer</button>
                         <div id="pfPhotoMsg" style="font-size:0.82rem;margin-top:4px;"></div>
                     </div>
@@ -2343,7 +2345,7 @@
                     savePhotoValue(out);
                 } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = 'Photo illisible.'; }
             };
-            img.onerror = () => { msg.style.color = 'var(--danger)'; msg.textContent = 'Photo illisible.'; };
+            img.onerror = () => { msg.style.color = 'var(--danger)'; msg.textContent = 'Photo illisible. Essayez une photo au format JPG ou PNG.'; };
             img.src = url;
             input.value = '';
         }
