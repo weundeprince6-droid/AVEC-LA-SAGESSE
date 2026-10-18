@@ -135,6 +135,10 @@
         .kpi .s { font-size: 0.72rem; color: var(--text-muted); }
         .btn-small.wa { color: #128c7e; border-color: #25d366; }
         .btn-small.wa:hover { background: #25d366; color: #fff; }
+        .rules { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; }
+        .rules li { padding: 7px 0 7px 22px; border-bottom: 1px dashed var(--border); position: relative; line-height: 1.4; }
+        .rules li:last-child { border-bottom: none; }
+        .rules li::before { content: '\2713'; position: absolute; left: 2px; color: var(--primary); font-weight: 700; }
         .compte-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; align-items: start; }
         .compte-grid > * { min-width: 0; margin-bottom: 0; }
         @media (max-width: 900px) { .compte-grid { grid-template-columns: 1fr; gap: 0; } .compte-grid > * { margin-bottom: 14px; } }
@@ -912,6 +916,29 @@
                 </div>
             </div>
             <div class="alert" id="mSocialBox" style="margin-bottom:16px;background:var(--card);border:1px solid var(--border);"></div>
+                <div class="grid-2">
+                    <section class="card">
+                        <div class="card-header"><i class="fa-solid fa-scale-balanced"></i><h3>Règles de l'épargne et du crédit</h3></div>
+                        <ul class="rules">
+                            <li><strong>Deux comptes séparés :</strong> votre épargne en dollars ($) et votre épargne en francs congolais (FC) sont gérées chacune de son côté.</li>
+                            <li><strong>Montant du crédit :</strong> vous pouvez emprunter jusqu'à <strong>3 fois votre épargne</strong>, moins ce qu'il vous reste déjà à rembourser, dans la même devise.</li>
+                            <li><strong>Intérêt de 10 %</strong> prélevé dès l'octroi : si vous empruntez 100, vous recevez 90 et vous remboursez 100.</li>
+                            <li><strong>Durée :</strong> le crédit se rembourse dans les <strong>3 mois</strong>. L'administrateur peut prolonger l'échéance si nécessaire.</li>
+                            <li><strong>Un seul crédit à la fois :</strong> une nouvelle demande de crédit n'est possible qu'une fois le précédent entièrement remboursé.</li>
+                            <li><strong>Retrait d'épargne :</strong> tant que vous avez un crédit en cours, un tiers du montant restant à rembourser reste bloqué dans votre épargne.</li>
+                        </ul>
+                    </section>
+                    <section class="card">
+                        <div class="card-header"><i class="fa-solid fa-hand-holding-heart"></i><h3>Règles des cas sociaux et du fonctionnement</h3></div>
+                        <ul class="rules">
+                            <li><strong>Cotisation hebdomadaire :</strong> <span id="ruleWeekly">1 000 FC</span> par semaine, versée à l'administrateur. Elle alimente la caisse des cas sociaux.</li>
+                            <li><strong>Cotisation occasionnelle :</strong> quand un membre traverse une épreuve, l'administrateur ouvre une collecte. La part est <strong>fixée à l'avance et identique pour tous</strong>, une seule part par membre. Elle peut être prélevée sur votre épargne si l'administrateur le décide.</li>
+                            <li><strong>Vos demandes :</strong> faites vos demandes de crédit ou de retrait depuis l'onglet « Demandes » ; l'administrateur y répond.</li>
+                            <li><strong>Une erreur ?</strong> Écrivez-nous depuis l'onglet « Réclamations » avec le montant et la date concernés.</li>
+                            <li><strong>Votre profil :</strong> complétez-le dans « Mon compte » pour que le groupe puisse vous joindre.</li>
+                        </ul>
+                    </section>
+                </div>
             </div>
             <div class="mpanel hidden" id="mp-credits">
                 <div class="grid-2">
@@ -3390,6 +3417,7 @@
 
             document.getElementById('memberUserDisplay').textContent = m.name + ' (' + m.id + ')';
             document.getElementById('memberWelcome').textContent = 'Bonjour ' + m.name + ', voici votre situation.';
+            const rw = document.getElementById('ruleWeekly'); if (rw) rw.textContent = fmt(socialWeekly, 'FC');
             setHidden('memberPwdNotice', !must);
             // Tant que le mot de passe par défaut n'est pas changé, aucune donnée n'est affichée
             setHidden('memberDataWrap', must);
