@@ -135,6 +135,9 @@
         .kpi .s { font-size: 0.72rem; color: var(--text-muted); }
         .btn-small.wa { color: #128c7e; border-color: #25d366; }
         .btn-small.wa:hover { background: #25d366; color: #fff; }
+        .compte-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; align-items: start; }
+        .compte-grid > * { min-width: 0; margin-bottom: 0; }
+        @media (max-width: 900px) { .compte-grid { grid-template-columns: 1fr; gap: 0; } .compte-grid > * { margin-bottom: 14px; } }
         .top-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .top-grid > * { min-width: 0; }
         .top-grid .card { margin-bottom: 0; }
@@ -864,25 +867,25 @@
             </div>
         </header>
 
+        <nav class="dtabs" id="memberTabs">
+            <button class="dtab mtab active" data-mtab="accueil" onclick="showMemberTab('accueil')"><i class="fa-solid fa-house"></i> Accueil</button>
+            <button class="dtab mtab" data-mtab="credits" onclick="showMemberTab('credits')"><i class="fa-solid fa-hand-holding-dollar"></i> Mes crédits</button>
+            <button class="dtab mtab" data-mtab="demandes" onclick="showMemberTab('demandes')"><i class="fa-solid fa-paper-plane"></i> Demandes</button>
+            <button class="dtab mtab" data-mtab="reclamations" onclick="showMemberTab('reclamations')"><i class="fa-solid fa-circle-exclamation"></i> Réclamations</button>
+            <button class="dtab mtab" data-mtab="compte" onclick="showMemberTab('compte')"><i class="fa-solid fa-user"></i> Mon compte</button>
+        </nav>
+
         <div id="memberPwdNotice" class="alert alert-error hidden" style="margin-bottom:20px;">
             <strong>Première connexion :</strong> pour protéger votre compte, choisissez votre propre mot de passe ci-dessous avant de continuer.
         </div>
 
         <div id="memberDataWrap">
-            <section class="card" id="memberProfileSection" style="margin-bottom:16px;">
-                <div class="card-header"><i class="fa-solid fa-id-card"></i><h3>Mon profil</h3></div>
-                <p id="pfProgress" style="font-size:0.88rem;color:var(--text-muted);margin-bottom:10px;"></p>
-                <form onsubmit="handleSaveProfile(event)">
-                    <div id="memberProfileForm" class="detail-grid"></div>
-                    <button type="submit" class="btn" style="margin-top:12px;"><i class="fa-solid fa-floppy-disk"></i> Enregistrer mon profil</button>
-                </form>
-                <div id="pfResultBox" class="alert hidden"></div>
-            </section>
-            <section class="card hidden" id="memberAnnSection" style="margin-bottom:16px;">
+            <div class="mpanel" id="mp-accueil">
+                <section class="card hidden" id="memberAnnSection" style="margin-bottom:16px;">
                 <div class="card-header"><i class="fa-solid fa-bullhorn"></i><h3>Annonces</h3></div>
                 <div id="memberAnnList"></div>
             </section>
-            <div class="stats-grid">
+                <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon bg-blue"><i class="fa-solid fa-wallet"></i></div>
                     <div class="stat-content">
@@ -909,9 +912,9 @@
                 </div>
             </div>
             <div class="alert" id="mSocialBox" style="margin-bottom:16px;background:var(--card);border:1px solid var(--border);"></div>
-
-            <div class="grid-container">
-                <div>
+            </div>
+            <div class="mpanel hidden" id="mp-credits">
+                <div class="grid-2">
                     <section class="card">
                         <div class="card-header">
                             <i class="fa-solid fa-hand-holding-dollar"></i>
@@ -934,7 +937,6 @@
                             </table>
                         </div>
                     </section>
-
                     <section class="card">
                         <div class="card-header">
                             <i class="fa-solid fa-clock-rotate-left"></i>
@@ -954,8 +956,9 @@
                         </div>
                     </section>
                 </div>
-
-                <div>
+            </div>
+            <div class="mpanel hidden" id="mp-demandes">
+                <div class="grid-2">
                     <section class="card">
                         <div class="card-header">
                             <i class="fa-solid fa-paper-plane"></i>
@@ -989,7 +992,6 @@
                         </form>
                         <div id="reqResultBox" class="alert hidden"></div>
                     </section>
-
                     <section class="card">
                         <div class="card-header">
                             <i class="fa-solid fa-list-check"></i>
@@ -997,7 +999,10 @@
                         </div>
                         <div id="mRequestsList"></div>
                     </section>
-
+                </div>
+            </div>
+            <div class="mpanel hidden" id="mp-reclamations">
+                <div class="grid-2">
                     <section class="card">
                         <div class="card-header">
                             <i class="fa-solid fa-circle-exclamation"></i>
@@ -1024,7 +1029,6 @@
                         </form>
                         <div id="claimResultBox" class="alert hidden"></div>
                     </section>
-
                     <section class="card">
                         <div class="card-header">
                             <i class="fa-solid fa-envelope-open-text"></i>
@@ -1036,7 +1040,18 @@
             </div>
         </div>
 
-        <section class="card" style="max-width:520px;">
+        <div class="mpanel hidden" id="mp-compte">
+            <div class="compte-grid">
+                <section class="card" id="memberProfileSection">
+                <div class="card-header"><i class="fa-solid fa-id-card"></i><h3>Mon profil</h3></div>
+                <p id="pfProgress" style="font-size:0.88rem;color:var(--text-muted);margin-bottom:10px;"></p>
+                <form onsubmit="handleSaveProfile(event)">
+                    <div id="memberProfileForm" class="detail-grid"></div>
+                    <button type="submit" class="btn" style="margin-top:12px;"><i class="fa-solid fa-floppy-disk"></i> Enregistrer mon profil</button>
+                </form>
+                <div id="pfResultBox" class="alert hidden"></div>
+            </section>
+                <section class="card">
             <div class="card-header">
                 <i class="fa-solid fa-key"></i>
                 <h3>Changer mon Mot de Passe</h3>
@@ -1058,6 +1073,8 @@
             </form>
             <div id="pwdResultBox" class="alert hidden"></div>
         </section>
+            </div>
+        </div>
     </div>
 
     <div id="calModal" class="modal hidden" onclick="if (event.target === this) closeCalendar()">
@@ -1779,6 +1796,7 @@
         }
 
         function logout() {
+            try { currentMTab = 'accueil'; } catch (e) {}
             try { localStorage.removeItem('avec_session'); } catch (e) {}
             if (CLOUD) {
                 if (stopListening) { stopListening(); stopListening = null; }
@@ -3332,6 +3350,28 @@
 
         // ---------- Espace membre (lecture seule) ----------
         // Le membre connecté ne voit que SA fiche : l'identifiant vient de son compte, jamais d'un champ modifiable.
+        let currentMTab = 'accueil';
+        function showMemberTab(name) {
+            currentMTab = name;
+            applyMemberTab();
+            try { window.scrollTo(0, 0); } catch (e) {}
+        }
+        function applyMemberTab() {
+            const user = currentUser;
+            const must = !!(user && user.mustChange);
+            const tab = must ? 'compte' : currentMTab;
+            ['accueil', 'credits', 'demandes', 'reclamations'].forEach(t => setHidden('mp-' + t, must || t !== tab));
+            setHidden('mp-compte', tab !== 'compte');
+            setHidden('memberProfileSection', must);
+            setHidden('memberTabs', must);
+            if (document.querySelectorAll) {
+                document.querySelectorAll('.mtab').forEach(b => {
+                    if (typeof b.getAttribute !== 'function') return;
+                    if (b.getAttribute('data-mtab') === tab) b.classList.add('active'); else b.classList.remove('active');
+                });
+            }
+            syncHeaderHeight();
+        }
         function renderMemberPortal() {
             const user = currentUser;
             const m = user && members.find(x => x.id === user.memberId);
@@ -3353,6 +3393,7 @@
             setHidden('memberPwdNotice', !must);
             // Tant que le mot de passe par défaut n'est pas changé, aucune donnée n'est affichée
             setHidden('memberDataWrap', must);
+            applyMemberTab();
             if (must) return;
 
             const tc = { USD: 0, FC: 0 };
