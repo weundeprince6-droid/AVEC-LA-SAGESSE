@@ -135,6 +135,29 @@
         .kpi .s { font-size: 0.72rem; color: var(--text-muted); }
         .btn-small.wa { color: #128c7e; border-color: #25d366; }
         .btn-small.wa:hover { background: #25d366; color: #fff; }
+        /* ===== Espace membre : présentation soignée ===== */
+        .hero { background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 55%, #38bdf8 100%); color: #fff; border-radius: 16px; padding: 18px 22px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; box-shadow: 0 12px 24px -12px rgba(37, 99, 235, 0.55); position: relative; overflow: hidden; }
+        .hero::after { content: ''; position: absolute; right: -40px; top: -60px; width: 200px; height: 200px; border-radius: 50%; background: rgba(255, 255, 255, 0.10); pointer-events: none; }
+        .hero-hi { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.01em; }
+        .hero-sub { font-size: 0.88rem; opacity: 0.9; margin-top: 2px; }
+        .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; position: relative; z-index: 1; }
+        .hero-actions button { border: none; border-radius: 999px; padding: 8px 14px; font-weight: 700; font-size: 0.85rem; cursor: pointer; background: #fff; color: #1d4ed8; }
+        .hero-actions button.ghost { background: rgba(255, 255, 255, 0.18); color: #fff; }
+        #mp-accueil .stat-card { border-top: 3px solid var(--primary); transition: transform 0.15s; }
+        #mp-accueil .stat-card:nth-child(2) { border-top-color: var(--warning); }
+        #mp-accueil .stat-card:nth-child(3) { border-top-color: #8b5cf6; }
+        #mp-accueil .stat-card:hover { transform: translateY(-2px); }
+        #mp-accueil .stat-content .value { font-size: 1.5rem; letter-spacing: -0.01em; }
+        .mprogress { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px; box-shadow: var(--shadow); }
+        .mprogress .pt { font-weight: 700; font-size: 0.9rem; margin-bottom: 8px; }
+        .pbar { margin: 6px 0; font-size: 0.82rem; }
+        .pbar .pl { display: flex; justify-content: space-between; color: var(--text-muted); margin-bottom: 3px; }
+        .pbar .pt2 { height: 9px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
+        .pbar .pf { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #10b981, #34d399); }
+        #memberSection .card { border-radius: 14px; }
+        #memberSection .card-header h3 { font-size: 1rem; }
+        #memberSection .card-header i { color: var(--primary); }
+        #memberTabs .dtab.active { background: #eff6ff; border-radius: 8px 8px 0 0; }
         .rules { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; }
         .rules li { padding: 7px 0 7px 22px; border-bottom: 1px dashed var(--border); position: relative; line-height: 1.4; }
         .rules li:last-child { border-bottom: none; }
@@ -885,6 +908,16 @@
 
         <div id="memberDataWrap">
             <div class="mpanel" id="mp-accueil">
+                <div class="hero">
+                    <div>
+                        <div class="hero-hi" id="heroHi">Bonjour</div>
+                        <div class="hero-sub" id="heroSub"></div>
+                    </div>
+                    <div class="hero-actions">
+                        <button type="button" onclick="showMemberTab('demandes')"><i class="fa-solid fa-paper-plane"></i> Faire une demande</button>
+                        <button type="button" class="ghost" onclick="showMemberTab('credits')"><i class="fa-solid fa-hand-holding-dollar"></i> Mes crédits</button>
+                    </div>
+                </div>
                 <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon bg-blue"><i class="fa-solid fa-wallet"></i></div>
@@ -911,7 +944,8 @@
                     </div>
                 </div>
             </div>
-            <div class="alert" id="mSocialBox" style="margin-bottom:16px;background:var(--card);border:1px solid var(--border);"></div>
+            <div class="mprogress hidden" id="mProgress"></div>
+                <div class="alert" id="mSocialBox" style="margin-bottom:16px;background:var(--card);border:1px solid var(--border);"></div>
                 <section class="card hidden" id="memberAnnSection" style="margin-bottom:16px;">
                 <div class="card-header"><i class="fa-solid fa-bullhorn"></i><h3>Annonces</h3></div>
                 <div id="memberAnnList"></div>
@@ -3455,6 +3489,28 @@
             document.getElementById('mStatEpargneFC').textContent = fmt(sav(m, 'FC'), 'FC');
             document.getElementById('mStatCreditsFC').textContent = fmt(tc.FC, 'FC');
             document.getElementById('mStatRestantFC').textContent = fmt(tr.FC, 'FC');
+
+            // Message d'accueil et progression du remboursement
+            const first = String(m.name || '').split(' ')[0];
+            const hh = new Date().getHours();
+            const hi = document.getElementById('heroHi'), hs = document.getElementById('heroSub');
+            if (hi) hi.textContent = (hh < 18 ? 'Bonjour ' : 'Bonsoir ') + first + ' 👋';
+            if (hs) hs.textContent = 'Membre ' + m.id + ' · situation au ' + formatISOtoFR(today);
+            const pg = document.getElementById('mProgress');
+            if (pg) {
+                let bars = '';
+                ['USD', 'FC'].forEach(d => {
+                    const cs = (m.credits || []).filter(c => devOf(c) === d);
+                    const total = cs.reduce((a, c) => a + (Number(c.amount) || 0), 0);
+                    const paid = cs.reduce((a, c) => a + Math.min(Number(c.repaid) || 0, Number(c.amount) || 0), 0);
+                    if (total > 0 && cs.some(c => creditRemaining(c) > 0)) {
+                        const pct = Math.max(0, Math.min(100, Math.round(paid / total * 100)));
+                        bars += '<div class="pbar"><div class="pl"><span>' + (d === 'FC' ? 'En francs' : 'En dollars') + ' : ' + fmt(paid, d) + ' remboursés sur ' + fmt(total, d) + '</span><strong>' + pct + ' %</strong></div><div class="pt2"><div class="pf" style="width:' + pct + '%"></div></div></div>';
+                    }
+                });
+                pg.innerHTML = bars ? '<div class="pt"><i class="fa-solid fa-bars-progress"></i> Remboursement de vos crédits en cours</div>' + bars : '';
+                setHidden('mProgress', !bars);
+            }
 
             const hist = (m.history || []).slice().reverse();
             let hrows = '';
