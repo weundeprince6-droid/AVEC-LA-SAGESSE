@@ -592,7 +592,7 @@
                                         </div></div>
                                         <div class="form-group">
                                             <label>Mot de passe par défaut</label>
-                                            <input type="text" id="memPassword" required minlength="6" maxlength="64" placeholder="6 caractères minimum" autocomplete="off">
+                                            <input type="text" id="memPassword" required minlength="6" maxlength="64" placeholder="6 caractères minimum" autocomplete="off" oninput="this.setAttribute('data-touched', '1')">
                                         </div>
                                         <button type="submit" class="btn"><i class="fa-solid fa-check"></i> Enregistrer le Membre</button>
                                     </form>
@@ -1511,6 +1511,17 @@
         }
 
         // Génère un identifiant unique même après suppression de membres
+        // Mot de passe par défaut : « avec » + numéro du membre sur 4 chiffres (MBR-011 → avec0011)
+        function defaultPasswordFor(id) {
+            const n = parseInt(String(id).replace(/\D/g, ''), 10) || 0;
+            return 'avec' + String(n).padStart(4, '0');
+        }
+        function fillDefaultPassword() {
+            try {
+                const el = document.getElementById('memPassword');
+                if (el && !el.getAttribute('data-touched')) el.value = defaultPasswordFor(nextMemberId());
+            } catch (e) { /* sans importance */ }
+        }
         function nextMemberId() {
             let max = 0;
             members.forEach(m => {
@@ -2052,6 +2063,8 @@
             logActivity('Nouveau membre : ' + name + ' (' + member.id + '), épargne initiale ' + fmt(epargne) + (epargneFC > 0 ? ' + ' + fmt(epargneFC, 'FC') : ''), member.id);
 
             e.target.reset();
+            try { document.getElementById('memPassword').removeAttribute('data-touched'); } catch (err) {}
+            fillDefaultPassword();
             box.className = 'alert alert-success';
             box.innerHTML = '<strong>Membre enregistré.</strong><br>' +
                 'Identifiant de connexion : <strong>' + escapeHtml(member.id) + '</strong><br>' +
@@ -2283,6 +2296,7 @@
         }
 
         function updateDashboard() {
+            try { fillDefaultPassword(); } catch (e) {}
             try { renderGallery(); } catch (e) {}
             const searchBox = document.getElementById('memberSearch');
             const query = normText(searchBox ? searchBox.value : '');
@@ -2548,11 +2562,10 @@
             const dup = members.find(m => waNumber(m.phone) && waNumber(m.phone) === waNumber(r.phone));
             if (dup && !confirm('Un membre porte déjà ce numéro (' + dup.name + ', ' + dup.id + '). Créer quand même un nouveau membre pour ' + r.name + ' ?')) return;
             if (!CLOUD && !cryptoAvailable()) { alert("Ce navigateur ne permet pas de protéger les mots de passe. Ouvrez l'application en HTTPS."); return; }
-            const suggestion = 'avec' + String(Math.floor(1000 + Math.random() * 9000));
-            const password = prompt('Accepter ' + r.name + ' ?\nChoisissez son mot de passe par défaut (6 caractères minimum). Il devra le changer à sa première connexion :', suggestion);
-            if (password === null) return;
-            if (password.length < 6) { alert('Le mot de passe doit contenir au moins 6 caractères.'); return; }
-            const member = { id: nextMemberId(), name: r.name, phone: r.phone, epargne: 0, credits: [], history: [], socialSince: todayISO() };
+            const newId = nextMemberId();
+            const password = defaultPasswordFor(newId);
+            if (!confirm('Accepter ' + r.name + ' ?\nIdentifiant : ' + newId + '\nMot de passe par défaut : ' + password + '\n(il devra le changer à sa première connexion)')) return;
+            const member = { id: newId, name: r.name, phone: r.phone, epargne: 0, credits: [], history: [], socialSince: todayISO() };
             let access;
             try { access = await provisionAccess(member.id, password, null); }
             catch (err) { box.className = 'alert alert-error'; box.textContent = "Création de l'accès impossible : " + authErrorMessage(err); return; }
