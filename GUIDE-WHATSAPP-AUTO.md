@@ -66,8 +66,8 @@ Le plus simple est d'utiliser **Google Cloud Shell**, un terminal dans le naviga
 3. Tapez ces commandes, une par une :
 
    ```
-   git clone https://github.com/weundeprince6-droid/avec-la-sagesse
-   cd avec-la-sagesse
+   git clone https://github.com/weundeprince6-droid/AVEC-LA-SAGESSE
+   cd AVEC-LA-SAGESSE
    npm install -g firebase-tools
    firebase login --no-localhost
    firebase use avec-la-sagesse
