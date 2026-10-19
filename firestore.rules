@@ -97,7 +97,7 @@ service cloud.firestore {
     }
     match /memberProfiles/{profileId} {
       allow read: if isStaff() || (hasProfile() && myMemberId() == profileId);
-      allow create, update: if hasProfile() && myMemberId() == profileId
+      allow create, update: if ((hasProfile() && myMemberId() == profileId) || isAdmin())
         && request.resource.data.keys().hasOnly(['memberId', 'address', 'birth', 'profession', 'email', 'kinName', 'kinPhone', 'note', 'photo', 'updatedAt'])
         && request.resource.data.memberId == profileId
         && okText(request.resource.data.get('address', ''), 120)
@@ -110,6 +110,34 @@ service cloud.firestore {
         && (!('photo' in request.resource.data) || (request.resource.data.photo is string
             && request.resource.data.photo.size() <= 60000
             && request.resource.data.photo.matches('^data:image/jpeg;base64,.*')));
+      allow delete: if isAdmin();
+    }
+
+    // Inscriptions : n'importe qui (sans connexion) peut DÉPOSER une demande, avec des champs limités ;
+    // seule l'équipe peut les lire, les accepter ou les refuser. L'administrateur seul peut les supprimer.
+    match /registrations/{rid} {
+      allow create: if request.resource.data.keys().hasOnly(['id', 'date', 'status', 'name', 'phone', 'address', 'birth', 'profession', 'email', 'kinName', 'kinPhone', 'note', 'photo'])
+        && request.resource.data.keys().hasAll(['id', 'date', 'status', 'name', 'phone'])
+        && request.resource.data.id == rid
+        && rid.size() <= 40
+        && request.resource.data.status == 'pending'
+        && okText(request.resource.data.date, 40)
+        && request.resource.data.name is string && request.resource.data.name.size() >= 3 && request.resource.data.name.size() <= 80
+        && request.resource.data.phone is string && request.resource.data.phone.size() >= 6 && request.resource.data.phone.size() <= 25
+        && okText(request.resource.data.get('address', ''), 120)
+        && okText(request.resource.data.get('birth', ''), 10)
+        && okText(request.resource.data.get('profession', ''), 80)
+        && okText(request.resource.data.get('email', ''), 80)
+        && okText(request.resource.data.get('kinName', ''), 80)
+        && okText(request.resource.data.get('kinPhone', ''), 25)
+        && okText(request.resource.data.get('note', ''), 300)
+        && (!('photo' in request.resource.data) || (request.resource.data.photo is string
+            && request.resource.data.photo.size() <= 60000
+            && request.resource.data.photo.matches('^data:image/jpeg;base64,.*')));
+      allow read: if isStaff();
+      allow update: if isStaff()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'memberId', 'decidedBy', 'decidedAt'])
+        && request.resource.data.status in ['accepted', 'refused'];
       allow delete: if isAdmin();
     }
 

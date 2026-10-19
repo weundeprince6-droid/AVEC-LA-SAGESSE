@@ -159,6 +159,8 @@
         #memberSection .card-header i { color: var(--primary); }
         #memberTabs .dtab.active { background: #eff6ff; border-radius: 8px 8px 0 0; }
         .avatar { border-radius: 50%; object-fit: cover; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; flex: 0 0 auto; vertical-align: middle; border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18); }
+.insc-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; background: #fff; }
+        .insc-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
         .gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
         .gal-item { margin: 0; background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
         .gal-item img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
@@ -312,6 +314,52 @@
 <body>
     <div id="syncStatus" class="sync-status hidden"></div>
 
+    <!-- FORMULAIRE D'INSCRIPTION PUBLIC (lien à partager : ?inscription) -->
+    <div id="signupSection" class="auth-container hidden" style="max-width:640px;">
+        <div class="auth-header">
+            <i class="fa-solid fa-user-plus"></i>
+            <h2>Demande d'inscription — AVEC LA SAGESSE</h2>
+        </div>
+        <div id="signupFormWrap">
+            <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:14px;">Remplissez vos informations. Votre demande sera examinée par l'administrateur : vous serez prévenu(e) dès qu'elle est confirmée. Les champs marqués d'une * sont obligatoires.</p>
+            <form onsubmit="handleSignup(event)" autocomplete="off">
+                <div class="form-row">
+                    <div class="form-group"><label>Nom &amp; post-nom *</label><input type="text" id="su_name" required minlength="3" maxlength="80"></div>
+                    <div class="form-group"><label>Téléphone (WhatsApp) * <small style="color:var(--text-muted);font-weight:400;">ex. +243 99 000 0000</small></label><input type="tel" id="su_phone" required maxlength="25"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Adresse</label><input type="text" id="su_address" maxlength="120"></div>
+                    <div class="form-group"><label>Date de naissance</label><input type="date" id="su_birth"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Profession</label><input type="text" id="su_profession" maxlength="80"></div>
+                    <div class="form-group"><label>E-mail</label><input type="email" id="su_email" maxlength="80"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Personne à prévenir en cas de besoin</label><input type="text" id="su_kinName" maxlength="80"></div>
+                    <div class="form-group"><label>Téléphone de cette personne</label><input type="tel" id="su_kinPhone" maxlength="25"></div>
+                </div>
+                <div class="form-group"><label>Autres informations</label><input type="text" id="su_note" maxlength="300"></div>
+                <div class="photo-box" style="border-bottom:none;">
+                    <div id="su_avatar"></div>
+                    <div>
+                        <div style="font-weight:700;">Votre photo <small style="font-weight:400;color:var(--text-muted);">(facultatif)</small></div>
+                        <input type="file" id="su_photoFile" accept="image/*" class="hidden" onchange="signupPhoto(this)">
+                        <button type="button" class="btn-small" onclick="document.getElementById('su_photoFile').click()"><i class="fa-solid fa-camera"></i> Choisir une photo</button>
+                        <div id="su_photoMsg" style="font-size:0.82rem;margin-top:4px;"></div>
+                    </div>
+                </div>
+                <div style="position:absolute;left:-9999px;" aria-hidden="true"><label>Ne pas remplir</label><input type="text" id="su_website" tabindex="-1" autocomplete="off"></div>
+                <button type="submit" class="btn"><i class="fa-solid fa-paper-plane"></i> Envoyer ma demande d'inscription</button>
+            </form>
+            <div id="signupResult" class="alert hidden"></div>
+        </div>
+        <div id="signupDone" class="hidden">
+            <div class="alert alert-success"><strong>Demande envoyée.</strong><br>Merci ! L'administrateur va examiner votre demande et vous contactera pour confirmer votre inscription.<br><small>Référence : <strong id="signupRef"></strong></small></div>
+        </div>
+        <p style="margin-top:14px;font-size:0.85rem;text-align:center;"><a href="#" onclick="leaveSignup(); return false;">Déjà membre ? Se connecter</a></p>
+    </div>
+
     <!-- SECTION AUTHENTIFICATION -->
     <div id="authSection" class="auth-container">
         <div class="auth-header">
@@ -384,6 +432,7 @@
             <button class="dtab" data-tab="social" onclick="showTab('social')"><i class="fa-solid fa-hand-holding-heart"></i> Cas sociaux</button>
             <button class="dtab" data-tab="annonces" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
             <button class="dtab" data-tab="galerie" onclick="showTab('galerie')"><i class="fa-solid fa-images"></i> Galerie</button>
+            <button class="dtab" data-tab="inscriptions" onclick="showTab('inscriptions')"><i class="fa-solid fa-user-plus"></i> Inscriptions <span class="tab-badge hidden" id="tabBadgeInsc">0</span></button>
             <button class="dtab" data-tab="demandes" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes <span class="tab-badge hidden" id="tabBadgeReq">0</span></button>
             <button class="dtab" data-tab="reclamations" onclick="showTab('reclamations')"><i class="fa-solid fa-bell"></i> Réclamations <span class="tab-badge hidden" id="tabBadgeClaims">0</span></button>
             <button class="dtab hidden" id="tabBtnEquipe" data-tab="equipe" onclick="showTab('equipe')"><i class="fa-solid fa-user-shield"></i> Équipe</button>
@@ -829,6 +878,28 @@
                                     </div>
                                     <div id="requestsAdminList"></div>
                                 </section>
+        </div>
+
+        <div class="dpanel hidden" id="panel-inscriptions">
+            <section class="card">
+                <div class="card-header"><i class="fa-solid fa-link"></i><h3>Lien d'inscription à partager</h3></div>
+                <p id="inscNote" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;">Envoyez ce lien aux personnes qui veulent rejoindre le groupe. Elles remplissent leur identité ; vous confirmez ensuite chaque demande ci-dessous.</p>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    <input type="text" id="inscLink" readonly style="flex:1 1 260px;" onclick="this.select()">
+                    <button type="button" class="btn-small" onclick="copyInscLink()"><i class="fa-solid fa-copy"></i> Copier le lien</button>
+                    <button type="button" class="btn-small wa" onclick="shareInscLink()"><i class="fa-brands fa-whatsapp"></i> Partager sur WhatsApp</button>
+                </div>
+                <div id="inscCopyMsg" style="font-size:0.82rem;margin-top:4px;color:var(--success);"></div>
+            </section>
+            <section class="card" style="margin-top:16px;">
+                <div class="card-header"><i class="fa-solid fa-user-clock"></i><h3>Demandes en attente</h3></div>
+                <div id="inscPending"></div>
+            </section>
+            <section class="card" style="margin-top:16px;">
+                <div class="card-header"><i class="fa-solid fa-clock-rotate-left"></i><h3>Demandes traitées</h3></div>
+                <div id="inscDone"></div>
+            </section>
+            <div id="inscResult" class="alert hidden" style="margin-top:16px;"></div>
         </div>
 
         <div class="dpanel hidden" id="panel-galerie">
@@ -1346,6 +1417,7 @@
         normalizeMembers();
 
         // ---------- Rôles, historique des opérations, réclamations ----------
+        let registrations = CLOUD ? [] : (store.get('avec_regs', []) || []);
         let memberProfiles = CLOUD ? {} : (store.get('avec_mprofiles', {}) || {});
         let announcements = CLOUD ? [] : store.get('avec_annonces', []);
         let claims = CLOUD ? [] : store.get('avec_claims', []);
@@ -1571,11 +1643,13 @@
             const stopProf = isAdmin(currentUser)
                 ? F().listenMemberProfiles(onProfiles, err => { /* sans gravité */ })
                 : F().listenMyProfile(currentUser.memberId, onProfiles, err => { /* sans gravité */ });
-            stopListening = () => { stopData(); stopAnn(); stopSet(); stopProf(); };
+            let stopReg = () => {};
+            if (isAdmin(currentUser) && F().listenRegistrations) stopReg = F().listenRegistrations(list => { registrations = list || []; renderRegistrations(); }, err => { /* sans gravité */ });
+            stopListening = () => { stopData(); stopAnn(); stopSet(); stopProf(); stopReg(); };
         }
 
         function resetCloudState() {
-            members = []; claims = []; requests = []; announcements = []; memberProfiles = {}; socialWeekly = SOCIAL_DEFAULT;
+            members = []; claims = []; requests = []; announcements = []; registrations = []; memberProfiles = {}; socialWeekly = SOCIAL_DEFAULT;
             cloudLoaded.members = cloudLoaded.claims = cloudLoaded.requests = false;
             lastSynced.members = {}; lastSynced.claims = {}; lastSynced.requests = {};
             importChecked = false;
@@ -2349,6 +2423,185 @@
             const ini = String(m.name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w.charAt(0).toUpperCase()).join('');
             return '<span class="avatar" style="' + sz + 'font-size:' + Math.round(size * 0.4) + 'px;background:' + colors[h % colors.length] + ';">' + escapeHtml(ini) + '</span>';
         }
+        // ---------- Inscriptions : formulaire public + confirmation par l'administrateur ----------
+        let SIGNUP_MODE = false;
+        try { SIGNUP_MODE = /[?&#]inscription/i.test((location.search || '') + (location.hash || '')); } catch (e) { /* hors navigateur */ }
+        let signupPhotoData = '';
+        function signupLink() {
+            try { return location.origin + location.pathname + '?inscription'; } catch (e) { return ''; }
+        }
+        function leaveSignup() {
+            try { location.href = location.pathname; } catch (e) {}
+        }
+        function imageToJpeg(file, size) {
+            return new Promise((resolve, reject) => {
+                if (!file || !/^image\//.test(file.type)) { reject(new Error('type')); return; }
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    try {
+                        const cv = document.createElement('canvas');
+                        cv.width = cv.height = size;
+                        const side = Math.min(img.width, img.height);
+                        cv.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+                        const out = cv.toDataURL('image/jpeg', 0.8);
+                        URL.revokeObjectURL(url);
+                        resolve(out);
+                    } catch (e) { reject(e); }
+                };
+                img.onerror = () => reject(new Error('lecture'));
+                img.src = url;
+            });
+        }
+        function signupPhoto(input) {
+            const msg = document.getElementById('su_photoMsg');
+            const f = input && input.files && input.files[0];
+            if (!f) return;
+            imageToJpeg(f, 200).then(d => {
+                signupPhotoData = d;
+                document.getElementById('su_avatar').innerHTML = '<img class="avatar" alt="" style="width:72px;height:72px;" src="' + d + '">';
+                msg.style.color = 'var(--success)'; msg.textContent = 'Photo prête.';
+            }).catch(() => { msg.style.color = 'var(--danger)'; msg.textContent = 'Photo illisible. Essayez une photo JPG ou PNG.'; });
+            input.value = '';
+        }
+        async function handleSignup(e) {
+            e.preventDefault();
+            const box = document.getElementById('signupResult');
+            const val = id => String((document.getElementById(id) || {}).value || '').trim();
+            const bad = m => { box.className = 'alert alert-error'; box.textContent = m; };
+            if (val('su_website')) { document.getElementById('signupFormWrap').classList.add('hidden'); setHidden('signupDone', false); return; } // anti-robot
+            const name = val('su_name'), phone = val('su_phone');
+            if (name.length < 3) { bad('Indiquez votre nom et post-nom.'); return; }
+            if (waNumber(phone).length < 8) { bad('Indiquez un numéro de téléphone valide (ex. +243 99 000 0000).'); return; }
+            const email = val('su_email'), birth = val('su_birth');
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { bad('Adresse e-mail invalide.'); return; }
+            if (birth && !/^\d{4}-\d{2}-\d{2}$/.test(birth)) { bad('Date de naissance invalide.'); return; }
+            let last = 0; try { last = Number(localStorage.getItem('avec_lastreg')) || 0; } catch (err) {}
+            if (Date.now() - last < 60000) { bad('Patientez une minute avant de renvoyer une demande.'); return; }
+            const id = 'R' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+            const entry = { id: id, date: new Date().toISOString(), status: 'pending', name: name.slice(0, 80), phone: phone.slice(0, 25),
+                address: val('su_address').slice(0, 120), birth: birth, profession: val('su_profession').slice(0, 80), email: email.slice(0, 80),
+                kinName: val('su_kinName').slice(0, 80), kinPhone: val('su_kinPhone').slice(0, 25), note: val('su_note').slice(0, 300) };
+            if (signupPhotoData) entry.photo = signupPhotoData;
+            try {
+                if (CLOUD) {
+                    try { await window.FB_READY; } catch (err) {}
+                    if (!F() || !F().submitRegistration) { bad('Service indisponible. Réessayez plus tard.'); return; }
+                    await F().submitRegistration(entry);
+                } else {
+                    registrations.unshift(entry);
+                    store.set('avec_regs', registrations);
+                }
+            } catch (err) { bad("Envoi impossible : " + errText(err) + ". Vérifiez votre connexion et réessayez."); return; }
+            try { localStorage.setItem('avec_lastreg', String(Date.now())); } catch (err) {}
+            document.getElementById('signupRef').textContent = id;
+            document.getElementById('signupFormWrap').classList.add('hidden');
+            setHidden('signupDone', false);
+        }
+        function copyInscLink() {
+            const inp = document.getElementById('inscLink'), msg = document.getElementById('inscCopyMsg');
+            const ok = () => { msg.textContent = 'Lien copié.'; };
+            try { navigator.clipboard.writeText(inp.value).then(ok, () => { inp.select(); document.execCommand('copy'); ok(); }); }
+            catch (e) { inp.select(); try { document.execCommand('copy'); ok(); } catch (err) { msg.textContent = 'Sélectionnez le lien et copiez-le.'; } }
+        }
+        function shareInscLink() {
+            waOpen('', "Bonjour,\nPour rejoindre notre groupe AVEC LA SAGESSE, remplissez votre demande d'inscription ici :\n" + signupLink() + "\nL'administrateur confirmera votre inscription.");
+        }
+        function renderRegistrations() {
+            const pend = document.getElementById('inscPending');
+            if (!pend) return;
+            const link = document.getElementById('inscLink'); if (link) link.value = signupLink();
+            const note = document.getElementById('inscNote');
+            if (note && !CLOUD) note.innerHTML = '<strong>Mode local :</strong> le lien ne fonctionne qu\'avec la version en ligne (Firebase). Ici, les demandes ne sont visibles que sur cet appareil.';
+            const list = (registrations || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+            const waiting = list.filter(r => r.status === 'pending'), done = list.filter(r => r.status !== 'pending');
+            setBadge('tabBadgeInsc', waiting.length);
+            const card = (r, hist) => {
+                const id = escapeHtml(r.id);
+                const ph = r.photo && String(r.photo).indexOf('data:image/jpeg;base64,') === 0
+                    ? '<img class="avatar zoomable" style="width:64px;height:64px;" alt="" data-name="' + escapeHtml(r.name) + '" src="' + r.photo + '" onclick="viewPhoto(this)">'
+                    : avatarHtml({ id: r.id, name: r.name }, 64);
+                const when = r.date ? formatISOtoFR(String(r.date).slice(0, 10)) : '';
+                const rows = [['Téléphone', r.phone], ['Adresse', r.address], ['Naissance', r.birth ? formatISOtoFR(r.birth) : ''], ['Profession', r.profession], ['E-mail', r.email],
+                    ['À prévenir', [r.kinName, r.kinPhone].filter(Boolean).join(' · ')], ['Autres infos', r.note]].filter(x => x[1]).map(x => kv(x[0], escapeHtml(x[1]))).join('');
+                let actions = '';
+                if (!hist) actions = '<div style="margin-top:8px;"><button class="btn-small wa" onclick="acceptRegistration(\'' + id + '\')"><i class="fa-solid fa-check"></i> Accepter l\'inscription</button>' +
+                    '<button class="btn-small danger" onclick="refuseRegistration(\'' + id + '\')"><i class="fa-solid fa-xmark"></i> Refuser</button></div>';
+                else actions = '<div style="margin-top:6px;font-size:0.85rem;">' + (r.status === 'accepted' ? '<span class="badge badge-ok">Acceptée' + (r.memberId ? ' · ' + escapeHtml(r.memberId) : '') + '</span>' : '<span class="badge badge-late">Refusée</span>') +
+                    (canDelete(currentUser) ? ' <button class="btn-small danger" onclick="deleteRegistration(\'' + id + '\')" title="Supprimer"><i class="fa-solid fa-trash"></i></button>' : '') + '</div>';
+                return '<div class="insc-card"><div class="insc-head">' + ph + '<div><strong>' + escapeHtml(r.name) + '</strong><div style="font-size:0.8rem;color:var(--text-muted);">Demande du ' + escapeHtml(when) + ' · réf. ' + id + '</div></div></div>' + rows + actions + '</div>';
+            };
+            pend.innerHTML = waiting.length ? waiting.map(r => card(r, false)).join('') : '<p style="color:var(--text-muted);font-size:0.9rem;">Aucune demande en attente.</p>';
+            document.getElementById('inscDone').innerHTML = done.length ? done.map(r => card(r, true)).join('') : '<p style="color:var(--text-muted);font-size:0.9rem;">Aucune demande traitée.</p>';
+        }
+        function setRegStatus(r, patch) {
+            Object.assign(r, patch);
+            if (CLOUD && F() && F().updateRegistration) return F().updateRegistration(r.id, patch);
+            store.set('avec_regs', registrations);
+            return Promise.resolve();
+        }
+        async function acceptRegistration(rid) {
+            if (!requireAdmin()) return;
+            const r = registrations.find(x => x.id === rid);
+            if (!r || r.status !== 'pending') return;
+            const box = document.getElementById('inscResult');
+            const dup = members.find(m => waNumber(m.phone) && waNumber(m.phone) === waNumber(r.phone));
+            if (dup && !confirm('Un membre porte déjà ce numéro (' + dup.name + ', ' + dup.id + '). Créer quand même un nouveau membre pour ' + r.name + ' ?')) return;
+            if (!CLOUD && !cryptoAvailable()) { alert("Ce navigateur ne permet pas de protéger les mots de passe. Ouvrez l'application en HTTPS."); return; }
+            const suggestion = 'avec' + String(Math.floor(1000 + Math.random() * 9000));
+            const password = prompt('Accepter ' + r.name + ' ?\nChoisissez son mot de passe par défaut (6 caractères minimum). Il devra le changer à sa première connexion :', suggestion);
+            if (password === null) return;
+            if (password.length < 6) { alert('Le mot de passe doit contenir au moins 6 caractères.'); return; }
+            const member = { id: nextMemberId(), name: r.name, phone: r.phone, epargne: 0, credits: [], history: [], socialSince: todayISO() };
+            let access;
+            try { access = await provisionAccess(member.id, password, null); }
+            catch (err) { box.className = 'alert alert-error'; box.textContent = "Création de l'accès impossible : " + authErrorMessage(err); return; }
+            if (!access) { box.className = 'alert alert-error'; box.textContent = 'Cet identifiant est déjà utilisé par un autre compte.'; return; }
+            if (access.uid) member.authUid = access.uid;
+            members.push(member);
+            store.set('avec_members', members);
+            // Le profil rempli par la personne devient le profil du membre
+            const prof = { memberId: member.id, updatedAt: new Date().toISOString() };
+            ['address', 'birth', 'profession', 'email', 'kinName', 'kinPhone', 'note'].forEach(k => { prof[k] = r[k] || ''; });
+            if (r.photo) prof.photo = r.photo;
+            try {
+                if (CLOUD && F()) await F().saveMemberProfile(member.id, prof);
+                memberProfiles[member.id] = prof;
+                if (!CLOUD) store.set('avec_mprofiles', memberProfiles);
+            } catch (err) { /* le profil pourra être complété par le membre */ }
+            try { await setRegStatus(r, { status: 'accepted', memberId: member.id, decidedBy: (currentUser && (currentUser.email || currentUser.username)) || '', decidedAt: new Date().toISOString() }); } catch (err) {}
+            logActivity('Inscription acceptée : ' + r.name + ' (' + member.id + ')', member.id);
+            const msg = 'Bonjour ' + String(r.name).split(' ')[0] + ",\nVotre inscription à l'AVEC LA SAGESSE est confirmée ✅\nIdentifiant : " + member.id + '\nMot de passe provisoire : ' + password + '\nConnectez-vous ici : ' + signupLink().replace('?inscription', '') + '\nVous choisirez votre propre mot de passe à la première connexion.';
+            box.className = 'alert alert-success';
+            box.innerHTML = '<strong>' + escapeHtml(r.name) + ' est inscrit(e).</strong><br>Identifiant : <strong>' + escapeHtml(member.id) + '</strong> · Mot de passe par défaut : <strong>' + escapeHtml(password) + '</strong><br>' +
+                '<button class="btn-small wa" style="margin-top:6px;" id="inscWaBtn"><i class="fa-brands fa-whatsapp"></i> Envoyer ses accès par WhatsApp</button>';
+            const b = document.getElementById('inscWaBtn');
+            if (b) b.onclick = () => waOpen(waNumber(r.phone), msg);
+            updateDashboard();
+            renderRegistrations();
+        }
+        async function refuseRegistration(rid) {
+            if (!requireAdmin()) return;
+            const r = registrations.find(x => x.id === rid);
+            if (!r || r.status !== 'pending') return;
+            if (!confirm('Refuser la demande de ' + r.name + ' ?')) return;
+            try { await setRegStatus(r, { status: 'refused', decidedBy: (currentUser && (currentUser.email || currentUser.username)) || '', decidedAt: new Date().toISOString() }); }
+            catch (err) { alert('Action impossible : ' + errText(err)); return; }
+            logActivity('Inscription refusée : ' + r.name, '');
+            renderRegistrations();
+        }
+        async function deleteRegistration(rid) {
+            if (!requireTotal()) return;
+            const r = registrations.find(x => x.id === rid);
+            if (!r || !confirm('Supprimer cette demande de la liste ?')) return;
+            try {
+                if (CLOUD && F() && F().removeRegistration) await F().removeRegistration(rid);
+                registrations = registrations.filter(x => x.id !== rid);
+                if (!CLOUD) store.set('avec_regs', registrations);
+            } catch (err) { alert('Suppression impossible : ' + errText(err)); return; }
+            renderRegistrations();
+        }
+
         // ---------- Galerie : toutes les photos de profil, avec le nom du membre comme titre ----------
         function photoFileName(m) {
             const base = String(m.name || m.id).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_');
@@ -3103,9 +3356,10 @@
             if ((name === 'equipe' || name === 'journal') && (!CLOUD || !currentUser || currentUser.level !== 'total')) name = 'dashboard';
             currentTab = name;
             if (name === 'galerie') { try { renderGallery(); } catch (e) {} }
+            if (name === 'inscriptions') { try { renderRegistrations(); } catch (e) {} }
             syncHeaderHeight();
             labelTables();
-            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'equipe', 'journal'].forEach(t => {
+            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'inscriptions', 'demandes', 'reclamations', 'equipe', 'journal'].forEach(t => {
                 setHidden('panel-' + t, t !== name);
             });
             if (document.querySelectorAll) {
@@ -4105,6 +4359,13 @@
 
         // ---------- Démarrage ----------
         window.onload = function () {
+            if (SIGNUP_MODE) {   // lien d'inscription : on n'affiche que le formulaire public
+                setHidden('authSection', true);
+                setHidden('signupSection', false);
+                document.getElementById('su_avatar').innerHTML = avatarHtml({ id: 'X', name: '?' }, 72);
+                if (CLOUD) { setSync('connecting'); Promise.resolve(window.FB_READY).then(() => setSync('online')).catch(() => {}); }
+                return;
+            }
             loadAutoLock();
             startAutoLockWatch();
             if (CLOUD) { initCloud(); return; }

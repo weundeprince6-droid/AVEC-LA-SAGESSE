@@ -8,6 +8,7 @@
 //   requests/{id}       demandes de crédit / retrait                    -> créées par le membre, traitées par l'admin
 //   profiles/{uid}      lien compte de connexion -> membre (+ mustChange)
 //   loginIndex/{MBR-001} numéro de version du compte (réinitialisation du mot de passe)
+//   registrations/{id}  demandes d'inscription envoyées par le formulaire public (lien ?inscription)
 //   activity/{id}       journal des actions de l'équipe (créé par l'équipe, lu par l'administrateur)
 //   staff/{e-mail}      équipe : level 'poste' (tout sauf supprimer) ou 'total' (tous les droits)
 //
@@ -192,6 +193,21 @@ window.FB_READY = (async () => {
         },
         listenSettings(cb, onError) {
             return onSnapshot(doc(db, 'settings', 'social'), s => cb(s.exists() ? s.data() : null), err => onError(err));
+        },
+
+        // ----- Inscriptions : formulaire public (création sans connexion), traitées par l'équipe -----
+        async submitRegistration(entry) {
+            await setDoc(doc(db, 'registrations', entry.id), entry);
+        },
+        async updateRegistration(id, patch) {
+            await updateDoc(doc(db, 'registrations', id), patch);
+        },
+        async removeRegistration(id) {
+            await deleteDoc(doc(db, 'registrations', id));
+        },
+        listenRegistrations(cb, onError) {
+            const q = query(collection(db, 'registrations'), orderBy('date', 'desc'), limit(200));
+            return onSnapshot(q, snap => cb(snap.docs.map(d => Object.assign({}, d.data(), { id: d.id }))), err => onError(err));
         },
 
         // ----- Annonces (écrites par l'équipe, lues par tous les membres connectés) -----
