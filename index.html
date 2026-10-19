@@ -159,6 +159,13 @@
         #memberSection .card-header i { color: var(--primary); }
         #memberTabs .dtab.active { background: #eff6ff; border-radius: 8px 8px 0 0; }
         .avatar { border-radius: 50%; object-fit: cover; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; flex: 0 0 auto; vertical-align: middle; border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18); }
+        .zoomable { cursor: zoom-in; }
+        .photo-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .photo-modal.hidden { display: none; }
+        .photo-view { position: relative; text-align: center; max-width: 100%; }
+        .photo-view img { display: block; max-width: min(88vw, 520px); max-height: 78vh; border-radius: 16px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); background: #fff; }
+        .photo-view #photoCaption { color: #fff; font-weight: 700; margin-top: 10px; }
+        .photo-close { position: absolute; top: -14px; right: -14px; width: 34px; height: 34px; border-radius: 50%; border: none; background: #fff; color: #111; font-size: 1.4rem; line-height: 1; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
         .avatar-click { cursor: pointer; position: relative; }
         .avatar-click:hover .avatar { filter: brightness(0.85); }
         .hero-id { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; }
@@ -1154,6 +1161,14 @@
             <div id="pwdResultBox" class="alert hidden"></div>
         </section>
             </div>
+        </div>
+    </div>
+
+    <div id="photoModal" class="photo-modal hidden" onclick="closePhoto()">
+        <div class="photo-view" onclick="event.stopPropagation()">
+            <button type="button" class="photo-close" onclick="closePhoto()" aria-label="Fermer">&times;</button>
+            <img id="photoBig" alt="Photo de profil">
+            <div id="photoCaption"></div>
         </div>
     </div>
 
@@ -2311,12 +2326,21 @@
             const p = memberProfiles[m.id];
             const sz = 'width:' + size + 'px;height:' + size + 'px;';
             if (p && typeof p.photo === 'string' && p.photo.indexOf('data:image/jpeg;base64,') === 0)
-                return '<img class="avatar" alt="" src="' + p.photo + '" style="' + sz + '">';
+                return '<img class="avatar zoomable" alt="Photo de ' + escapeHtml(m.name || '') + '" title="Voir la photo" src="' + p.photo + '" data-name="' + escapeHtml(m.name || '') + '" onclick="event.stopPropagation(); viewPhoto(this)" style="' + sz + '">';
             const colors = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#059669', '#0891b2'];
             let h = 0; String(m.id || '').split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) % 997; });
             const ini = String(m.name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w.charAt(0).toUpperCase()).join('');
             return '<span class="avatar" style="' + sz + 'font-size:' + Math.round(size * 0.4) + 'px;background:' + colors[h % colors.length] + ';">' + escapeHtml(ini) + '</span>';
         }
+        function viewPhoto(img) {
+            const box = document.getElementById('photoModal');
+            if (!box) return;
+            document.getElementById('photoBig').src = img.src;
+            document.getElementById('photoCaption').textContent = img.getAttribute('data-name') || '';
+            box.classList.remove('hidden');
+        }
+        function closePhoto() { const b = document.getElementById('photoModal'); if (b) b.classList.add('hidden'); }
+        try { document.addEventListener('keydown', e => { if (e.key === 'Escape') closePhoto(); }); } catch (e) {}
         function savePhotoValue(photo) {
             const msg = document.getElementById('pfPhotoMsg');
             if (!currentUser || currentUser.role !== 'member') return;
