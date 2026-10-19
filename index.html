@@ -159,7 +159,11 @@
         #memberSection .card-header i { color: var(--primary); }
         #memberTabs .dtab.active { background: #eff6ff; border-radius: 8px 8px 0 0; }
         .avatar { border-radius: 50%; object-fit: cover; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; flex: 0 0 auto; vertical-align: middle; border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18); }
-.insc-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; background: #fff; }
+.subtabs { display: flex; gap: 6px; margin-bottom: 14px; }
+        .subtab { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 6px 14px; font-weight: 600; font-size: 0.85rem; cursor: pointer; color: var(--text-muted); }
+        .subtab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .subtab .tab-badge { margin-left: 4px; }
+        .insc-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; background: #fff; }
         .insc-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
         .gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
         .gal-item { margin: 0; background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
@@ -427,12 +431,11 @@
         <!-- ONGLETS PAR CATÉGORIE -->
         <nav class="dtabs" id="dashTabs">
             <button class="dtab active" data-tab="dashboard" onclick="showTab('dashboard')"><i class="fa-solid fa-chart-pie"></i> Tableau de bord</button>
-            <button class="dtab" data-tab="membres" onclick="showTab('membres')"><i class="fa-solid fa-users"></i> Membres</button>
+            <button class="dtab" data-tab="membres" onclick="showTab('membres')"><i class="fa-solid fa-users"></i> Membres <span class="tab-badge hidden" id="tabBadgeMembres">0</span></button>
             <button class="dtab" data-tab="operations" onclick="showTab('operations')"><i class="fa-solid fa-money-bill-transfer"></i> Opérations</button>
             <button class="dtab" data-tab="social" onclick="showTab('social')"><i class="fa-solid fa-hand-holding-heart"></i> Cas sociaux</button>
             <button class="dtab" data-tab="annonces" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
             <button class="dtab" data-tab="galerie" onclick="showTab('galerie')"><i class="fa-solid fa-images"></i> Galerie</button>
-            <button class="dtab" data-tab="inscriptions" onclick="showTab('inscriptions')"><i class="fa-solid fa-user-plus"></i> Inscriptions <span class="tab-badge hidden" id="tabBadgeInsc">0</span></button>
             <button class="dtab" data-tab="demandes" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes <span class="tab-badge hidden" id="tabBadgeReq">0</span></button>
             <button class="dtab" data-tab="reclamations" onclick="showTab('reclamations')"><i class="fa-solid fa-bell"></i> Réclamations <span class="tab-badge hidden" id="tabBadgeClaims">0</span></button>
             <button class="dtab hidden" id="tabBtnEquipe" data-tab="equipe" onclick="showTab('equipe')"><i class="fa-solid fa-user-shield"></i> Équipe</button>
@@ -566,6 +569,11 @@
         </div>
 
         <div class="dpanel hidden" id="panel-membres">
+            <div class="subtabs">
+                <button type="button" class="subtab active" id="subBtn-repertoire" onclick="showMemberSub('repertoire')"><i class="fa-solid fa-users"></i> Répertoire</button>
+                <button type="button" class="subtab" id="subBtn-inscriptions" onclick="showMemberSub('inscriptions')"><i class="fa-solid fa-user-plus"></i> Inscriptions <span class="tab-badge hidden" id="subBadgeInsc">0</span></button>
+            </div>
+            <div id="memSub-repertoire">
             <div class="grid-container">
                 <div>
                 <section class="card">
@@ -630,6 +638,28 @@
                                 </section>
                 </div>
             </div>
+            </div>
+            <div id="memSub-inscriptions" class="hidden">
+            <section class="card">
+                <div class="card-header"><i class="fa-solid fa-link"></i><h3>Lien d'inscription à partager</h3></div>
+                <p id="inscNote" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;">Envoyez ce lien aux personnes qui veulent rejoindre le groupe. Elles remplissent leur identité ; vous confirmez ensuite chaque demande ci-dessous.</p>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    <input type="text" id="inscLink" readonly style="flex:1 1 260px;" onclick="this.select()">
+                    <button type="button" class="btn-small" onclick="copyInscLink()"><i class="fa-solid fa-copy"></i> Copier le lien</button>
+                    <button type="button" class="btn-small wa" onclick="shareInscLink()"><i class="fa-brands fa-whatsapp"></i> Partager sur WhatsApp</button>
+                </div>
+                <div id="inscCopyMsg" style="font-size:0.82rem;margin-top:4px;color:var(--success);"></div>
+            </section>
+            <section class="card" style="margin-top:16px;">
+                <div class="card-header"><i class="fa-solid fa-user-clock"></i><h3>Demandes en attente</h3></div>
+                <div id="inscPending"></div>
+            </section>
+            <section class="card" style="margin-top:16px;">
+                <div class="card-header"><i class="fa-solid fa-clock-rotate-left"></i><h3>Demandes traitées</h3></div>
+                <div id="inscDone"></div>
+            </section>
+            <div id="inscResult" class="alert hidden" style="margin-top:16px;"></div>
+                    </div>
         </div>
 
         <div class="dpanel hidden" id="panel-membre">
@@ -878,28 +908,6 @@
                                     </div>
                                     <div id="requestsAdminList"></div>
                                 </section>
-        </div>
-
-        <div class="dpanel hidden" id="panel-inscriptions">
-            <section class="card">
-                <div class="card-header"><i class="fa-solid fa-link"></i><h3>Lien d'inscription à partager</h3></div>
-                <p id="inscNote" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;">Envoyez ce lien aux personnes qui veulent rejoindre le groupe. Elles remplissent leur identité ; vous confirmez ensuite chaque demande ci-dessous.</p>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                    <input type="text" id="inscLink" readonly style="flex:1 1 260px;" onclick="this.select()">
-                    <button type="button" class="btn-small" onclick="copyInscLink()"><i class="fa-solid fa-copy"></i> Copier le lien</button>
-                    <button type="button" class="btn-small wa" onclick="shareInscLink()"><i class="fa-brands fa-whatsapp"></i> Partager sur WhatsApp</button>
-                </div>
-                <div id="inscCopyMsg" style="font-size:0.82rem;margin-top:4px;color:var(--success);"></div>
-            </section>
-            <section class="card" style="margin-top:16px;">
-                <div class="card-header"><i class="fa-solid fa-user-clock"></i><h3>Demandes en attente</h3></div>
-                <div id="inscPending"></div>
-            </section>
-            <section class="card" style="margin-top:16px;">
-                <div class="card-header"><i class="fa-solid fa-clock-rotate-left"></i><h3>Demandes traitées</h3></div>
-                <div id="inscDone"></div>
-            </section>
-            <div id="inscResult" class="alert hidden" style="margin-top:16px;"></div>
         </div>
 
         <div class="dpanel hidden" id="panel-galerie">
@@ -2296,6 +2304,7 @@
         }
 
         function updateDashboard() {
+            try { renderRegistrations(); } catch (e) {}
             try { fillDefaultPassword(); } catch (e) {}
             try { renderGallery(); } catch (e) {}
             const searchBox = document.getElementById('memberSearch');
@@ -2529,7 +2538,8 @@
             if (note && !CLOUD) note.innerHTML = '<strong>Mode local :</strong> le lien ne fonctionne qu\'avec la version en ligne (Firebase). Ici, les demandes ne sont visibles que sur cet appareil.';
             const list = (registrations || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
             const waiting = list.filter(r => r.status === 'pending'), done = list.filter(r => r.status !== 'pending');
-            setBadge('tabBadgeInsc', waiting.length);
+            setBadge('subBadgeInsc', waiting.length);
+            setBadge('tabBadgeMembres', waiting.length);
             const card = (r, hist) => {
                 const id = escapeHtml(r.id);
                 const ph = r.photo && String(r.photo).indexOf('data:image/jpeg;base64,') === 0
@@ -3364,15 +3374,23 @@
             window.addEventListener('resize', syncHeaderHeight);
             window.addEventListener('load', syncHeaderHeight);
         }
+        function showMemberSub(which) {
+            setHidden('memSub-repertoire', which !== 'repertoire');
+            setHidden('memSub-inscriptions', which !== 'inscriptions');
+            const a = document.getElementById('subBtn-repertoire'), b = document.getElementById('subBtn-inscriptions');
+            if (a && a.classList) { if (which === 'repertoire') a.classList.add('active'); else a.classList.remove('active'); }
+            if (b && b.classList) { if (which === 'inscriptions') b.classList.add('active'); else b.classList.remove('active'); }
+            if (which === 'inscriptions') { try { renderRegistrations(); } catch (e) {} }
+        }
         function showTab(name) {
+            if (name === 'inscriptions') { name = 'membres'; showMemberSub('inscriptions'); }
             // Équipe et Journal : réservés à l'accès total (en ligne)
             if ((name === 'equipe' || name === 'journal') && (!CLOUD || !currentUser || currentUser.level !== 'total')) name = 'dashboard';
             currentTab = name;
             if (name === 'galerie') { try { renderGallery(); } catch (e) {} }
-            if (name === 'inscriptions') { try { renderRegistrations(); } catch (e) {} }
             syncHeaderHeight();
             labelTables();
-            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'inscriptions', 'demandes', 'reclamations', 'equipe', 'journal'].forEach(t => {
+            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'equipe', 'journal'].forEach(t => {
                 setHidden('panel-' + t, t !== name);
             });
             if (document.querySelectorAll) {
