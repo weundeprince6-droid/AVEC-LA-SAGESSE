@@ -1308,7 +1308,7 @@
     </div>
 
     <script src="firebase-config.js"></script>
-    <script type="module" src="firebase-adapter.js"></script>
+    <script type="module" src="firebase-adapter.js?v=20261019"></script>
     <script>
         // ---------- Utilitaires ----------
 
@@ -3117,7 +3117,8 @@
         }
         function saveWaSettings(e) {
             e.preventDefault();
-            if (!CLOUD || !F() || !F().saveWaSettings) { waMsg("L'envoi automatique n'est possible qu'avec la base en ligne (Firebase).", false); return; }
+            if (!CLOUD) { waMsg("L'envoi automatique n'est possible qu'avec la base en ligne (Firebase).", false); return; }
+            if (!F() || !F().saveWaSettings) { waMsg("La mise à jour n'est pas encore chargée dans ce navigateur : appuyez sur Ctrl+F5 (ou fermez et rouvrez la page), puis réessayez.", false); return; }
             if (!isAdmin(currentUser) || !canDelete(currentUser)) { waMsg("Seul l'accès total peut changer ce réglage.", false); return; }
             const mode = document.getElementById('waModeAuto').checked ? 'auto' : 'manual';
             const autoOps = document.getElementById('waAutoOps').checked;
