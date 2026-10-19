@@ -1,0 +1,11 @@
+{
+  "name": "avec-la-sagesse-whatsapp",
+  "description": "Envoi automatique des messages WhatsApp de l'application AVEC LA SAGESSE (Meta WhatsApp Cloud API)",
+  "private": true,
+  "main": "index.js",
+  "engines": { "node": "20" },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.0"
+  }
+}

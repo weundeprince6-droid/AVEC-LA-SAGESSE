@@ -78,16 +78,41 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // Réglages : montant de la cotisation hebdomadaire « cas sociaux » (lu par tous, modifié par l'accès total)
+    // Réglages : « social » = cotisation hebdomadaire (lue par tous, modifiée par l'accès total) ;
+    // « whatsapp » = envoi manuel ou automatique (lu par l'équipe, modifié par l'accès total)
     match /settings/{settingId} {
-      allow read: if isStaff() || hasProfile();
-      allow create, update: if isAdmin()
-        && settingId == 'social'
-        && request.resource.data.keys().hasOnly(['weekly', 'by', 'date'])
-        && request.resource.data.weekly is number
-        && request.resource.data.weekly > 0
-        && request.resource.data.weekly <= 100000000;
+      allow read: if isStaff() || (hasProfile() && settingId == 'social');
+      allow create, update: if isAdmin() && (
+        (settingId == 'social'
+          && request.resource.data.keys().hasOnly(['weekly', 'by', 'date'])
+          && request.resource.data.weekly is number
+          && request.resource.data.weekly > 0
+          && request.resource.data.weekly <= 100000000)
+        || (settingId == 'whatsapp'
+          && request.resource.data.keys().hasOnly(['mode', 'autoOps', 'template', 'lang', 'by', 'date'])
+          && request.resource.data.mode in ['manual', 'auto']
+          && request.resource.data.autoOps is bool
+          && request.resource.data.template is string && request.resource.data.template.size() <= 60
+          && request.resource.data.lang is string && request.resource.data.lang.size() <= 10));
       allow delete: if false;
+    }
+
+    // File d'envoi WhatsApp automatique : l'équipe dépose un message (statut « pending »), la Cloud Function
+    // l'envoie via Meta puis met à jour le statut (elle n'est pas soumise à ces règles). Personne ne modifie une ligne.
+    match /whatsappQueue/{qid} {
+      allow read: if isStaff();
+      allow create: if isStaff()
+        && request.resource.data.keys().hasOnly(['id', 'date', 'to', 'text', 'kind', 'memberId', 'status', 'by'])
+        && request.resource.data.id == qid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.by == request.auth.token.email
+        && request.resource.data.to is string && request.resource.data.to.matches('^[0-9]{8,15}$')
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+        && request.resource.data.kind in ['situation', 'rappel', 'recu', 'annonce', 'diffusion']
+        && okText(request.resource.data.memberId, 40)
+        && okText(request.resource.data.date, 40);
+      allow update: if false;
+      allow delete: if isAdmin();
     }
 
     // Profil complété par le membre lui-même (adresse, profession, personne à prévenir…).

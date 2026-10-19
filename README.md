@@ -24,6 +24,8 @@ Application web de gestion d'une AVEC : épargne, crédits et remboursements des
 | `firebase-adapter.js` | Connexion et synchronisation avec Firebase |
 | `firestore.rules` | Règles de sécurité de la base (à publier dans Firebase) |
 | `GUIDE-FIREBASE.md` | Installation pas à pas côté Firebase |
+| `GUIDE-WHATSAPP-AUTO.md` | Envoi automatique des messages WhatsApp (Meta + Cloud Function) |
+| `functions/` , `firebase.json` | Programme d’envoi automatique (à déployer avec `firebase deploy --only functions`) |
 
 ## Mode local et mode en ligne
 
@@ -38,3 +40,4 @@ Une fois Firebase configuré (voir `GUIDE-FIREBASE.md`), l'administrateur et les
 - **Galerie** (administrateur) : onglet qui rassemble les photos de profil avec le nom du membre en titre, agrandissement au clic, téléchargement de chaque photo sous le nom du membre (ex. Bahati_Alain.jpg).
 - **Inscriptions en ligne** : sous-onglet « Inscriptions » de l'onglet Membres (pastille rouge sur Membres) avec un lien à partager (adresse du site suivie de ?inscription). La personne remplit son identité (et une photo facultative) sans compte ; l'administrateur accepte (le membre est créé avec son profil et sa photo, ses accès partent par WhatsApp) ou refuse. Republier firestore.rules.
 - **Mot de passe par défaut automatique** : « avec » + numéro du membre sur 4 chiffres (MBR-011 → avec0011), proposé dans le formulaire « Nouveau membre » et utilisé à l'acceptation d'une inscription. Le membre doit le changer à sa première connexion.
+- **Envoi WhatsApp manuel ou automatique** (onglet Annonces, carte « Envoi WhatsApp », accès total) : en « Manuel », les boutons ouvrent WhatsApp (gratuit) ; en « Automatique », les messages sont déposés dans la file `whatsappQueue` et envoyés par une Cloud Function via l'API WhatsApp Cloud de Meta (confirmation automatique de chaque opération, diffusion à tous, suivi Envoyé/Échec avec réessai). Installation unique dans `GUIDE-WHATSAPP-AUTO.md` ; en attendant, rester en Manuel. Republier firestore.rules.

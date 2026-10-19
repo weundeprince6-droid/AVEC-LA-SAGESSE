@@ -875,6 +875,26 @@
                     <div id="annAdminList"></div>
                 </section>
             </div>
+            <section class="card" style="margin-top:20px;" id="waAutoCard">
+                <div class="card-header"><i class="fa-brands fa-whatsapp"></i><h3>Envoi WhatsApp : manuel ou automatique</h3><span id="waModeNow" style="margin-left:auto;"></span></div>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;"><strong>Manuel</strong> : WhatsApp s'ouvre avec le message prêt et vous appuyez sur « Envoyer » (gratuit). <strong>Automatique</strong> : les messages partent seuls, sans ouvrir WhatsApp, via l'API officielle WhatsApp Business de Meta (installation unique décrite dans <em>GUIDE-WHATSAPP-AUTO.md</em> ; chaque message peut être facturé par Meta).</p>
+                <form onsubmit="saveWaSettings(event)">
+                    <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:8px;font-weight:500;"><input type="radio" name="waMode" id="waModeManual" style="width:auto;" checked> Manuel (gratuit)</label>
+                        <label style="display:flex;align-items:center;gap:8px;font-weight:500;margin-top:6px;"><input type="radio" name="waMode" id="waModeAuto" style="width:auto;"> Automatique</label>
+                    </div>
+                    <div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:500;"><input type="checkbox" id="waAutoOps" style="width:auto;" checked> En mode automatique, confirmer chaque opération au membre (versement, crédit, remboursement, retrait)</label></div>
+                    <details style="margin-bottom:10px;"><summary style="cursor:pointer;font-size:0.88rem;">Réglages avancés</summary>
+                        <div class="form-group" style="margin-top:8px;"><label>Nom du modèle de message approuvé par Meta</label><input type="text" id="waTemplate" maxlength="60" placeholder="avec_notification"></div>
+                        <div class="form-group"><label>Langue du modèle</label><input type="text" id="waLang" maxlength="10" placeholder="fr"></div>
+                    </details>
+                    <button type="submit" class="btn"><i class="fa-solid fa-floppy-disk"></i> Enregistrer le réglage</button>
+                </form>
+                <div id="waSetMsg" class="alert hidden"></div>
+                <h4 style="margin:14px 0 6px;font-size:0.92rem;">File d'envoi automatique</h4>
+                <div id="waQueueList"></div>
+                <div style="margin-top:8px;"><button type="button" class="btn-small danger" onclick="waClearQueue()"><i class="fa-solid fa-broom"></i> Vider les envois terminés</button></div>
+            </section>
             <section class="card" style="margin-top:20px;">
                 <div class="card-header"><i class="fa-brands fa-whatsapp"></i><h3>Message de diffusion WhatsApp</h3></div>
                 <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Écrivez un message, choisissez les membres, puis envoyez-le un par un : WhatsApp s'ouvre à chaque fois avec le bon numéro et le message prêt. <strong>{prénom}</strong> est remplacé par le prénom du membre.</p>
@@ -883,7 +903,8 @@
                         <div class="form-group"><label>Message</label>
                             <textarea id="waBcText" rows="6" maxlength="1000" placeholder="Bonjour {prénom}, réunion samedi à 10 h. — AVEC LA SAGESSE" oninput="renderBroadcast()"></textarea></div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                            <button type="button" class="btn-small wa" onclick="waBroadcastNext()"><i class="fa-brands fa-whatsapp"></i> Envoyer au suivant</button>
+                            <button type="button" class="btn-small wa wa-manual-only" onclick="waBroadcastNext()"><i class="fa-brands fa-whatsapp"></i> Envoyer au suivant</button>
+                            <button type="button" class="btn-small wa wa-auto-only" style="display:none;" onclick="waBroadcastAll()"><i class="fa-solid fa-paper-plane"></i> Envoyer automatiquement à tous</button>
                             <button type="button" class="btn-small" onclick="waCopyNumbers()"><i class="fa-solid fa-copy"></i> Copier les numéros</button>
                             <button type="button" class="btn-small" onclick="waBroadcastReset()"><i class="fa-solid fa-rotate-left"></i> Recommencer</button>
                         </div>
@@ -1428,6 +1449,10 @@
         let registrations = CLOUD ? [] : (store.get('avec_regs', []) || []);
         let memberProfiles = CLOUD ? {} : (store.get('avec_mprofiles', {}) || {});
         let announcements = CLOUD ? [] : store.get('avec_annonces', []);
+        // Envoi WhatsApp : « manual » (WhatsApp s'ouvre, gratuit) ou « auto » (file d'envoi traitée par la Cloud Function)
+        const WA_DEFAULTS = { mode: 'manual', autoOps: true, template: 'avec_notification', lang: 'fr' };
+        let waSettings = Object.assign({}, WA_DEFAULTS);
+        let waQueue = [];
         let claims = CLOUD ? [] : store.get('avec_claims', []);
         let requests = CLOUD ? [] : store.get('avec_requests', []);
         let currentUser = null;
@@ -1481,6 +1506,7 @@
             if (devise === 'FC') entry.devise = 'FC';
             m.history.push(entry);
             if (m.history.length > 200) m.history = m.history.slice(-200);
+            waAutoOp(m, entry);
             if (note !== 'Épargne initiale') {
                 logActivity((OP_LABELS[type] || type) + ' : ' + fmt(amount, devise) + ' — ' + m.name + ' (' + m.id + ')' + (note ? ' · ' + note : ''), m.id);
             }
@@ -1664,11 +1690,16 @@
                 : F().listenMyProfile(currentUser.memberId, onProfiles, err => { /* sans gravité */ });
             let stopReg = () => {};
             if (isAdmin(currentUser) && F().listenRegistrations) stopReg = F().listenRegistrations(list => { registrations = list || []; renderRegistrations(); }, err => { /* sans gravité */ });
-            stopListening = () => { stopData(); stopAnn(); stopSet(); stopProf(); stopReg(); };
+            let stopWa = () => {}, stopWaQ = () => {};
+            if (isAdmin(currentUser) && F().listenWaSettings) {
+                stopWa = F().listenWaSettings(d => { waSettings = Object.assign({}, WA_DEFAULTS, d || {}); renderWaSettings(); applyWaMode(); }, err => { /* sans gravité */ });
+                stopWaQ = F().listenWaQueue(list => { waQueue = list || []; renderWaQueue(); }, err => { /* sans gravité */ });
+            }
+            stopListening = () => { stopData(); stopAnn(); stopSet(); stopProf(); stopReg(); stopWa(); stopWaQ(); };
         }
 
         function resetCloudState() {
-            members = []; claims = []; requests = []; announcements = []; registrations = []; memberProfiles = {}; socialWeekly = SOCIAL_DEFAULT;
+            members = []; claims = []; requests = []; announcements = []; registrations = []; waQueue = []; waSettings = Object.assign({}, WA_DEFAULTS); memberProfiles = {}; socialWeekly = SOCIAL_DEFAULT;
             cloudLoaded.members = cloudLoaded.claims = cloudLoaded.requests = false;
             lastSynced.members = {}; lastSynced.claims = {}; lastSynced.requests = {};
             importChecked = false;
@@ -2780,6 +2811,62 @@
             const parts = open.map(c => fmt(creditRemaining(c), devOf(c)) + (c.dueDate ? ' avant le ' + formatISOtoFR(c.dueDate) : ''));
             return 'Bonjour ' + first + ',\nPetit rappel : il vous reste à rembourser ' + parts.join(' et ') + '.\nMerci de votre ponctualité. — AVEC LA SAGESSE';
         }
+        // Texte de confirmation d'une opération (même texte en manuel et en automatique)
+        function waReceiptText(m, h) {
+            const amt = Number(h.amount) || 0;
+            return 'Bonjour ' + String(m.name || '').split(' ')[0] + ',\nConfirmation : ' + (OP_LABELS[h.type] || 'Opération') + ' de ' + fmt(Math.abs(amt), devOf(h)) + ' le ' + formatISOtoFR(h.date) + '.' +
+                (h.note ? '\n' + h.note : '') + '\nVotre épargne : ' + fmt(m.epargne) + ' · ' + fmt(sav(m, 'FC'), 'FC') + '.\n— AVEC LA SAGESSE';
+        }
+        // ----- Envoi automatique : le message est déposé dans la file « whatsappQueue », la Cloud Function l'envoie via Meta -----
+        function waAuto() { return CLOUD && !!F() && !!F().queueWhatsapp && !!currentUser && isAdmin(currentUser) && waSettings.mode === 'auto'; }
+        function waToast(msg, bad) {
+            try {
+                let t = document.getElementById('waToast');
+                if (!t) {
+                    t = document.createElement('div'); t.id = 'waToast';
+                    t.style.cssText = 'position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:3000;max-width:92vw;padding:10px 16px;border-radius:10px;font-size:0.88rem;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25);';
+                    document.body.appendChild(t);
+                }
+                t.textContent = msg;
+                t.style.background = bad ? '#991b1b' : '#075e54'; t.style.color = '#fff';
+                t.style.display = 'block';
+                clearTimeout(waToast.h);
+                waToast.h = setTimeout(() => { t.style.display = 'none'; }, 3500);
+            } catch (e) {}
+        }
+        function waEnqueue(num, text, kind, memberId) {
+            const entry = {
+                id: 'W-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8),
+                date: new Date().toISOString(), to: String(num), text: String(text).slice(0, 1000),
+                kind: kind, memberId: memberId || '', status: 'pending', by: String(currentUser.username)
+            };
+            return F().queueWhatsapp(entry);
+        }
+        // Envoie un message : automatiquement si le mode est « Automatique », sinon ouvre WhatsApp
+        function waDeliver(num, text, kind, memberId) {
+            if (!waAuto()) { waOpen(num, text); return; }
+            waEnqueue(num, text, kind, memberId)
+                .then(() => waToast('Message envoyé automatiquement (voir la file dans Annonces).'))
+                .catch(err => { if (confirm("L'envoi automatique a échoué (" + errText(err) + ").\nOuvrir WhatsApp pour l'envoyer à la main ?")) waOpen(num, text); });
+        }
+        // Dépose le même message (personnalisé) pour plusieurs membres ; renvoie une promesse { ok, fail }
+        function waEnqueueMany(list, textFn, kind) {
+            return Promise.all(list.map(m => waEnqueue(waNumber(m.phone), textFn(m), kind, m.id).then(() => ({ ok: m.id }), err => ({ err: err })))).then(rs => {
+                const ok = rs.filter(r => r.ok).map(r => r.ok), fail = rs.filter(r => r.err);
+                waToast(ok.length + ' message(s) en cours d\'envoi' + (fail.length ? ' · ' + fail.length + ' échec(s) : ' + errText(fail[0].err) : '') + '.', fail.length > 0);
+                return { ok: ok, fail: fail.length };
+            });
+        }
+        // Confirmation automatique après une opération (si l'envoi est en mode Automatique et l'option cochée)
+        function waAutoOp(m, entry) {
+            try {
+                if (!waAuto() || !waSettings.autoOps || !entry || entry.note === 'Épargne initiale') return;
+                if (['epargne', 'credit', 'retrait', 'remboursement', 'social', 'prolongation'].indexOf(entry.type) < 0) return;
+                const num = waNumber(m.phone);
+                if (!num) return;
+                waEnqueue(num, waReceiptText(m, entry), 'recu', m.id).catch(() => {});
+            } catch (e) {}
+        }
         function waSend(memberId, kind, idx) {
             const m = members.find(x => x.id === memberId);
             if (!m) return;
@@ -2793,16 +2880,22 @@
             } else if (kind === 'recu') {
                 const h = (m.history || [])[idx];
                 if (!h) return;
-                const amt = Number(h.amount) || 0;
-                text = 'Bonjour ' + String(m.name || '').split(' ')[0] + ',\nConfirmation : ' + (OP_LABELS[h.type] || 'Opération') + ' de ' + fmt(Math.abs(amt), devOf(h)) + ' le ' + formatISOtoFR(h.date) + '.' +
-                    (h.note ? '\n' + h.note : '') + '\nVotre épargne : ' + fmt(m.epargne) + ' · ' + fmt(sav(m, 'FC'), 'FC') + '.\n— AVEC LA SAGESSE';
+                text = waReceiptText(m, h);
             }
-            waOpen(num, text);
+            waDeliver(num, text, kind, m.id);
         }
         function waAnnounce(annId) {
             const a = announcements.find(x => x.id === annId);
             if (!a) return;
-            waOpen('', '📢 ' + a.title + '\n\n' + a.text + '\n\n— AVEC LA SAGESSE');
+            const text = '📢 ' + a.title + '\n\n' + a.text + '\n\n— AVEC LA SAGESSE';
+            if (waAuto()) {
+                const list = waBcMembers();
+                if (!list.length) { alert('Aucun membre avec un numéro de téléphone.'); return; }
+                if (!confirm('Envoyer cette annonce automatiquement à ' + list.length + ' membre(s) ?\nChaque message peut être facturé par Meta.')) return;
+                waEnqueueMany(list, () => text, 'annonce');
+                return;
+            }
+            waOpen('', text);
         }
         function renderMemberDetail() {
             const box = document.getElementById('memberDetail');
@@ -2947,6 +3040,7 @@
         function renderBroadcast() {
             const box = document.getElementById('waBcList');
             if (!box) return;
+            applyWaMode();
             const all = waBcMembers();
             const noPhone = members.length - all.length;
             box.innerHTML = all.map(m => {
@@ -2967,9 +3061,18 @@
             const t = document.getElementById('waBcText');
             if (!m) return;
             if (!t || !t.value.trim()) { alert('Écrivez d\'abord le message à diffuser.'); return; }
-            waOpen(waNumber(m.phone), waBcText(m));
+            waDeliver(waNumber(m.phone), waBcText(m), 'diffusion', m.id);
             waBcSent[m.id] = true;
             renderBroadcast();
+        }
+        function waBroadcastAll() {
+            const t = document.getElementById('waBcText');
+            if (!t || !t.value.trim()) { alert('Écrivez d\'abord le message à diffuser.'); return; }
+            if (!waAuto()) { alert('Passez d\'abord l\'envoi en mode « Automatique » (carte ci-dessus).'); return; }
+            const list = waBcMembers().filter(m => !waBcOff[m.id] && !waBcSent[m.id]);
+            if (!list.length) { alert('Tous les membres choisis ont déjà reçu le message. Cliquez sur « Recommencer » pour renvoyer.'); return; }
+            if (!confirm('Envoyer ce message automatiquement à ' + list.length + ' membre(s) ?\nChaque message peut être facturé par Meta.')) return;
+            waEnqueueMany(list, waBcText, 'diffusion').then(r => { r.ok.forEach(id => { waBcSent[id] = true; }); renderBroadcast(); });
         }
         function waBroadcastNext() {
             const next = waBcMembers().find(m => !waBcOff[m.id] && !waBcSent[m.id]);
@@ -2983,7 +3086,81 @@
             try { navigator.clipboard.writeText(nums).then(done, () => prompt('Copiez les numéros :', nums.replace(/\n/g, ', '))); }
             catch (e) { prompt('Copiez les numéros :', nums.replace(/\n/g, ', ')); }
         }
+        // ----- Réglage Manuel / Automatique + file d'envoi -----
+        function applyWaMode() {
+            try {
+                const auto = waAuto();
+                document.querySelectorAll('.wa-auto-only').forEach(e => { e.style.display = auto ? '' : 'none'; });
+                document.querySelectorAll('.wa-manual-only').forEach(e => { e.style.display = auto ? 'none' : ''; });
+            } catch (e) {}
+        }
+        function waMsg(text, ok) {
+            const box = document.getElementById('waSetMsg');
+            if (!box) return;
+            box.className = 'alert ' + (ok ? 'alert-success' : 'alert-error');
+            box.textContent = text;
+        }
+        function renderWaSettings() {
+            const f = document.getElementById('waAutoCard');
+            if (!f) return;
+            const auto = waSettings.mode === 'auto';
+            const set = (id, fn) => { const e = document.getElementById(id); if (e) fn(e); };
+            set('waModeManual', e => { e.checked = !auto; e.disabled = !CLOUD; });
+            set('waModeAuto', e => { e.checked = auto; e.disabled = !CLOUD; });
+            set('waAutoOps', e => { e.checked = !!waSettings.autoOps; e.disabled = !CLOUD; });
+            set('waTemplate', e => { e.value = waSettings.template || ''; e.disabled = !CLOUD; });
+            set('waLang', e => { e.value = waSettings.lang || 'fr'; e.disabled = !CLOUD; });
+            set('waModeNow', e => {
+                e.innerHTML = !CLOUD ? '<span class="badge badge-due">Mode local : envoi manuel uniquement</span>'
+                    : (auto ? '<span class="badge badge-ok">Mode actuel : Automatique</span>' : '<span class="badge badge-due">Mode actuel : Manuel</span>');
+            });
+        }
+        function saveWaSettings(e) {
+            e.preventDefault();
+            if (!CLOUD || !F() || !F().saveWaSettings) { waMsg("L'envoi automatique n'est possible qu'avec la base en ligne (Firebase).", false); return; }
+            if (!isAdmin(currentUser) || !canDelete(currentUser)) { waMsg("Seul l'accès total peut changer ce réglage.", false); return; }
+            const mode = document.getElementById('waModeAuto').checked ? 'auto' : 'manual';
+            const autoOps = document.getElementById('waAutoOps').checked;
+            const template = document.getElementById('waTemplate').value.trim().slice(0, 60);
+            const lang = (document.getElementById('waLang').value.trim() || 'fr').slice(0, 10);
+            if (mode === 'auto' && !confirm("Passer en envoi AUTOMATIQUE ?\n\nLes messages partiront seuls via l'API WhatsApp Business de Meta (installation du guide GUIDE-WHATSAPP-AUTO.md nécessaire) et pourront être facturés par Meta.")) return;
+            F().saveWaSettings({ mode: mode, autoOps: autoOps, template: template, lang: lang, by: String(currentUser.username), date: new Date().toISOString() })
+                .then(() => waMsg(mode === 'auto' ? 'Envoi automatique activé.' : 'Envoi manuel activé (boutons WhatsApp gratuits).', true))
+                .catch(err => waMsg('Enregistrement impossible : ' + errText(err), false));
+            logActivity('Envoi WhatsApp réglé sur : ' + (mode === 'auto' ? 'automatique' : 'manuel'));
+        }
+        const WA_KINDS = { situation: 'Situation', rappel: 'Rappel', recu: 'Confirmation', annonce: 'Annonce', diffusion: 'Diffusion' };
+        const WA_STATUS = { pending: ['badge-due', 'En attente'], sending: ['badge-due', 'Envoi…'], sent: ['badge-ok', 'Envoyé'], failed: ['badge-late', 'Échec'], cancelled: ['badge-due', 'Annulé'] };
+        function renderWaQueue() {
+            const box = document.getElementById('waQueueList');
+            if (!box) return;
+            if (!waQueue.length) { box.innerHTML = '<p style="color:var(--text-muted);font-size:0.88rem;">Aucun envoi automatique pour le moment.</p>'; return; }
+            box.innerHTML = '<div style="overflow-x:auto;max-height:300px;overflow-y:auto;"><table><thead><tr><th>Date</th><th>Pour</th><th>Type</th><th>Statut</th><th></th></tr></thead><tbody>' +
+                waQueue.slice(0, 40).map(q => {
+                    const m = members.find(x => x.id === q.memberId);
+                    const st = WA_STATUS[q.status] || ['badge-due', escapeHtml(q.status || '?')];
+                    const d = new Date(q.date);
+                    return '<tr><td>' + (isNaN(d) ? '' : d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })) + '</td><td>' +
+                        escapeHtml(m ? m.name : '+' + q.to) + '</td><td>' + escapeHtml(WA_KINDS[q.kind] || q.kind || '') + '</td><td><span class="badge ' + st[0] + '">' + st[1] + '</span>' +
+                        (q.error ? '<br><small style="color:var(--text-muted);">' + escapeHtml(String(q.error).slice(0, 160)) + '</small>' : '') + '</td><td>' +
+                        (q.status === 'failed' ? '<button class="btn-small wa" onclick="waRetry(\'' + escapeHtml(q.id) + '\')" title="Réessayer"><i class="fa-solid fa-rotate-right"></i></button>' : '') + '</td></tr>';
+                }).join('') + '</tbody></table></div>';
+            labelTables();
+        }
+        function waRetry(id) {
+            const q = waQueue.find(x => x.id === id);
+            if (!q || !waAuto()) return;
+            waEnqueue(q.to, q.text, q.kind, q.memberId).then(() => waToast('Nouvel essai envoyé.')).catch(err => waToast('Échec : ' + errText(err), true));
+        }
+        function waClearQueue() {
+            if (!requireTotal()) return;
+            const ids = waQueue.filter(q => q.status === 'sent' || q.status === 'failed' || q.status === 'cancelled').map(q => q.id);
+            if (!ids.length) { waToast('Rien à vider.'); return; }
+            if (!confirm('Retirer ' + ids.length + ' envoi(s) terminé(s) de la liste ?')) return;
+            F().removeWaQueue(ids).then(() => waToast('Liste vidée.')).catch(err => waToast('Échec : ' + errText(err), true));
+        }
         function renderAnnouncements() {
+            try { renderWaSettings(); renderWaQueue(); applyWaMode(); } catch (e) {}
             try { renderBroadcast(); } catch (e) {}
             const list = annSorted();
             const admin = document.getElementById('annAdminList');

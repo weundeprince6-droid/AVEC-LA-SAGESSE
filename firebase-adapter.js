@@ -3,6 +3,7 @@
 //
 // Organisation des données (voir firestore.rules) :
 //   members/{MBR-001}   fiche du membre (épargne, crédits, historique)  -> écrite par l'administrateur
+//   whatsappQueue/{id}  messages WhatsApp à envoyer automatiquement (traités par la Cloud Function)
 //   announcements/{id}  annonces de l'administrateur, lues par tous les membres
 //   claims/{id}         réclamations                                    -> créées par le membre, traitées par l'admin
 //   requests/{id}       demandes de crédit / retrait                    -> créées par le membre, traitées par l'admin
@@ -193,6 +194,28 @@ window.FB_READY = (async () => {
         },
         listenSettings(cb, onError) {
             return onSnapshot(doc(db, 'settings', 'social'), s => cb(s.exists() ? s.data() : null), err => onError(err));
+        },
+
+        // ----- WhatsApp automatique : réglage (manuel / automatique) et file d'envoi lue par la Cloud Function -----
+        async saveWaSettings(data) {
+            await setDoc(doc(db, 'settings', 'whatsapp'), data);
+        },
+        listenWaSettings(cb, onError) {
+            return onSnapshot(doc(db, 'settings', 'whatsapp'), s => cb(s.exists() ? s.data() : null), err => onError(err));
+        },
+        async queueWhatsapp(entry) {
+            await setDoc(doc(db, 'whatsappQueue', entry.id), entry);
+        },
+        async removeWaQueue(ids) {
+            for (let i = 0; i < ids.length; i += 400) {
+                const batch = writeBatch(db);
+                ids.slice(i, i + 400).forEach(id => batch.delete(doc(db, 'whatsappQueue', id)));
+                await batch.commit();
+            }
+        },
+        listenWaQueue(cb, onError) {
+            const q = query(collection(db, 'whatsappQueue'), orderBy('date', 'desc'), limit(60));
+            return onSnapshot(q, snap => cb(snap.docs.map(d => Object.assign({}, d.data(), { id: d.id }))), err => onError(err));
         },
 
         // ----- Inscriptions : formulaire public (création sans connexion), traitées par l'équipe -----
