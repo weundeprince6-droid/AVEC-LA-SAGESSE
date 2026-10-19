@@ -159,6 +159,12 @@
         #memberSection .card-header i { color: var(--primary); }
         #memberTabs .dtab.active { background: #eff6ff; border-radius: 8px 8px 0 0; }
         .avatar { border-radius: 50%; object-fit: cover; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; flex: 0 0 auto; vertical-align: middle; border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18); }
+        .gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+        .gal-item { margin: 0; background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+        .gal-item img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
+        .gal-item figcaption { padding: 8px 10px; display: grid; grid-template-columns: 1fr auto; gap: 2px 6px; align-items: center; font-size: 0.85rem; }
+        .gal-item figcaption small { color: var(--text-muted); grid-column: 1; }
+        .gal-item figcaption button { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
         .zoomable { cursor: zoom-in; }
         .photo-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; }
         .photo-modal.hidden { display: none; }
@@ -377,6 +383,7 @@
             <button class="dtab" data-tab="operations" onclick="showTab('operations')"><i class="fa-solid fa-money-bill-transfer"></i> Opérations</button>
             <button class="dtab" data-tab="social" onclick="showTab('social')"><i class="fa-solid fa-hand-holding-heart"></i> Cas sociaux</button>
             <button class="dtab" data-tab="annonces" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
+            <button class="dtab" data-tab="galerie" onclick="showTab('galerie')"><i class="fa-solid fa-images"></i> Galerie</button>
             <button class="dtab" data-tab="demandes" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes <span class="tab-badge hidden" id="tabBadgeReq">0</span></button>
             <button class="dtab" data-tab="reclamations" onclick="showTab('reclamations')"><i class="fa-solid fa-bell"></i> Réclamations <span class="tab-badge hidden" id="tabBadgeClaims">0</span></button>
             <button class="dtab hidden" id="tabBtnEquipe" data-tab="equipe" onclick="showTab('equipe')"><i class="fa-solid fa-user-shield"></i> Équipe</button>
@@ -822,6 +829,15 @@
                                     </div>
                                     <div id="requestsAdminList"></div>
                                 </section>
+        </div>
+
+        <div class="dpanel hidden" id="panel-galerie">
+            <section class="card">
+                <div class="card-header"><i class="fa-solid fa-images"></i><h3>Galerie des membres</h3></div>
+                <p id="galInfo" style="font-size:0.88rem;color:var(--text-muted);margin-bottom:12px;"></p>
+                <div id="galGrid" class="gal-grid"></div>
+                <div id="galMissing" style="margin-top:14px;font-size:0.85rem;color:var(--text-muted);"></div>
+            </section>
         </div>
 
         <div class="dpanel hidden" id="panel-reclamations">
@@ -2193,6 +2209,7 @@
         }
 
         function updateDashboard() {
+            try { renderGallery(); } catch (e) {}
             const searchBox = document.getElementById('memberSearch');
             const query = normText(searchBox ? searchBox.value : '');
             let shown = 0;
@@ -2331,6 +2348,32 @@
             let h = 0; String(m.id || '').split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) % 997; });
             const ini = String(m.name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w.charAt(0).toUpperCase()).join('');
             return '<span class="avatar" style="' + sz + 'font-size:' + Math.round(size * 0.4) + 'px;background:' + colors[h % colors.length] + ';">' + escapeHtml(ini) + '</span>';
+        }
+        // ---------- Galerie : toutes les photos de profil, avec le nom du membre comme titre ----------
+        function photoFileName(m) {
+            const base = String(m.name || m.id).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_');
+            return (base || m.id) + '.jpg';
+        }
+        function downloadPhoto(id) {
+            const m = members.find(x => x.id === id), p = memberProfiles[id];
+            if (!m || !p || !p.photo) return;
+            const a = document.createElement('a');
+            a.href = p.photo; a.download = photoFileName(m);
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        }
+        function renderGallery() {
+            const grid = document.getElementById('galGrid');
+            if (!grid) return;
+            const withPhoto = members.filter(m => memberProfiles[m.id] && memberProfiles[m.id].photo);
+            const without = members.filter(m => !(memberProfiles[m.id] && memberProfiles[m.id].photo));
+            document.getElementById('galInfo').textContent = withPhoto.length + ' photo(s) sur ' + members.length + ' membre(s). Cliquez sur une photo pour l\'agrandir.';
+            grid.innerHTML = withPhoto.map(m => {
+                const id = escapeHtml(m.id);
+                return '<figure class="gal-item"><img class="zoomable" src="' + memberProfiles[m.id].photo + '" alt="' + escapeHtml(m.name) + '" data-name="' + escapeHtml(m.name) + '" onclick="viewPhoto(this)">' +
+                    '<figcaption><strong>' + escapeHtml(m.name) + '</strong><small>' + id + '</small>' +
+                    '<button type="button" class="btn-small" onclick="downloadPhoto(\'' + id + '\')" title="Télécharger : ' + escapeHtml(photoFileName(m)) + '"><i class="fa-solid fa-download"></i></button></figcaption></figure>';
+            }).join('') || '<p style="color:var(--text-muted);">Aucune photo pour le moment. Les membres ajoutent leur photo dans « Mon compte ».</p>';
+            document.getElementById('galMissing').innerHTML = without.length ? '<strong>Sans photo (' + without.length + ') :</strong> ' + without.map(m => escapeHtml(m.name)).join(', ') : '';
         }
         function viewPhoto(img) {
             const box = document.getElementById('photoModal');
@@ -3059,9 +3102,10 @@
             // Équipe et Journal : réservés à l'accès total (en ligne)
             if ((name === 'equipe' || name === 'journal') && (!CLOUD || !currentUser || currentUser.level !== 'total')) name = 'dashboard';
             currentTab = name;
+            if (name === 'galerie') { try { renderGallery(); } catch (e) {} }
             syncHeaderHeight();
             labelTables();
-            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'demandes', 'reclamations', 'equipe', 'journal'].forEach(t => {
+            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'equipe', 'journal'].forEach(t => {
                 setHidden('panel-' + t, t !== name);
             });
             if (document.querySelectorAll) {

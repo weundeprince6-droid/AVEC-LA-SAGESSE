@@ -35,3 +35,4 @@ Une fois Firebase configuré (voir `GUIDE-FIREBASE.md`), l'administrateur et les
 - **Espace membre en onglets** : Accueil, Mes crédits, Demandes, Réclamations, Mon compte (profil + mot de passe côte à côte).
 - **Photo de profil** : le membre choisit sa photo dans « Mon compte » (réduite à 200 px dans le navigateur, gardée dans sa fiche de profil). Elle apparaît dans son accueil et dans la liste et la fiche côté administrateur. Republier firestore.rules.
 - **Agrandir la photo** : un clic sur une photo l'ouvre en grand (membre, administrateur ou poste de l'équipe) ; Échap ou un clic à côté la ferme.
+- **Galerie** (administrateur) : onglet qui rassemble les photos de profil avec le nom du membre en titre, agrandissement au clic, téléchargement de chaque photo sous le nom du membre (ex. Bahati_Alain.jpg).
