@@ -892,8 +892,9 @@
                 </form>
                 <div id="waSetMsg" class="alert hidden"></div>
                 <h4 style="margin:14px 0 6px;font-size:0.92rem;">File d'envoi automatique</h4>
+                <div id="waStuck" class="alert alert-error hidden"></div>
                 <div id="waQueueList"></div>
-                <div style="margin-top:8px;"><button type="button" class="btn-small danger" onclick="waClearQueue()"><i class="fa-solid fa-broom"></i> Vider les envois terminés</button></div>
+                <div style="margin-top:8px;"><button type="button" class="btn-small danger" onclick="waClearQueue()"><i class="fa-solid fa-broom"></i> Vider les envois terminés ou bloqués</button></div>
             </section>
             <section class="card" style="margin-top:20px;">
                 <div class="card-header"><i class="fa-brands fa-whatsapp"></i><h3>Message de diffusion WhatsApp</h3></div>
@@ -3132,9 +3133,16 @@
         }
         const WA_KINDS = { situation: 'Situation', rappel: 'Rappel', recu: 'Confirmation', annonce: 'Annonce', diffusion: 'Diffusion' };
         const WA_STATUS = { pending: ['badge-due', 'En attente'], sending: ['badge-due', 'Envoi…'], sent: ['badge-ok', 'Envoyé'], failed: ['badge-late', 'Échec'], cancelled: ['badge-due', 'Annulé'] };
+        function waStuckList() { return waQueue.filter(q => (q.status === 'pending' || q.status === 'sending') && Date.now() - new Date(q.date).getTime() > 120000); }
         function renderWaQueue() {
             const box = document.getElementById('waQueueList');
             if (!box) return;
+            const st = document.getElementById('waStuck');
+            if (st) {
+                const n = waStuckList().length;
+                st.textContent = n ? n + " envoi(s) attendent depuis plus de 2 minutes : le programme d'envoi automatique ne répond pas. Il n'est probablement pas encore installé (voir GUIDE-WHATSAPP-AUTO.md). Ces messages ne partiront pas : repassez en « Manuel » pour les envoyer vous-même, puis cliquez sur « Vider les envois terminés »." : '';
+                st.classList.toggle('hidden', !n);
+            }
             if (!waQueue.length) { box.innerHTML = '<p style="color:var(--text-muted);font-size:0.88rem;">Aucun envoi automatique pour le moment.</p>'; return; }
             box.innerHTML = '<div style="overflow-x:auto;max-height:300px;overflow-y:auto;"><table><thead><tr><th>Date</th><th>Pour</th><th>Type</th><th>Statut</th><th></th></tr></thead><tbody>' +
                 waQueue.slice(0, 40).map(q => {
@@ -3155,9 +3163,9 @@
         }
         function waClearQueue() {
             if (!requireTotal()) return;
-            const ids = waQueue.filter(q => q.status === 'sent' || q.status === 'failed' || q.status === 'cancelled').map(q => q.id);
+            const ids = waQueue.filter(q => q.status === 'sent' || q.status === 'failed' || q.status === 'cancelled').concat(waStuckList()).map(q => q.id);
             if (!ids.length) { waToast('Rien à vider.'); return; }
-            if (!confirm('Retirer ' + ids.length + ' envoi(s) terminé(s) de la liste ?')) return;
+            if (!confirm('Retirer ' + ids.length + ' envoi(s) terminé(s) ou bloqué(s) de la liste ?')) return;
             F().removeWaQueue(ids).then(() => waToast('Liste vidée.')).catch(err => waToast('Échec : ' + errText(err), true));
         }
         function renderAnnouncements() {
