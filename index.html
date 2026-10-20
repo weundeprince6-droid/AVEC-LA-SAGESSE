@@ -414,7 +414,7 @@
                 <p>Suivi de Caisse, Épargne et Crédits Membres</p>
             </div>
             <div class="header-actions">
-                <button class="btn-export" onclick="exportCSV()" title="Télécharger le rapport (Excel/CSV)"><i class="fa-solid fa-file-arrow-down"></i> Exporter</button>
+                <button class="btn-export" onclick="exportReport()" title="Télécharger le rapport Excel (une feuille par onglet, avec graphiques)"><i class="fa-solid fa-file-arrow-down"></i> Exporter</button>
                 <div class="user-info">
                     <select id="lockSelAdmin" class="lock-select" onchange="setAutoLock(this.value)" title="Verrouillage automatique : vous êtes déconnecté après ce temps sans utiliser l'application">
                         <option value="0">🔒 Aucun</option>
@@ -3937,6 +3937,211 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        }
+
+        // ---------- Rapport Excel : une feuille par onglet, mise en forme et graphiques ----------
+        const _loadedScripts = {};
+        function loadScriptOnce(src) {
+            if (!_loadedScripts[src]) {
+                _loadedScripts[src] = new Promise((resolve, reject) => {
+                    const s = document.createElement('script');
+                    s.src = src; s.onload = resolve; s.onerror = () => { delete _loadedScripts[src]; reject(new Error('Chargement impossible : ' + src)); };
+                    document.head.appendChild(s);
+                });
+            }
+            return _loadedScripts[src];
+        }
+        async function exportReport() {
+            if (!requireAdmin()) return;
+            try {
+                await loadScriptOnce('vendor/jszip.min.js?v=3.10.1');
+                await loadScriptOnce('report-xlsx.js?v=20261020');
+            } catch (e) {
+                if (confirm("Le rapport Excel n'a pas pu être préparé (fichiers non chargés : connexion ou ancienne version en cache).\n\nTélécharger à la place le rapport simplifié (CSV) ?")) exportCSV();
+                return;
+            }
+            try {
+                const blob = await buildReportXlsx();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'rapport-avec-' + todayISO() + '.xlsx';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 2000);
+                logActivity('Rapport Excel téléchargé');
+            } catch (err) {
+                console.error(err);
+                if (confirm("Le rapport Excel n'a pas pu être créé (" + errText(err) + ").\n\nTélécharger à la place le rapport simplifié (CSV) ?")) exportCSV();
+            }
+        }
+        function buildReportXlsx() {
+            const X = window.AvecXlsx, today = todayISO(), U = X.util, nowFR = formatISOtoFR(today);
+            const wb = new X(window.JSZip);
+            const who = currentUser ? String(currentUser.username) : '';
+            wb.props = { title: 'Rapport AVEC LA SAGESSE ' + nowFR, creator: who || 'AVEC LA SAGESSE' };
+            const sub = (extra) => 'Situation au ' + nowFR + (extra ? ' · ' + extra : '') + (who ? ' · par ' + who : '');
+            const nameOf = id => { const m = members.find(x => x.id === id); return m ? m.name : id; };
+            const num = v => round2(Number(v) || 0);
+            const statusOf = c => creditRemaining(c) === 0 ? 'Remboursé' : (c.dueDate && c.dueDate < today ? 'En retard' : 'En cours');
+            const sum = (list, f) => round2(list.reduce((t, x) => t + (Number(f(x)) || 0), 0));
+            const allCredits = [];
+            members.forEach(m => (m.credits || []).forEach(c => allCredits.push({ m: m, c: c })));
+            const cnt = { 'Remboursé': 0, 'En cours': 0, 'En retard': 0 };
+            allCredits.forEach(x => { cnt[statusOf(x.c)]++; });
+            const fund = socialFund();
+
+            // 1. Tableau de bord
+            const d = wb.sheet('Tableau de bord', { tab: '1E3A8A', first: true, grid: false, widths: [12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12], zoom: 100 });
+            d.merge(1, 1, 1, 12, { b: true, sz: 20, color: 'FFFFFF', bg: '1E3A8A', indent: 1 }); d.set(1, 1, 'AVEC LA SAGESSE · Rapport', { b: true, sz: 20, color: 'FFFFFF', bg: '1E3A8A', indent: 1 }); d.height(1, 40);
+            d.merge(2, 1, 2, 12, { i: true, color: '6B7280', indent: 1 }); d.set(2, 1, sub(), { i: true, color: '6B7280', indent: 1 }); d.height(2, 20); d.height(3, 8);
+            const card = (r, i, label, value, subtxt, color, fmt) => {
+                const c = 1 + i * 2, bg = 'F4F7FB';
+                d.merge(r, c, r, c + 1, { sz: 9, b: true, color: '6B7280', bg: bg, al: 'c', border: 'top', bc: color });
+                d.set(r, c, label, { sz: 9, b: true, color: '6B7280', bg: bg, al: 'c', border: 'top', bc: color });
+                d.merge(r + 1, c, r + 1, c + 1, { sz: 18, b: true, color: color, bg: bg, al: 'c', fmt: fmt });
+                d.set(r + 1, c, value, { sz: 18, b: true, color: color, bg: bg, al: 'c', fmt: fmt });
+                d.merge(r + 2, c, r + 2, c + 1, { sz: 9, color: '6B7280', bg: bg, al: 'c' });
+                d.set(r + 2, c, subtxt || '', { sz: 9, color: '6B7280', bg: bg, al: 'c' });
+            };
+            const USD = X.FMT.usd, FC = X.FMT.fc, INT = X.FMT.int;
+            const outU = sum(members, m => memberOutstanding(m, 'USD')), outF = sum(members, m => memberOutstanding(m, 'FC'));
+            card(4, 0, 'MEMBRES', members.length, members.filter(hasActiveCredit).length + ' avec un crédit en cours', '2563EB', INT);
+            card(4, 1, 'ÉPARGNE ($)', sum(members, m => sav(m, 'USD')), '', '059669', USD);
+            card(4, 2, 'ÉPARGNE (FC)', sum(members, m => sav(m, 'FC')), '', '059669', FC);
+            card(4, 3, 'CRÉDITS EN COURS ($)', outU, cnt['En retard'] + ' crédit(s) en retard', 'D97706', USD);
+            card(4, 4, 'CRÉDITS EN COURS (FC)', outF, '', 'D97706', FC);
+            card(4, 5, 'FONDS CAS SOCIAUX (FC)', fund.balance, 'cotisé ' + fmt(fund.paid, 'FC') + ' · aides ' + fmt(fund.aid, 'FC'), '7C3AED', FC);
+            d.height(4, 20); d.height(5, 32); d.height(6, 18); d.height(7, 8);
+            const ci = (dev, f) => sum(allCredits.filter(x => devOf(x.c) === dev), x => f(x.c));
+            card(8, 0, 'INTÉRÊTS PRÉVUS ($)', ci('USD', c => c.interet), '', '0891B2', USD);
+            card(8, 1, 'INTÉRÊTS PRÉVUS (FC)', ci('FC', c => c.interet), '', '0891B2', FC);
+            card(8, 2, 'REMBOURSÉ ($)', ci('USD', c => c.repaid), '', '059669', USD);
+            card(8, 3, 'REMBOURSÉ (FC)', ci('FC', c => c.repaid), '', '059669', FC);
+            card(8, 4, 'DEMANDES EN ATTENTE', requests.filter(r => r.status === 'en attente').length, '', 'D97706', INT);
+            card(8, 5, 'RÉCLAMATIONS OUVERTES', claims.filter(c => c.status !== 'traitée').length, '', 'DC2626', INT);
+            d.height(8, 20); d.height(9, 32); d.height(10, 18); d.height(11, 10);
+            d.merge(12, 1, 12, 12, { b: true, sz: 12, color: '1E3A8A', border: 'bottom', bc: '2563EB' }); d.set(12, 1, 'Graphiques', { b: true, sz: 12, color: '1E3A8A', border: 'bottom', bc: '2563EB' });
+            // données des graphiques (à droite du 3e graphique)
+            const top = members.filter(m => sav(m, 'USD') > 0).sort((a, b) => sav(b, 'USD') - sav(a, 'USD')).slice(0, 10).map(m => [m.name, num(sav(m, 'USD'))]);
+            const months = [];
+            for (let i = 5; i >= 0; i--) { const dt = new Date(); dt.setDate(1); dt.setMonth(dt.getMonth() - i); months.push(dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0')); }
+            const perMonth = months.map(k => [k.slice(5) + '/' + k.slice(0, 4), members.reduce((t, m) => t + (m.history || []).filter(h => String(h.date).slice(0, 7) === k && h.note !== 'Épargne initiale').length, 0)]);
+            const stRows = Object.keys(cnt).map(k => [k, cnt[k]]);
+            let blk = d.block(33, 7, 'Statut des crédits', ['Statut', 'Nombre'], stRows, [null, 'int']);
+            const stBlk = blk;
+            const topBlk = d.block(blk.next, 7, 'Épargne en dollars (10 premiers)', ['Membre', '$'], top, [null, 'usd']);
+            const moBlk = d.block(topBlk.next, 7, 'Opérations par mois', ['Mois', 'Nombre'], perMonth, [null, 'int']);
+            d.merge(32, 7, 32, 12, { b: true, sz: 12, color: '1E3A8A', border: 'bottom', bc: '2563EB' }); d.set(32, 7, 'Données des graphiques', { b: true, sz: 12, color: '1E3A8A', border: 'bottom', bc: '2563EB' });
+            if (allCredits.length) d.chart({ type: 'doughnut', title: 'Statut des crédits', name: 'Crédits', cats: stBlk.cats, vals: stBlk.vals, catRef: stBlk.catRef, valRef: stBlk.valRef, from: [0, 12], to: [6, 29], colors: ['10B981', 'F59E0B', 'EF4444'] });
+            if (top.length) d.chart({ type: 'bar', title: 'Épargne en dollars : les 10 premiers membres', name: 'Épargne ($)', cats: topBlk.cats, vals: topBlk.vals, catRef: topBlk.catRef, valRef: topBlk.valRef, from: [6, 12], to: [12, 29], fmt: USD, colors: ['2563EB'] });
+            d.chart({ type: 'col', title: 'Opérations enregistrées par mois', name: 'Opérations', cats: moBlk.cats, vals: moBlk.vals, catRef: moBlk.catRef, valRef: moBlk.valRef, from: [0, 31], to: [6, 48], fmt: '0', colors: ['8B5CF6'] });
+
+            // 2. Membres
+            const nProf = PROFILE_FIELDS.length;
+            wb.table('Membres', { title: 'Membres', subtitle: sub(members.length + ' membre(s)'), tab: '2563EB', landscape: true,
+                cols: [{ h: 'ID', w: 10, k: 'center' }, { h: 'Nom', w: 28 }, { h: 'Téléphone', w: 17 }, { h: 'Épargne ($)', w: 14, k: 'usd' }, { h: 'Épargne (FC)', w: 16, k: 'fc' },
+                    { h: 'Crédit en cours ($)', w: 15, k: 'usd' }, { h: 'Crédit en cours (FC)', w: 17, k: 'fc' }, { h: 'Crédit possible ($)', w: 15, k: 'usd' }, { h: 'Crédit possible (FC)', w: 17, k: 'fc' },
+                    { h: 'Crédit', w: 14, k: 'status' }, { h: 'Cas sociaux', w: 26, k: 'status' }, { h: 'Accès', w: 12, k: 'status' }, { h: 'Profil', w: 14, k: 'status' }, { h: 'Photo', w: 9, k: 'center' }],
+                rows: members.map(m => {
+                    const p = memberProfiles[m.id] || null, n = profileCount(p), cr = m.credits || [];
+                    const crSt = !cr.length ? 'Aucun crédit' : (cr.some(c => creditRemaining(c) > 0 && c.dueDate && c.dueDate < today) ? 'En retard' : (hasActiveCredit(m) ? 'En cours' : 'Remboursé'));
+                    const access = CLOUD ? !!m.authUid : users.some(x => x.role === 'member' && x.memberId === m.id);
+                    return [m.id, m.name, m.phone || '', num(sav(m, 'USD')), num(sav(m, 'FC')), memberOutstanding(m, 'USD'), memberOutstanding(m, 'FC'), availableCeiling(m, 'USD'), availableCeiling(m, 'FC'),
+                        crSt, String(arrearsText(m)).replace(/<[^>]*>/g, ''), access ? 'Actif' : "Pas d'accès", n === nProf ? 'Complet' : (n ? 'Partiel ' + n + '/' + nProf : 'Vide'), p && p.photo ? 'Oui' : '—'];
+                }),
+                totals: { label: 'Total', cols: [3, 4, 5, 6] } });
+
+            // 3. Crédits
+            const cs = wb.table('Crédits', { title: 'Crédits', subtitle: sub(allCredits.length + ' crédit(s) · ' + cnt['En cours'] + ' en cours · ' + cnt['En retard'] + ' en retard'), tab: 'D97706',
+                cols: [{ h: 'ID', w: 10, k: 'center' }, { h: 'Membre', w: 28 }, { h: 'Date', w: 12, k: 'date' }, { h: 'Devise', w: 9, k: 'center' }, { h: 'Montant', w: 15 }, { h: 'Intérêt (10 %)', w: 15 },
+                    { h: 'Net versé', w: 15 }, { h: 'Remboursé', w: 15 }, { h: 'Reste', w: 15 }, { h: 'Échéance', w: 12, k: 'date' }, { h: 'Prolongations', w: 13, k: 'center' }, { h: 'Statut', w: 13, k: 'status' }],
+                rows: allCredits.slice().sort((a, b) => String(b.c.date).localeCompare(String(a.c.date))).map(x => {
+                    const c = x.c, k = devOf(c) === 'FC' ? 'fc' : 'usd', mm = (v) => ({ v: num(v), k: k });
+                    return [x.m.id, x.m.name, c.date || '', devOf(c) === 'FC' ? 'FC' : 'USD', mm(c.amount), mm(c.interet), mm(num(c.amount) - num(c.interet)), mm(c.repaid), mm(creditRemaining(c)), c.dueDate || '', (c.extensions || []).length, statusOf(c)];
+                }) });
+            if (allCredits.length) {
+                const t = cs.table; let r = t.last + 2;
+                [['USD', 'usd', 'Total en dollars'], ['FC', 'fc', 'Total en francs']].forEach(row => {
+                    cs.set(r, 1, row[2], { b: true, bg: 'E0E7FF', color: '1E3A8A', border: 'all', bc: '93A5E8' });
+                    for (let c = 2; c <= 4; c++) cs.set(r, c, null, { bg: 'E0E7FF', border: 'all', bc: '93A5E8' });
+                    cs.merge(r, 1, r, 4, { b: true, bg: 'E0E7FF', color: '1E3A8A', border: 'all', bc: '93A5E8' });
+                    [4, 5, 6, 7, 8].forEach(ci => {
+                        const val = sum(allCredits.filter(x => devOf(x.c) === row[0]), x => ci === 4 ? x.c.amount : ci === 5 ? x.c.interet : ci === 6 ? num(x.c.amount) - num(x.c.interet) : ci === 7 ? x.c.repaid : creditRemaining(x.c));
+                        const col = U.colName(ci + 1);
+                        cs.set(r, ci + 1, { f: 'SUMIF($D$' + t.r0 + ':$D$' + t.last + ',"' + row[0] + '",' + col + t.r0 + ':' + col + t.last + ')', v: val }, { b: true, bg: 'E0E7FF', color: '1E3A8A', border: 'all', bc: '93A5E8', fmt: X.FMT[row[1]], al: 'r' });
+                    });
+                    r++;
+                });
+            }
+
+            // 4. Opérations (tous les mouvements)
+            const ops = [];
+            members.forEach(m => (m.history || []).forEach(h => { if (h.note !== 'Épargne initiale') ops.push({ m: m, h: h }); }));
+            ops.sort((a, b) => String(b.h.date).localeCompare(String(a.h.date)));
+            const byType = {};
+            ops.forEach(o => { const l = OP_LABELS[o.h.type] || 'Autre'; byType[l] = (byType[l] || 0) + 1; });
+            const os = wb.table('Opérations', { title: 'Opérations', subtitle: sub(ops.length + ' mouvement(s) enregistré(s)'), tab: '059669',
+                cols: [{ h: 'Date', w: 12, k: 'date' }, { h: 'Membre', w: 28 }, { h: 'ID', w: 10, k: 'center' }, { h: 'Opération', w: 30 }, { h: 'Devise', w: 9, k: 'center' }, { h: 'Montant', w: 16 }, { h: 'Détail', w: 58 }],
+                rows: ops.map(o => [o.h.date || '', o.m.name, o.m.id, OP_LABELS[o.h.type] || 'Opération', devOf(o.h) === 'FC' ? 'FC' : 'USD', { v: num(o.h.amount), k: devOf(o.h) === 'FC' ? 'fc' : 'usd' }, o.h.note || '']) });
+            const typeRows = Object.keys(byType).sort((a, b) => byType[b] - byType[a]).map(k => [k, byType[k]]);
+            if (typeRows.length) {
+                const tb = os.block(4, 9, 'Opérations par type', ['Type', 'Nombre'], typeRows, [null, 'int']);
+                os.widths[7] = 3; os.widths[8] = 32; os.widths[9] = 10;
+                os.chart({ type: 'bar', title: 'Opérations par type', name: 'Nombre', cats: tb.cats, vals: tb.vals, catRef: tb.catRef, valRef: tb.valRef, from: [8, tb.next], to: [13, tb.next + 18], fmt: '0', colors: ['059669'] });
+            }
+
+            // 5. Cas sociaux
+            const ss = wb.table('Cas sociaux', { title: 'Cas sociaux', subtitle: sub('cotisation hebdomadaire ' + fmt(socialWeekly, 'FC') + ' · fonds : cotisé ' + fmt(fund.paid, 'FC') + ', aides ' + fmt(fund.aid, 'FC') + ', solde ' + fmt(fund.balance, 'FC')), tab: '7C3AED',
+                cols: [{ h: 'ID', w: 10, k: 'center' }, { h: 'Membre', w: 28 }, { h: 'Cotise depuis', w: 14, k: 'date' }, { h: 'Semaines dues', w: 13, k: 'int' }, { h: 'Semaines payées', w: 13, k: 'int' },
+                    { h: 'Total cotisé (FC)', w: 17, k: 'fc' }, { h: 'Aides reçues (FC)', w: 17, k: 'fc' }, { h: 'Situation', w: 28, k: 'status' }],
+                rows: members.map(m => [m.id, m.name, m.socialSince || '', socialDueWeeks(m), socialPaidWeeks(m), socialPaidTotal(m), socialAidTotal(m), String(arrearsText(m)).replace(/<[^>]*>/g, '')]),
+                totals: { label: 'Total', cols: [5, 6] } });
+            const topS = members.filter(m => socialPaidTotal(m) > 0).sort((a, b) => socialPaidTotal(b) - socialPaidTotal(a)).slice(0, 10).map(m => [m.name, socialPaidTotal(m)]);
+            if (topS.length) {
+                ss.widths[8] = 3; ss.widths[9] = 28; ss.widths[10] = 16;
+                const tb = ss.block(4, 10, 'Cotisations (10 premiers)', ['Membre', 'FC'], topS, [null, 'fc']);
+                ss.chart({ type: 'bar', title: 'Total cotisé par membre (FC)', name: 'FC', cats: tb.cats, vals: tb.vals, catRef: tb.catRef, valRef: tb.valRef, from: [9, tb.next], to: [14, tb.next + 18], fmt: '#,##0', colors: ['7C3AED'] });
+            }
+            // 5 bis. Collectes occasionnelles
+            wb.table('Collectes', { title: 'Cotisations occasionnelles', subtitle: sub(allCollectes().length + ' collecte(s)'), tab: '7C3AED',
+                cols: [{ h: 'Date', w: 12, k: 'date' }, { h: 'Titre', w: 36 }, { h: 'Bénéficiaire', w: 28 }, { h: 'Récolté (FC)', w: 16, k: 'fc' }, { h: 'Remis (FC)', w: 16, k: 'fc' }, { h: 'Reste à remettre (FC)', w: 20, k: 'fc' }],
+                rows: allCollectes().map(x => { const got = collecteCollected(x.c.id), rem = num(x.c.remitted); return [x.c.date || '', x.c.title || '', x.b.name, got, rem, round2(got - rem)]; }),
+                totals: { label: 'Total', cols: [3, 4, 5] }, empty: 'Aucune cotisation occasionnelle.' });
+
+            // 6. Annonces
+            wb.table('Annonces', { title: 'Annonces', subtitle: sub(announcements.length + ' annonce(s)'), tab: '0891B2', rowHeight: 48,
+                cols: [{ h: 'Date', w: 12, k: 'date' }, { h: 'Titre', w: 32, k: 'wrap' }, { h: 'Message', w: 80, k: 'wrap' }, { h: 'Importante', w: 12, k: 'center' }, { h: 'Publiée par', w: 30 }],
+                rows: annSorted().map(a => [String(a.date || '').slice(0, 10), a.title || '', a.text || '', a.important ? 'Oui' : '—', a.by || '']), empty: 'Aucune annonce publiée.' });
+
+            // 7. Galerie
+            const withPhoto = members.filter(m => memberProfiles[m.id] && memberProfiles[m.id].photo);
+            const gs = wb.table('Galerie', { title: 'Galerie des photos de profil', subtitle: sub(withPhoto.length + ' photo(s) sur ' + members.length + ' membre(s)'), tab: 'EC4899', rowHeight: 66, fixedHeight: true,
+                cols: [{ h: 'Photo', w: 14, k: 'center' }, { h: 'Nom', w: 30 }, { h: 'ID', w: 10, k: 'center' }, { h: 'Téléphone', w: 18 }],
+                rows: withPhoto.map(m => ['', m.name, m.id, m.phone || '']), empty: 'Aucune photo de profil pour le moment.' });
+            withPhoto.forEach((m, i) => {
+                const url = String(memberProfiles[m.id].photo), mt = url.match(/^data:image\/jpeg;base64,(.+)$/);
+                if (mt) gs.image({ data: mt[1], ext: 'jpeg', col: 0, row: 4 + i, w: 80, h: 80, alt: m.name });
+            });
+
+            // 8. Demandes
+            wb.table('Demandes', { title: 'Demandes des membres', subtitle: sub(requests.length + ' demande(s) · ' + requests.filter(r => r.status === 'en attente').length + ' en attente'), tab: 'D97706', rowHeight: 30,
+                cols: [{ h: 'Date', w: 12, k: 'date' }, { h: 'Membre', w: 28 }, { h: 'ID', w: 10, k: 'center' }, { h: 'Demande', w: 22 }, { h: 'Montant', w: 16 }, { h: 'Précision', w: 40, k: 'wrap' }, { h: 'Statut', w: 14, k: 'status' }, { h: 'Réponse', w: 40, k: 'wrap' }],
+                rows: requests.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(r => [r.date || '', nameOf(r.memberId), r.memberId, REQ_LABELS[r.type] || r.type || '', { v: num(r.amount), k: devOf(r) === 'FC' ? 'fc' : 'usd' }, r.note || '', r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : '', r.decision || '']), empty: 'Aucune demande.' });
+
+            // 9. Réclamations
+            wb.table('Réclamations', { title: 'Réclamations', subtitle: sub(claims.length + ' réclamation(s) · ' + claims.filter(c => c.status !== 'traitée').length + ' ouverte(s)'), tab: 'DC2626', rowHeight: 40,
+                cols: [{ h: 'Date', w: 12, k: 'date' }, { h: 'Membre', w: 28 }, { h: 'ID', w: 10, k: 'center' }, { h: 'Objet', w: 30, k: 'wrap' }, { h: 'Message', w: 60, k: 'wrap' }, { h: 'Statut', w: 14, k: 'status' }, { h: 'Réponse', w: 50, k: 'wrap' }],
+                rows: claims.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(c => [c.date || '', nameOf(c.memberId), c.memberId, c.subject || '', c.message || '', c.status === 'traitée' ? 'Traitée' : 'Ouverte', c.response || '']), empty: 'Aucune réclamation.' });
+
+            // 10-11. Équipe et Journal (accès total, en ligne)
+            if (CLOUD && currentUser && currentUser.level === 'total') {
+                wb.table('Équipe', { title: 'Équipe et postes', subtitle: sub(staffList.length + ' personne(s)'), tab: '64748B',
+                    cols: [{ h: 'E-mail', w: 38 }, { h: 'Niveau', w: 18, k: 'center' }, { h: 'Poste', w: 28 }, { h: 'Ajouté par', w: 34 }, { h: 'Ajouté le', w: 13, k: 'date' }],
+                    rows: staffList.map(s => [s.email || '', s.level === 'total' ? 'Accès total' : 'Poste', s.poste || '', s.addedBy || '', s.addedAt || '']), empty: 'Aucun membre d\'équipe enregistré.' });
+                wb.table('Journal', { title: "Journal d'activité", subtitle: sub(activityList.length + ' ligne(s) les plus récentes'), tab: '64748B', rowHeight: 20,
+                    cols: [{ h: 'Date', w: 18, k: 'center' }, { h: 'Par', w: 34 }, { h: 'Poste', w: 22 }, { h: 'Action', w: 100 }],
+                    rows: activityList.map(a => { const dt = new Date(a.date); return [isNaN(dt) ? '' : dt.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), a.by || '', a.poste || '', a.text || '']; }), empty: 'Journal vide.' });
+            }
+            return wb.blob();
         }
 
         // ---------- Crédits ----------
