@@ -414,7 +414,7 @@
                 <p>Suivi de Caisse, Épargne et Crédits Membres</p>
             </div>
             <div class="header-actions">
-                <button class="btn-export" onclick="exportReport()" title="Télécharger le rapport Excel (une feuille par onglet, avec graphiques)"><i class="fa-solid fa-file-arrow-down"></i> Exporter</button>
+                <button class="btn-export" onclick="openExportMenu()" title="Enregistrer le rapport en Excel ou en PDF"><i class="fa-solid fa-file-arrow-down"></i> Exporter</button>
                 <div class="user-info">
                     <select id="lockSelAdmin" class="lock-select" onchange="setAutoLock(this.value)" title="Verrouillage automatique : vous êtes déconnecté après ce temps sans utiliser l'application">
                         <option value="0">🔒 Aucun</option>
@@ -4142,6 +4142,184 @@
                     rows: activityList.map(a => { const dt = new Date(a.date); return [isNaN(dt) ? '' : dt.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), a.by || '', a.poste || '', a.text || '']; }), empty: 'Journal vide.' });
             }
             return wb.blob();
+        }
+
+        // ---------- Menu d'export : Excel ou PDF ----------
+        function openExportMenu() {
+            if (!requireAdmin()) return;
+            let m = document.getElementById('exportMenu');
+            if (!m) {
+                m = document.createElement('div');
+                m.id = 'exportMenu';
+                m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:2500;display:flex;align-items:center;justify-content:center;padding:16px;';
+                m.onclick = e => { if (e.target === m) closeExportMenu(); };
+                m.innerHTML = '<div style="background:#fff;border-radius:14px;padding:20px;max-width:380px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.35);">' +
+                    '<h3 style="margin:0 0 4px;font-size:1.05rem;">Enregistrer le rapport</h3>' +
+                    '<p style="font-size:0.85rem;color:#6b7280;margin:0 0 14px;">Les chiffres viennent de la base de données, à l\'instant.</p>' +
+                    '<button type="button" class="btn" style="margin-bottom:8px;" onclick="closeExportMenu();exportReport()"><i class="fa-solid fa-file-excel"></i> Excel (.xlsx) : une feuille par onglet, avec graphiques</button>' +
+                    '<button type="button" class="btn" style="margin-bottom:8px;background:#b91c1c;" onclick="closeExportMenu();exportPDF()"><i class="fa-solid fa-file-pdf"></i> PDF : rapport mis en page, prêt à imprimer</button>' +
+                    '<button type="button" class="btn-small" style="width:100%;" onclick="closeExportMenu()">Annuler</button></div>';
+                document.body.appendChild(m);
+            }
+            m.style.display = 'flex';
+        }
+        function closeExportMenu() { const m = document.getElementById('exportMenu'); if (m) m.style.display = 'none'; }
+
+        // ---------- Rapport PDF : page de rapport mise en forme, enregistrée en PDF par la fenêtre d'impression ----------
+        function exportPDF() {
+            if (!requireAdmin()) return;
+            const w = window.open('', '_blank');   // ouvert tout de suite (clic de l'utilisateur) pour ne pas être bloqué
+            if (!w) { alert("Le navigateur a bloqué l'ouverture de la fenêtre du rapport. Autorisez les fenêtres pop-up pour ce site, puis recommencez."); return; }
+            try {
+                w.document.open();
+                w.document.write(buildReportHtml());
+                w.document.close();
+                logActivity('Rapport PDF généré');
+            } catch (err) {
+                console.error(err);
+                try { w.close(); } catch (e) {}
+                alert('Le rapport PDF n\'a pas pu être créé : ' + errText(err));
+            }
+        }
+        function buildReportHtml() {
+            const today = todayISO(), nowFR = formatISOtoFR(today), who = currentUser ? String(currentUser.username) : '';
+            const E = escapeHtml, num = v => round2(Number(v) || 0);
+            const money = (v, dev) => fmt(num(v), dev === 'FC' ? 'FC' : 'USD');
+            const sum = (list, f) => round2(list.reduce((t, x) => t + (Number(f(x)) || 0), 0));
+            const statusOf = c => creditRemaining(c) === 0 ? 'Remboursé' : (c.dueDate && c.dueDate < today ? 'En retard' : 'En cours');
+            const nameOf = id => { const m = members.find(x => x.id === id); return m ? m.name : id; };
+            const plain = h => String(h).replace(/<[^>]*>/g, '');
+            const stCls = t => { const x = String(t || '').toLowerCase(); if (/retard|refus|pas d'acc|vide/.test(x)) return 'st-r'; if (/rembours|approuv|trait|^actif|à jour|avance|complet/.test(x)) return 'st-g'; if (/cours|attente|ouverte|début|partiel/.test(x)) return 'st-a'; return ''; };
+            const allCredits = [];
+            members.forEach(m => (m.credits || []).forEach(c => allCredits.push({ m: m, c: c })));
+            const cnt = { 'Remboursé': 0, 'En cours': 0, 'En retard': 0 };
+            allCredits.forEach(x => { cnt[statusOf(x.c)]++; });
+            const fund = socialFund();
+            const ci = (dev, f) => sum(allCredits.filter(x => devOf(x.c) === dev), x => f(x.c));
+            // ----- graphiques SVG -----
+            const donut = (data, colors) => {
+                const total = data.reduce((t, d) => t + d[1], 0);
+                if (!total) return '<p class="muted">Aucun crédit.</p>';
+                let a0 = -Math.PI / 2, paths = '';
+                data.forEach((d, i) => {
+                    if (!d[1]) return;
+                    const a1 = a0 + (d[1] / total) * Math.PI * 2 - (data.filter(x => x[1]).length > 1 ? 0.012 : 0.0001), R = 80, r = 48, cx = 90, cy = 90;
+                    const p = (a, rad) => (cx + rad * Math.cos(a)).toFixed(2) + ' ' + (cy + rad * Math.sin(a)).toFixed(2);
+                    paths += '<path d="M' + p(a0, R) + ' A' + R + ' ' + R + ' 0 ' + ((a1 - a0) > Math.PI ? 1 : 0) + ' 1 ' + p(a1, R) + ' L' + p(a1, r) + ' A' + r + ' ' + r + ' 0 ' + ((a1 - a0) > Math.PI ? 1 : 0) + ' 0 ' + p(a0, r) + ' Z" fill="' + colors[i] + '"/>';
+                    a0 += (d[1] / total) * Math.PI * 2;
+                });
+                return '<svg viewBox="0 0 330 180" class="svg"><g>' + paths + '<text x="90" y="88" text-anchor="middle" font-size="26" font-weight="700" fill="#1e3a8a">' + total + '</text><text x="90" y="106" text-anchor="middle" font-size="10" fill="#6b7280">crédit(s)</text></g>' +
+                    data.map((d, i) => '<rect x="195" y="' + (48 + i * 28) + '" width="14" height="14" rx="3" fill="' + colors[i] + '"/><text x="216" y="' + (60 + i * 28) + '" font-size="13" fill="#374151">' + E(d[0]) + ' : <tspan font-weight="700">' + d[1] + '</tspan></text>').join('') + '</svg>';
+            };
+            const hbars = (data, color, f) => {
+                if (!data.length) return '<p class="muted">Aucune donnée.</p>';
+                const max = Math.max.apply(null, data.map(d => d[1])) || 1, h = 26;
+                return '<svg viewBox="0 0 520 ' + (data.length * h + 6) + '" class="svg">' + data.map((d, i) => {
+                    const bw = Math.max(2, (d[1] / max) * 270);
+                    return '<text x="150" y="' + (i * h + 17) + '" text-anchor="end" font-size="11" fill="#374151">' + E(String(d[0]).slice(0, 24)) + '</text><rect x="158" y="' + (i * h + 5) + '" width="' + bw.toFixed(1) + '" height="16" rx="3" fill="' + color + '"/><text x="' + (164 + bw).toFixed(1) + '" y="' + (i * h + 17) + '" font-size="11" font-weight="700" fill="#111827">' + E(f(d[1])) + '</text>';
+                }).join('') + '</svg>';
+            };
+            const vbars = (data, color) => {
+                const max = Math.max.apply(null, data.map(d => d[1]).concat([1])), H = 120, bw = 40;
+                return '<svg viewBox="0 0 ' + (data.length * 70 + 20) + ' 170" class="svg">' + data.map((d, i) => {
+                    const bh = (d[1] / max) * H, x = 20 + i * 70;
+                    return '<rect x="' + x + '" y="' + (140 - bh).toFixed(1) + '" width="' + bw + '" height="' + bh.toFixed(1) + '" rx="3" fill="' + color + '"/><text x="' + (x + bw / 2) + '" y="' + (134 - bh).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#111827">' + d[1] + '</text><text x="' + (x + bw / 2) + '" y="158" text-anchor="middle" font-size="10" fill="#6b7280">' + E(d[0]) + '</text>';
+                }).join('') + '<line x1="10" y1="140" x2="' + (data.length * 70 + 10) + '" y2="140" stroke="#cbd5e1"/></svg>';
+            };
+            const months = [];
+            for (let i = 5; i >= 0; i--) { const dt = new Date(); dt.setDate(1); dt.setMonth(dt.getMonth() - i); months.push(dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0')); }
+            const perMonth = months.map(k => [k.slice(5) + '/' + k.slice(2, 4), members.reduce((t, m) => t + (m.history || []).filter(h => String(h.date).slice(0, 7) === k && h.note !== 'Épargne initiale').length, 0)]);
+            const top = members.filter(m => sav(m, 'USD') > 0).sort((a, b) => sav(b, 'USD') - sav(a, 'USD')).slice(0, 10).map(m => [m.name, num(sav(m, 'USD'))]);
+            const kpi = (l, v, s, c) => '<div class="kpi" style="border-top-color:' + c + '"><div class="kl">' + l + '</div><div class="kv" style="color:' + c + '">' + v + '</div><div class="ks">' + (s || '&nbsp;') + '</div></div>';
+            // ----- tableaux -----
+            const table = (cols, rows, o) => {
+                o = o || {};
+                if (!rows.length) return '<p class="muted">' + E(o.empty || 'Aucune donnée pour le moment.') + '</p>';
+                return '<table><thead><tr>' + cols.map(c => '<th>' + E(c.h) + '</th>').join('') + '</tr></thead><tbody>' +
+                    rows.map(r => '<tr>' + r.map((v, j) => { const k = cols[j].k || ''; return '<td class="' + (k === 'num' ? 'num' : k === 'c' ? 'ctr' : k === 'st' ? 'ctr ' + stCls(v) : '') + '">' + (k === 'raw' ? v : E(v)) + '</td>'; }).join('') + '</tr>').join('') +
+                    (o.total ? '<tr class="tot">' + o.total.map((v, j) => '<td class="' + (cols[j].k === 'num' ? 'num' : '') + '">' + E(v) + '</td>').join('') + '</tr>' : '') + '</tbody></table>';
+            };
+            const section = (title, sub, body) => '<section class="page"><h2>' + E(title) + '</h2><p class="sub">' + E(sub) + '</p>' + body + '</section>';
+            const nProf = PROFILE_FIELDS.length;
+            let html = '';
+            // Tableau de bord
+            html += '<section class="page first"><div class="banner"><div class="bt">AVEC LA SAGESSE</div><div class="bs">Rapport au ' + E(nowFR) + (who ? ' · par ' + E(who) : '') + '</div></div>' +
+                '<div class="kpis">' +
+                kpi('MEMBRES', members.length, members.filter(hasActiveCredit).length + ' avec un crédit en cours', '#2563eb') +
+                kpi('ÉPARGNE ($)', money(sum(members, m => sav(m, 'USD')), 'USD'), '', '#059669') +
+                kpi('ÉPARGNE (FC)', money(sum(members, m => sav(m, 'FC')), 'FC'), '', '#059669') +
+                kpi('CRÉDITS EN COURS ($)', money(sum(members, m => memberOutstanding(m, 'USD')), 'USD'), cnt['En retard'] + ' en retard', '#d97706') +
+                kpi('CRÉDITS EN COURS (FC)', money(sum(members, m => memberOutstanding(m, 'FC')), 'FC'), '', '#d97706') +
+                kpi('FONDS CAS SOCIAUX', money(fund.balance, 'FC'), 'cotisé ' + money(fund.paid, 'FC') + ' · aides ' + money(fund.aid, 'FC'), '#7c3aed') +
+                kpi('INTÉRÊTS PRÉVUS', money(ci('USD', c => c.interet), 'USD') + ' · ' + money(ci('FC', c => c.interet), 'FC'), '', '#0891b2') +
+                kpi('REMBOURSÉ', money(ci('USD', c => c.repaid), 'USD') + ' · ' + money(ci('FC', c => c.repaid), 'FC'), '', '#059669') +
+                kpi('DEMANDES EN ATTENTE', requests.filter(r => r.status === 'en attente').length, '', '#d97706') +
+                kpi('RÉCLAMATIONS OUVERTES', claims.filter(c => c.status !== 'traitée').length, '', '#dc2626') +
+                '</div><div class="charts"><div class="chart"><h3>Statut des crédits</h3>' + donut(Object.keys(cnt).map(k => [k, cnt[k]]), ['#10b981', '#f59e0b', '#ef4444']) + '</div>' +
+                '<div class="chart"><h3>Opérations par mois</h3>' + vbars(perMonth, '#8b5cf6') + '</div>' +
+                '<div class="chart wide"><h3>Épargne en dollars : les 10 premiers membres</h3>' + hbars(top, '#2563eb', v => fmt(v, 'USD')) + '</div></div></section>';
+            // Membres
+            html += section('Membres', members.length + ' membre(s)', table(
+                [{ h: 'ID', k: 'c' }, { h: 'Nom' }, { h: 'Téléphone' }, { h: 'Épargne ($)', k: 'num' }, { h: 'Épargne (FC)', k: 'num' }, { h: 'Crédit en cours ($)', k: 'num' }, { h: 'Crédit en cours (FC)', k: 'num' }, { h: 'Crédit', k: 'st' }, { h: 'Cas sociaux', k: 'st' }, { h: 'Accès', k: 'st' }, { h: 'Profil', k: 'st' }],
+                members.map(m => {
+                    const p = memberProfiles[m.id] || null, n = profileCount(p), cr = m.credits || [];
+                    const crSt = !cr.length ? 'Aucun crédit' : (cr.some(c => creditRemaining(c) > 0 && c.dueDate && c.dueDate < today) ? 'En retard' : (hasActiveCredit(m) ? 'En cours' : 'Remboursé'));
+                    const access = CLOUD ? !!m.authUid : users.some(x => x.role === 'member' && x.memberId === m.id);
+                    return [m.id, m.name, m.phone || '', fmt(sav(m, 'USD'), 'USD'), fmt(sav(m, 'FC'), 'FC'), fmt(memberOutstanding(m, 'USD'), 'USD'), fmt(memberOutstanding(m, 'FC'), 'FC'), crSt, plain(arrearsText(m)), access ? 'Actif' : "Pas d'accès", n === nProf ? 'Complet' : (n ? 'Partiel ' + n + '/' + nProf : 'Vide')];
+                }),
+                { total: ['Total', '', '', fmt(sum(members, m => sav(m, 'USD')), 'USD'), fmt(sum(members, m => sav(m, 'FC')), 'FC'), fmt(sum(members, m => memberOutstanding(m, 'USD')), 'USD'), fmt(sum(members, m => memberOutstanding(m, 'FC')), 'FC'), '', '', '', ''] }));
+            // Crédits
+            html += section('Crédits', allCredits.length + ' crédit(s) · ' + cnt['En cours'] + ' en cours · ' + cnt['En retard'] + ' en retard', table(
+                [{ h: 'Membre' }, { h: 'Date', k: 'c' }, { h: 'Montant', k: 'num' }, { h: 'Intérêt', k: 'num' }, { h: 'Remboursé', k: 'num' }, { h: 'Reste', k: 'num' }, { h: 'Échéance', k: 'c' }, { h: 'Statut', k: 'st' }],
+                allCredits.slice().sort((a, b) => String(b.c.date).localeCompare(String(a.c.date))).map(x => { const c = x.c, d = devOf(c); return [x.m.name, formatISOtoFR(c.date), money(c.amount, d), money(c.interet, d), money(c.repaid, d), money(creditRemaining(c), d), formatISOtoFR(c.dueDate), statusOf(c)]; }),
+                { empty: 'Aucun crédit.' }));
+            // Opérations
+            const ops = [];
+            members.forEach(m => (m.history || []).forEach(h => { if (h.note !== 'Épargne initiale') ops.push({ m: m, h: h }); }));
+            ops.sort((a, b) => String(b.h.date).localeCompare(String(a.h.date)));
+            html += section('Opérations', ops.length + ' mouvement(s) enregistré(s)', table(
+                [{ h: 'Date', k: 'c' }, { h: 'Membre' }, { h: 'Opération' }, { h: 'Montant', k: 'num' }, { h: 'Détail' }],
+                ops.map(o => [formatISOtoFR(o.h.date), o.m.name, OP_LABELS[o.h.type] || 'Opération', money(o.h.amount, devOf(o.h)), o.h.note || '']), { empty: 'Aucune opération.' }));
+            // Cas sociaux + collectes
+            html += section('Cas sociaux', 'Cotisation hebdomadaire ' + fmt(socialWeekly, 'FC') + ' · fonds : cotisé ' + fmt(fund.paid, 'FC') + ', aides ' + fmt(fund.aid, 'FC') + ', solde ' + fmt(fund.balance, 'FC'),
+                table([{ h: 'Membre' }, { h: 'Cotise depuis', k: 'c' }, { h: 'Sem. dues', k: 'num' }, { h: 'Sem. payées', k: 'num' }, { h: 'Total cotisé', k: 'num' }, { h: 'Aides reçues', k: 'num' }, { h: 'Situation', k: 'st' }],
+                    members.map(m => [m.name, m.socialSince ? formatISOtoFR(m.socialSince) : '—', socialDueWeeks(m), socialPaidWeeks(m), fmt(socialPaidTotal(m), 'FC'), fmt(socialAidTotal(m), 'FC'), plain(arrearsText(m))]),
+                    { total: ['Total', '', '', '', fmt(fund.paid, 'FC'), fmt(fund.aid, 'FC'), ''] }) +
+                '<h3 class="h3">Cotisations occasionnelles</h3>' + table([{ h: 'Date', k: 'c' }, { h: 'Titre' }, { h: 'Bénéficiaire' }, { h: 'Récolté', k: 'num' }, { h: 'Remis', k: 'num' }, { h: 'Reste à remettre', k: 'num' }],
+                    allCollectes().map(x => { const got = collecteCollected(x.c.id), rem = num(x.c.remitted); return [formatISOtoFR(x.c.date), x.c.title || '', x.b.name, fmt(got, 'FC'), fmt(rem, 'FC'), fmt(round2(got - rem), 'FC')]; }), { empty: 'Aucune cotisation occasionnelle.' }));
+            // Annonces
+            html += section('Annonces', announcements.length + ' annonce(s)', table([{ h: 'Date', k: 'c' }, { h: 'Titre' }, { h: 'Message' }, { h: 'Publiée par' }],
+                annSorted().map(a => [formatISOtoFR(String(a.date || '').slice(0, 10)), (a.important ? '★ ' : '') + (a.title || ''), a.text || '', a.by || '']), { empty: 'Aucune annonce publiée.' }));
+            // Galerie
+            const withPhoto = members.filter(m => memberProfiles[m.id] && /^data:image\/jpeg;base64,/.test(memberProfiles[m.id].photo || ''));
+            html += section('Galerie', withPhoto.length + ' photo(s) sur ' + members.length + ' membre(s)', withPhoto.length ?
+                '<div class="gal">' + withPhoto.map(m => '<figure><img src="' + memberProfiles[m.id].photo + '" alt=""><figcaption>' + E(m.name) + '<br><small>' + E(m.id) + '</small></figcaption></figure>').join('') + '</div>' : '<p class="muted">Aucune photo de profil pour le moment.</p>');
+            // Demandes et réclamations
+            html += section('Demandes', requests.length + ' demande(s) · ' + requests.filter(r => r.status === 'en attente').length + ' en attente', table(
+                [{ h: 'Date', k: 'c' }, { h: 'Membre' }, { h: 'Demande' }, { h: 'Montant', k: 'num' }, { h: 'Précision' }, { h: 'Statut', k: 'st' }, { h: 'Réponse' }],
+                requests.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(r => [formatISOtoFR(r.date), nameOf(r.memberId), REQ_LABELS[r.type] || r.type || '', money(r.amount, devOf(r)), r.note || '', r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : '', r.decision || '']), { empty: 'Aucune demande.' }));
+            html += section('Réclamations', claims.length + ' réclamation(s) · ' + claims.filter(c => c.status !== 'traitée').length + ' ouverte(s)', table(
+                [{ h: 'Date', k: 'c' }, { h: 'Membre' }, { h: 'Objet' }, { h: 'Message' }, { h: 'Statut', k: 'st' }, { h: 'Réponse' }],
+                claims.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(c => [formatISOtoFR(c.date), nameOf(c.memberId), c.subject || '', c.message || '', c.status === 'traitée' ? 'Traitée' : 'Ouverte', c.response || '']), { empty: 'Aucune réclamation.' }));
+            if (CLOUD && currentUser && currentUser.level === 'total') {
+                html += section('Équipe', staffList.length + ' personne(s)', table([{ h: 'E-mail' }, { h: 'Niveau', k: 'c' }, { h: 'Poste' }, { h: 'Ajouté par' }, { h: 'Ajouté le', k: 'c' }],
+                    staffList.map(s => [s.email || '', s.level === 'total' ? 'Accès total' : 'Poste', s.poste || '', s.addedBy || '', s.addedAt ? formatISOtoFR(s.addedAt) : '']), { empty: 'Aucun membre d\'équipe enregistré.' }));
+                html += section("Journal d'activité", activityList.length + ' ligne(s) les plus récentes', table([{ h: 'Date', k: 'c' }, { h: 'Par' }, { h: 'Poste' }, { h: 'Action' }],
+                    activityList.map(a => { const dt = new Date(a.date); return [isNaN(dt) ? '' : dt.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), a.by || '', a.poste || '', a.text || '']; }), { empty: 'Journal vide.' }));
+            }
+            const css = '@page{size:A4 landscape;margin:12mm}*{box-sizing:border-box}body{margin:0;font-family:Calibri,"Segoe UI",Arial,sans-serif;color:#1f2937;font-size:11px;background:#e5e7eb}' +
+                '.bar{position:sticky;top:0;background:#1e3a8a;color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;z-index:5}.bar button{background:#fff;color:#1e3a8a;border:0;border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:13px}.bar span{font-size:12px;opacity:.9}' +
+                '.page{background:#fff;max-width:1100px;margin:14px auto;padding:22px 26px;break-after:page;page-break-after:always;box-shadow:0 2px 10px rgba(0,0,0,.12)}.page:last-child{break-after:auto;page-break-after:auto}' +
+                'h2{margin:0 0 2px;font-size:20px;color:#fff;background:#1e3a8a;padding:9px 14px;border-radius:6px}.sub{margin:6px 0 12px;color:#6b7280;font-style:italic}.h3{margin:18px 0 8px;color:#1e3a8a;font-size:14px}.muted{color:#6b7280;font-style:italic}' +
+                '.banner{background:#1e3a8a;color:#fff;border-radius:8px;padding:16px 20px;margin-bottom:14px}.bt{font-size:26px;font-weight:700;letter-spacing:.5px}.bs{opacity:.85;margin-top:2px}' +
+                '.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}.kpi{background:#f4f7fb;border-top:3px solid #2563eb;border-radius:6px;padding:8px 10px;text-align:center}.kl{font-size:9px;font-weight:700;color:#6b7280}.kv{font-size:16px;font-weight:700;margin:3px 0}.ks{font-size:9px;color:#6b7280}' +
+                '.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px}.chart{border:1px solid #d9e1ec;border-radius:8px;padding:10px 12px;break-inside:avoid}.chart.wide{grid-column:1/3}.chart h3{margin:0 0 6px;font-size:13px;color:#1e3a8a}.svg{width:100%;height:auto;max-height:230px}' +
+                'table{width:100%;border-collapse:collapse;font-size:10.5px}th{background:#2563eb;color:#fff;padding:6px 7px;text-align:center;border:1px solid #1d4ed8}td{padding:5px 7px;border:1px solid #d9e1ec;vertical-align:top}tbody tr:nth-child(even) td{background:#f4f7fb}tr{break-inside:avoid}thead{display:table-header-group}' +
+                '.num{text-align:right;white-space:nowrap}.ctr{text-align:center;white-space:nowrap}.st-g{background:#d1fae5!important;color:#065f46;font-weight:700}.st-a{background:#fef3c7!important;color:#92400e;font-weight:700}.st-r{background:#fee2e2!important;color:#991b1b;font-weight:700}' +
+                '.tot td{background:#e0e7ff!important;color:#1e3a8a;font-weight:700}.gal{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}figure{margin:0;text-align:center;break-inside:avoid}figure img{width:100%;max-width:130px;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid #d9e1ec}figcaption{margin-top:4px;font-weight:700}figcaption small{color:#6b7280;font-weight:400}' +
+                '@media print{body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}.bar{display:none}.page{box-shadow:none;margin:0;padding:0;max-width:none}}';
+            return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport AVEC LA SAGESSE ' + E(nowFR) + '</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style></head><body>' +
+                '<div class="bar"><button onclick="window.print()">Enregistrer en PDF / Imprimer</button><span>Dans la fenêtre qui s\'ouvre, choisissez « Enregistrer au format PDF » comme imprimante (orientation paysage).</span></div>' + html + '</body></html>';
         }
 
         // ---------- Crédits ----------
