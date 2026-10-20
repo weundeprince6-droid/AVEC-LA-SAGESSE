@@ -983,7 +983,15 @@
                                 </section>
                 <section class="card hidden" id="reportSection">
                     <div class="card-header"><i class="fa-solid fa-envelope-open-text"></i><h3>Rapport mensuel par e-mail (PDF)</h3><span id="reportState" style="margin-left:auto;"></span></div>
-                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Le 1er de chaque mois à 7 h, un rapport PDF (situation, crédits en retard, activité du mois, cas sociaux, points à traiter) est envoyé automatiquement à l'adresse ci-dessous. Installation unique décrite dans <em>GUIDE-RAPPORT-EMAIL.md</em>.</p>
+                    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px;margin-bottom:14px;">
+                        <strong style="font-size:0.92rem;"><i class="fa-solid fa-hand-pointer"></i> Envoi manuel (sans installation, gratuit)</strong>
+                        <p style="font-size:0.85rem;color:var(--text-muted);margin:6px 0 10px;">1) Le rapport PDF s'ouvre : choisissez « Enregistrer au format PDF ». 2) Votre messagerie Gmail s'ouvre avec le message prêt : joignez le PDF (trombone) et envoyez.</p>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                            <button type="button" class="btn" style="width:auto;" onclick="sendReportManual()"><i class="fa-solid fa-envelope"></i> Préparer l'e-mail avec le rapport PDF</button>
+                            <span id="reportManualLast" style="font-size:0.8rem;color:var(--text-muted);"></span>
+                        </div>
+                    </div>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Envoi automatique (nécessite le plan Blaze) : le 1er de chaque mois à 7 h, un rapport PDF (situation, crédits en retard, activité du mois, cas sociaux, points à traiter) est envoyé automatiquement à l'adresse ci-dessous. Installation unique décrite dans <em>GUIDE-RAPPORT-EMAIL.md</em>.</p>
                     <form onsubmit="saveReportSettings(event)">
                         <div class="form-group"><label for="reportTo">Adresse e-mail qui reçoit le rapport</label>
                             <input type="email" id="reportTo" maxlength="80" placeholder="Ex : votre-adresse@gmail.com"></div>
@@ -3710,6 +3718,7 @@
             box.textContent = text;
         }
         function renderReportSettings() {
+            renderReportManualLast();
             const to = document.getElementById('reportTo'), on = document.getElementById('reportOn'), st = document.getElementById('reportState');
             if (!to || !on) return;
             if (document.activeElement !== to) to.value = reportSettings.to || '';
@@ -3733,6 +3742,25 @@
                 .then(() => reportMsg(enabled ? 'Enregistré : le rapport sera envoyé à ' + to + ' le 1er de chaque mois.' : 'Enregistré : envoi mensuel désactivé.', true))
                 .catch(err => reportMsg('Enregistrement impossible : ' + errText(err), false));
             logActivity('Rapport mensuel par e-mail : ' + (enabled ? 'activé vers ' + to : 'désactivé'));
+        }
+        function sendReportManual() {
+            if (!requireAdmin()) return;
+            const to = (document.getElementById('reportTo').value || reportSettings.to || (currentUser && currentUser.email) || '').trim();
+            const month = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+            const subject = 'Rapport AVEC LA SAGESSE - ' + month;
+            const body = 'Bonjour,\n\nVeuillez trouver ci-joint le rapport AVEC LA SAGESSE (' + month + ').\n\n(Joindre ici le fichier PDF enregistré à l\'étape précédente.)\n\nCordialement.';
+            exportPDF();
+            try { localStorage.setItem('avec_report_manual_last', todayISO()); } catch (e) {}
+            renderReportManualLast();
+            const url = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to) ? to : '') + '&su=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+            setTimeout(() => { if (!window.open(url, '_blank')) reportMsg("Autorisez les fenêtres pop-up pour ouvrir aussi Gmail, puis recommencez.", false); }, 700);
+        }
+        function renderReportManualLast() {
+            const el = document.getElementById('reportManualLast');
+            if (!el) return;
+            let d = '';
+            try { d = localStorage.getItem('avec_report_manual_last') || ''; } catch (e) {}
+            el.textContent = d ? 'Dernière préparation : ' + formatISOtoFR(d) : '';
         }
         function sendReportNow() {
             if (!CLOUD || !F() || !F().requestReportNow) { reportMsg("La mise à jour n'est pas encore chargée : appuyez sur Ctrl+F5 puis réessayez.", false); return; }
