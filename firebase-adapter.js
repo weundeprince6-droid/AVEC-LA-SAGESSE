@@ -4,6 +4,7 @@
 // Organisation des données (voir firestore.rules) :
 //   members/{MBR-001}   fiche du membre (épargne, crédits, historique)  -> écrite par l'administrateur
 //   whatsappQueue/{id}  messages WhatsApp à envoyer automatiquement (traités par la Cloud Function)
+//   reportRequests/{id}  demandes d'envoi immédiat du rapport PDF par e-mail (traitées par la Cloud Function)
 //   announcements/{id}  annonces de l'administrateur, lues par tous les membres
 //   claims/{id}         réclamations                                    -> créées par le membre, traitées par l'admin
 //   requests/{id}       demandes de crédit / retrait                    -> créées par le membre, traitées par l'admin
@@ -216,6 +217,17 @@ window.FB_READY = (async () => {
         listenWaQueue(cb, onError) {
             const q = query(collection(db, 'whatsappQueue'), orderBy('date', 'desc'), limit(60));
             return onSnapshot(q, snap => cb(snap.docs.map(d => Object.assign({}, d.data(), { id: d.id }))), err => onError(err));
+        },
+
+        // ----- Rapport mensuel par e-mail : réglage (settings/report) et demande d'envoi immédiat -----
+        async saveReportSettings(data) {
+            await setDoc(doc(db, 'settings', 'report'), data, { merge: true });
+        },
+        listenReportSettings(cb, onError) {
+            return onSnapshot(doc(db, 'settings', 'report'), s => cb(s.exists() ? s.data() : null), err => onError(err));
+        },
+        async requestReportNow(entry) {
+            await setDoc(doc(db, 'reportRequests', entry.id), entry);
         },
 
         // ----- Inscriptions : formulaire public (création sans connexion), traitées par l'équipe -----

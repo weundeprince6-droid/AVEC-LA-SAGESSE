@@ -14,6 +14,9 @@
  * Secrets et paramètres : voir GUIDE-WHATSAPP-AUTO.md.
  */
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const PDFLib = require('pdf-lib');
+const { buildPdf } = require('./report');
 const { defineSecret, defineString, defineInt } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const admin = require('firebase-admin');
@@ -22,9 +25,11 @@ admin.initializeApp();
 const db = admin.firestore();
 
 const WHATSAPP_TOKEN = defineSecret('WHATSAPP_TOKEN');        // jeton d'accès permanent Meta
-const PHONE_ID = defineString('WHATSAPP_PHONE_ID');            // identifiant du numéro WhatsApp Business
+const PHONE_ID = defineString('WHATSAPP_PHONE_ID', { default: '' });            // identifiant du numéro WhatsApp Business
 const API_VERSION = defineString('WHATSAPP_API_VERSION', { default: 'v23.0' });
 const DAILY_LIMIT = defineInt('WHATSAPP_DAILY_LIMIT', { default: 300 });
+const RESEND_KEY = defineSecret('RESEND_API_KEY');             // clé du service d'envoi d'e-mails (Resend)
+const REPORT_FROM = defineString('REPORT_FROM', { default: 'AVEC LA SAGESSE <onboarding@resend.dev>' });
 
 // Un paramètre de modèle ne peut pas contenir de retour à la ligne ni de longues suites d'espaces
 function toTemplateText(text) {
@@ -113,6 +118,85 @@ exports.sendWhatsapp = onDocumentCreated(
     } catch (err) {
       logger.error('Envoi WhatsApp impossible', { id: ref.id, err: String(err) });
       await finish({ status: 'failed', error: String(err && err.message || err).slice(0, 300) });
+    }
+  }
+);
+
+
+// =====================================================================================================
+// Rapport mensuel par e-mail (PDF en pièce jointe) pour l'administrateur
+//   settings/report : { enabled, to }  (réglé depuis l'onglet Équipe de l'application)
+//   Envoi automatique le 1er de chaque mois à 7 h (heure de Lubumbashi), ou à la demande (reportRequests).
+// =====================================================================================================
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+async function readAll(name) {
+  const snap = await db.collection(name).get();
+  return snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+}
+
+async function sendMonthlyReport() {
+  const st = await db.doc('settings/report').get();
+  const settings = st.exists ? st.data() : {};
+  const to = String(settings.to || '').trim();
+  if (!EMAIL_RE.test(to)) throw new Error("Aucune adresse e-mail valide pour le rapport (onglet Équipe).");
+  const [members, requests, claims, social] = await Promise.all([readAll('members'), readAll('requests'), readAll('claims'), db.doc('settings/social').get()]);
+  const weekly = social.exists ? Number(social.data().weekly) : 1000;
+  const r = await buildPdf(PDFLib, { members, requests, claims, weekly, now: new Date() });
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + RESEND_KEY.value(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: REPORT_FROM.value(),
+      to: [to],
+      subject: 'AVEC LA SAGESSE : rapport de ' + r.monthLabel,
+      html: '<p>Bonjour,</p><p>Veuillez trouver en pièce jointe le rapport mensuel de l\'AVEC LA SAGESSE pour <strong>' + r.monthLabel + '</strong> (situation des membres, crédits, opérations du mois, cas sociaux, points à traiter).</p><p>Message envoyé automatiquement.</p>',
+      attachments: [{ filename: 'rapport-avec-' + r.monthKey + '.pdf', content: Buffer.from(r.bytes).toString('base64') }]
+    })
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error('(' + res.status + ') ' + (body.message || body.name || 'Refus du service e-mail'));
+  return { to: to, month: r.monthLabel, id: body.id };
+}
+
+async function noteReportResult(ok, info) {
+  const patch = { lastAt: admin.firestore.FieldValue.serverTimestamp(), lastStatus: ok ? 'sent' : 'failed' };
+  patch.lastError = ok ? '' : String(info).slice(0, 300);
+  await db.doc('settings/report').set(patch, { merge: true });
+}
+
+exports.monthlyReport = onSchedule(
+  { schedule: '0 7 1 * *', timeZone: 'Africa/Lubumbashi', secrets: [RESEND_KEY], memory: '512MiB', timeoutSeconds: 180 },
+  async () => {
+    const st = await db.doc('settings/report').get();
+    if (!st.exists || st.data().enabled !== true) { logger.info('Rapport mensuel désactivé'); return; }
+    try { await sendMonthlyReport(); await noteReportResult(true); }
+    catch (err) { logger.error('Rapport mensuel impossible', { err: String(err) }); await noteReportResult(false, (err && err.message) || err); }
+  }
+);
+
+exports.reportNow = onDocumentCreated(
+  { document: 'reportRequests/{id}', secrets: [RESEND_KEY], memory: '512MiB', timeoutSeconds: 180, maxInstances: 2 },
+  async (event) => {
+    const ref = event.data.ref;
+    const data = event.data.data();
+    if (!data || data.status !== 'pending') return;
+    const locked = await db.runTransaction(async (tx) => {
+      const cur = await tx.get(ref);
+      if (!cur.exists || cur.get('status') !== 'pending') return false;
+      tx.update(ref, { status: 'sending' });
+      return true;
+    });
+    if (!locked) return;
+    try {
+      const info = await sendMonthlyReport();
+      await ref.update({ status: 'sent', finishedAt: admin.firestore.FieldValue.serverTimestamp() });
+      await noteReportResult(true, info);
+    } catch (err) {
+      logger.error('Rapport à la demande impossible', { err: String(err) });
+      const msg = String((err && err.message) || err).slice(0, 300);
+      await ref.update({ status: 'failed', error: msg, finishedAt: admin.firestore.FieldValue.serverTimestamp() });
+      await noteReportResult(false, msg);
     }
   }
 );

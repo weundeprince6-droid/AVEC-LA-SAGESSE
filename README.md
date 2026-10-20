@@ -24,8 +24,9 @@ Application web de gestion d'une AVEC : épargne, crédits et remboursements des
 | `firebase-adapter.js` | Connexion et synchronisation avec Firebase |
 | `firestore.rules` | Règles de sécurité de la base (à publier dans Firebase) |
 | `GUIDE-FIREBASE.md` | Installation pas à pas côté Firebase |
+| `GUIDE-RAPPORT-EMAIL.md` | Rapport mensuel PDF envoyé par e-mail (Cloud Function + Resend) |
 | `GUIDE-WHATSAPP-AUTO.md` | Envoi automatique des messages WhatsApp (Meta + Cloud Function) |
-| `functions/` , `firebase.json` | Programme d’envoi automatique (à déployer avec `firebase deploy --only functions`) |
+| `functions/` , `firebase.json` | Programme d’envoi automatique (à déployer fonction par fonction : `firebase deploy --only functions:NOM`, voir les guides) |
 
 ## Mode local et mode en ligne
 
@@ -43,3 +44,4 @@ Une fois Firebase configuré (voir `GUIDE-FIREBASE.md`), l'administrateur et les
 - **Envoi WhatsApp manuel ou automatique** (onglet Annonces, carte « Envoi WhatsApp », accès total) : en « Manuel », les boutons ouvrent WhatsApp (gratuit) ; en « Automatique », les messages sont déposés dans la file `whatsappQueue` et envoyés par une Cloud Function via l'API WhatsApp Cloud de Meta (confirmation automatique de chaque opération, diffusion à tous, suivi Envoyé/Échec avec réessai). Installation unique dans `GUIDE-WHATSAPP-AUTO.md` ; en attendant, rester en Manuel. Republier firestore.rules.
 - **Rapport Excel** (bouton « Exporter » du bandeau) : classeur .xlsx avec une feuille par onglet (Tableau de bord avec indicateurs et 3 graphiques, Membres, Crédits, Opérations avec graphique, Cas sociaux avec graphique, Collectes, Annonces, Galerie avec les photos, Demandes, Réclamations, et Équipe + Journal pour l'accès total). Mise en forme prête à imprimer (A4 paysage), statuts colorés, totaux, filtres. Construit dans le navigateur avec `report-xlsx.js` et `vendor/jszip.min.js` (JSZip, licence MIT) ; si le chargement échoue, un CSV simplifié est proposé.
 - **Rapport PDF** : le bouton « Exporter » ouvre un choix **Excel** ou **PDF**. Le PDF est un rapport mis en page (tableau de bord avec graphiques, puis une page par onglet) généré à partir des données de la base à cet instant ; dans la fenêtre qui s'ouvre, « Enregistrer en PDF / Imprimer » puis choisir « Enregistrer au format PDF » (A4 paysage). Autoriser les fenêtres pop-up pour le site.
+- **Rapport mensuel par e-mail** (onglet Équipe, accès total) : un PDF (synthèse et graphiques, activité du mois, crédits en retard et échéances, membres, cas sociaux, points à traiter) est envoyé automatiquement le 1er de chaque mois à 7 h à l'adresse choisie, ou tout de suite avec « Envoyer un rapport maintenant ». Cloud Functions `monthlyReport` et `reportNow` (`functions/report.js`, pdf-lib) + service d'e-mail Resend. Installation unique dans `GUIDE-RAPPORT-EMAIL.md`. Republier firestore.rules.

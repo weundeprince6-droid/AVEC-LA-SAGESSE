@@ -86,10 +86,10 @@ Le plus simple est d'utiliser **Google Cloud Shell**, un terminal dans le naviga
    echo "WHATSAPP_PHONE_ID=123456789" > functions/.env
    ```
 
-6. Déployez **uniquement les fonctions** (ne lancez jamais `firebase deploy` sans `--only functions` : cela pourrait écraser vos règles de sécurité) :
+6. Déployez **uniquement cette fonction** (ne lancez jamais `firebase deploy` sans `--only functions:…` : cela pourrait écraser vos règles de sécurité) :
 
    ```
-   firebase deploy --only functions
+   firebase deploy --only functions:sendWhatsapp
    ```
 
    Si Firebase demande d'activer des services (Cloud Build, Artifact Registry, Eventarc), répondez oui.

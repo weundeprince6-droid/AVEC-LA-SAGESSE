@@ -79,7 +79,7 @@ service cloud.firestore {
     }
 
     // Réglages : « social » = cotisation hebdomadaire (lue par tous, modifiée par l'accès total) ;
-    // « whatsapp » = envoi manuel ou automatique (lu par l'équipe, modifié par l'accès total)
+    // « whatsapp » = envoi manuel ou automatique, « report » = rapport mensuel par e-mail (lus par l'équipe, modifiés par l'accès total)
     match /settings/{settingId} {
       allow read: if isStaff() || (hasProfile() && settingId == 'social');
       allow create, update: if isAdmin() && (
@@ -93,7 +93,12 @@ service cloud.firestore {
           && request.resource.data.mode in ['manual', 'auto']
           && request.resource.data.autoOps is bool
           && request.resource.data.template is string && request.resource.data.template.size() <= 60
-          && request.resource.data.lang is string && request.resource.data.lang.size() <= 10));
+          && request.resource.data.lang is string && request.resource.data.lang.size() <= 10)
+        || (settingId == 'report'
+          && request.resource.data.keys().hasOnly(['enabled', 'to', 'by', 'date', 'lastAt', 'lastStatus', 'lastError'])
+          && request.resource.data.enabled is bool
+          && request.resource.data.to is string && request.resource.data.to.size() <= 80
+          && (request.resource.data.to == '' || request.resource.data.to.matches('^[^@ ]+@[^@ ]+\\.[^@ ]+$'))));
       allow delete: if false;
     }
 
@@ -110,6 +115,19 @@ service cloud.firestore {
         && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
         && request.resource.data.kind in ['situation', 'rappel', 'recu', 'annonce', 'diffusion']
         && okText(request.resource.data.memberId, 40)
+        && okText(request.resource.data.date, 40);
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // Demandes d'envoi immédiat du rapport PDF par e-mail : déposées par l'accès total, traitées par la Cloud Function.
+    match /reportRequests/{rid} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['id', 'date', 'by', 'status'])
+        && request.resource.data.id == rid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.by == request.auth.token.email
         && okText(request.resource.data.date, 40);
       allow update: if false;
       allow delete: if isAdmin();

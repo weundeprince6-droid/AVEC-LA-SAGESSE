@@ -981,6 +981,20 @@
                                     </form>
                                     <div id="staffList" style="margin-top:14px;"></div>
                                 </section>
+                <section class="card hidden" id="reportSection">
+                    <div class="card-header"><i class="fa-solid fa-envelope-open-text"></i><h3>Rapport mensuel par e-mail (PDF)</h3><span id="reportState" style="margin-left:auto;"></span></div>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Le 1er de chaque mois à 7 h, un rapport PDF (situation, crédits en retard, activité du mois, cas sociaux, points à traiter) est envoyé automatiquement à l'adresse ci-dessous. Installation unique décrite dans <em>GUIDE-RAPPORT-EMAIL.md</em>.</p>
+                    <form onsubmit="saveReportSettings(event)">
+                        <div class="form-group"><label for="reportTo">Adresse e-mail qui reçoit le rapport</label>
+                            <input type="email" id="reportTo" maxlength="80" placeholder="Ex : votre-adresse@gmail.com"></div>
+                        <div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:500;"><input type="checkbox" id="reportOn" style="width:auto;"> Envoyer le rapport automatiquement chaque mois</label></div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <button type="submit" class="btn" style="width:auto;"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+                            <button type="button" class="btn-small" onclick="sendReportNow()"><i class="fa-solid fa-paper-plane"></i> Envoyer un rapport maintenant</button>
+                        </div>
+                    </form>
+                    <div id="reportMsg" class="alert hidden"></div>
+                </section>
         </div>
 
         <div class="dpanel hidden" id="panel-journal">
@@ -1454,6 +1468,8 @@
         const WA_DEFAULTS = { mode: 'manual', autoOps: true, template: 'avec_notification', lang: 'fr' };
         let waSettings = Object.assign({}, WA_DEFAULTS);
         let waQueue = [];
+        let reportSettings = { enabled: false, to: '' };
+        let stopReport = null;
         let claims = CLOUD ? [] : store.get('avec_claims', []);
         let requests = CLOUD ? [] : store.get('avec_requests', []);
         let currentUser = null;
@@ -1809,6 +1825,7 @@
             }
             if (stopListening) { stopListening(); stopListening = null; }
             if (stopStaff) { stopStaff(); stopStaff = null; }
+            if (stopReport) { stopReport(); stopReport = null; }
             if (stopActivity) { stopActivity(); stopActivity = null; }
             staffList = []; activityList = [];
             if (!user) {
@@ -1856,12 +1873,14 @@
                     setHidden('dashboardSection', false);
                     document.getElementById('currentUserDisplay').textContent = user.email + (label ? ' · ' + label : '');
                     setHidden('teamSection', level !== 'total');
+                    setHidden('reportSection', level !== 'total');
                     setHidden('activitySection', level !== 'total');
                     setHidden('tabBtnEquipe', level !== 'total');
                     setHidden('tabBtnJournal', level !== 'total');
                     showTab('dashboard');
                     if (level === 'total') {
                         stopStaff = F().listenStaff(list => { staffList = list; renderTeam(); }, err => { /* sans gravité */ });
+                        if (F().listenReportSettings) stopReport = F().listenReportSettings(d => { reportSettings = Object.assign({ enabled: false, to: '' }, d || {}); renderReportSettings(); }, err => { /* sans gravité */ });
                         stopActivity = F().listenActivity(list => { activityList = list; renderActivity(); }, err => { /* sans gravité */ });
                     }
                     updateDashboard();
@@ -2037,6 +2056,7 @@
             if (CLOUD) {
                 if (stopListening) { stopListening(); stopListening = null; }
                 if (stopStaff) { stopStaff(); stopStaff = null; }
+                if (stopReport) { stopReport(); stopReport = null; }
                 if (stopActivity) { stopActivity(); stopActivity = null; }
                 staffList = []; activityList = [];
                 if (F()) F().logout().catch(() => {});
@@ -3682,6 +3702,47 @@
             setHidden(id, !(n > 0));
         }
 
+        // ----- Rapport mensuel par e-mail -----
+        function reportMsg(text, ok) {
+            const box = document.getElementById('reportMsg');
+            if (!box) return;
+            box.className = 'alert ' + (ok ? 'alert-success' : 'alert-error');
+            box.textContent = text;
+        }
+        function renderReportSettings() {
+            const to = document.getElementById('reportTo'), on = document.getElementById('reportOn'), st = document.getElementById('reportState');
+            if (!to || !on) return;
+            if (document.activeElement !== to) to.value = reportSettings.to || '';
+            on.checked = !!reportSettings.enabled;
+            if (st) {
+                let last = '';
+                const t = reportSettings.lastAt && reportSettings.lastAt.toDate ? reportSettings.lastAt.toDate() : null;
+                if (reportSettings.lastStatus === 'sent') last = '<span class="badge badge-ok">Dernier envoi : ' + (t ? escapeHtml(t.toLocaleDateString('fr-FR')) : 'réussi') + '</span>';
+                else if (reportSettings.lastStatus === 'failed') last = '<span class="badge badge-late">Dernier envoi : échec</span>';
+                st.innerHTML = last;
+            }
+            if (reportSettings.lastStatus === 'failed' && reportSettings.lastError) reportMsg('Dernier essai échoué : ' + reportSettings.lastError, false);
+        }
+        function saveReportSettings(e) {
+            e.preventDefault();
+            if (!CLOUD || !F() || !F().saveReportSettings) { reportMsg("La mise à jour n'est pas encore chargée : appuyez sur Ctrl+F5 puis réessayez.", false); return; }
+            if (!isAdmin(currentUser) || !canDelete(currentUser)) { reportMsg("Seul l'accès total peut changer ce réglage.", false); return; }
+            const to = document.getElementById('reportTo').value.trim(), enabled = document.getElementById('reportOn').checked;
+            if (enabled && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) { reportMsg('Indiquez une adresse e-mail valide pour recevoir le rapport.', false); return; }
+            F().saveReportSettings({ enabled: enabled, to: to, by: String(currentUser.username), date: new Date().toISOString() })
+                .then(() => reportMsg(enabled ? 'Enregistré : le rapport sera envoyé à ' + to + ' le 1er de chaque mois.' : 'Enregistré : envoi mensuel désactivé.', true))
+                .catch(err => reportMsg('Enregistrement impossible : ' + errText(err), false));
+            logActivity('Rapport mensuel par e-mail : ' + (enabled ? 'activé vers ' + to : 'désactivé'));
+        }
+        function sendReportNow() {
+            if (!CLOUD || !F() || !F().requestReportNow) { reportMsg("La mise à jour n'est pas encore chargée : appuyez sur Ctrl+F5 puis réessayez.", false); return; }
+            if (!isAdmin(currentUser) || !canDelete(currentUser)) { reportMsg("Seul l'accès total peut envoyer le rapport.", false); return; }
+            if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(reportSettings.to || ''))) { reportMsg("Enregistrez d'abord une adresse e-mail valide (bouton « Enregistrer »).", false); return; }
+            if (!confirm('Envoyer maintenant le rapport PDF à ' + reportSettings.to + ' ?')) return;
+            F().requestReportNow({ id: 'RP-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7), date: new Date().toISOString(), by: String(currentUser.username), status: 'pending' })
+                .then(() => reportMsg("Demande envoyée. Le rapport arrive en 1 à 2 minutes ; le résultat s'affiche ici (« Dernier envoi »). Si rien n'arrive, vérifiez le guide GUIDE-RAPPORT-EMAIL.md.", true))
+                .catch(err => reportMsg('Demande impossible : ' + errText(err), false));
+        }
         function renderTeam() {
             const box = document.getElementById('staffList');
             if (!box) return;
