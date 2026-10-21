@@ -96,7 +96,6 @@ function bqRenderMember() {
     const nm = document.getElementById('bqShopName');
     if (nm && document.activeElement !== nm && document.activeElement && !['bqShopDesc', 'bqShopContact'].includes(document.activeElement.id)) {
         nm.value = myShop ? myShop.name : (nm.value || '');
-        if (!myShop && m && !document.getElementById('bqShopContact').value) document.getElementById('bqShopContact').value = m.phone || '';
         document.getElementById('bqShopDesc').value = myShop ? (myShop.desc || '') : document.getElementById('bqShopDesc').value;
         document.getElementById('bqShopContact').value = myShop ? (myShop.contact || '') : document.getElementById('bqShopContact').value;
     }
