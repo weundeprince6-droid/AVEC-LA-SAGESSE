@@ -4799,10 +4799,30 @@
                     '<div class="claim-msg"><strong>' + fmt(r.amount, devOf(r)) + '</strong>' + (r.note ? ' — ' + escapeHtml(r.note) : '') + '</div>' +
                     (r.decision ? '<div class="claim-reply"><strong>Réponse de l\'administrateur' +
                         (r.decisionDate ? ' (' + escapeHtml(formatISOtoFR(r.decisionDate)) + ')' : '') + ' :</strong><br>' + escapeHtml(r.decision) + '</div>' : '') +
+                    (r.type === 'retrait' && r.status === 'approuvée'
+                        ? (r.remis ? '<div class="claim-reply" style="background:var(--success-light);"><i class="fa-solid fa-hand-holding-dollar"></i> <strong>Argent remis</strong> le ' + escapeHtml(formatISOtoFR(r.remisDate || '')) + '.</div>'
+                                   : '<div class="claim-reply"><i class="fa-solid fa-clock"></i> Retrait approuvé : passez retirer votre argent auprès de l\'administrateur.</div>') : '') +
                     '</div>';
             });
             document.getElementById('mRequestsList').innerHTML = html ||
                 '<p style="color:var(--text-muted);font-size:0.88rem;">Aucune demande.</p>';
+        }
+
+        // Retrait approuvé mais argent pas encore remis en main propre
+        function cashToHand(r) { return !!r && r.type === 'retrait' && r.status === 'approuvée' && !r.remis; }
+        // L'administrateur confirme avoir remis l'argent au membre (l'épargne a déjà été diminuée à l'approbation)
+        function confirmCashHanded(id) {
+            if (!requireAdmin()) return;
+            const r = requests.find(x => x.id === id);
+            if (!cashToHand(r)) return;
+            const m = members.find(x => x.id === r.memberId);
+            if (!confirm('Confirmer que ' + fmt(r.amount, devOf(r)) + ' ont bien été remis à ' + (m ? m.name : r.memberId) + ' ?')) return;
+            r.remis = true;
+            r.remisDate = todayISO();
+            r.remisBy = String(currentUser.username);
+            logActivity('Argent du retrait remis : ' + fmt(r.amount, devOf(r)) + ' — ' + (m ? m.name : '') + ' (' + r.memberId + ')', r.memberId);
+            store.set('avec_requests', requests);
+            renderAdminRequests();
         }
 
         // Côté administrateur : demandes en attente d'abord
@@ -4810,6 +4830,8 @@
             const memberName = id => { const m = members.find(x => x.id === id); return m ? m.name : id; };
             const sorted = requests.slice().sort((a, b) => {
                 if ((a.status === 'en attente') !== (b.status === 'en attente')) return a.status === 'en attente' ? -1 : 1;
+                const ta = cashToHand(a), tb = cashToHand(b);
+                if (ta !== tb) return ta ? -1 : 1;
                 return String(b.id).localeCompare(String(a.id));
             });
             let html = '';
@@ -4836,12 +4858,17 @@
                 } else if (r.decision) {
                     html += '<div class="claim-reply"><strong>Votre décision :</strong><br>' + escapeHtml(r.decision) + '</div>';
                 }
+                if (r.type === 'retrait' && r.status === 'approuvée') {
+                    html += r.remis
+                        ? '<div class="claim-reply" style="background:var(--success-light);"><i class="fa-solid fa-hand-holding-dollar"></i> <strong>Argent remis au membre</strong> le ' + escapeHtml(formatISOtoFR(r.remisDate || '')) + (r.remisBy ? ' · confirmé par ' + escapeHtml(r.remisBy) : '') + '</div>'
+                        : '<div class="claim-actions" style="margin-top:8px;"><span class="badge badge-due">Argent pas encore remis</span> <button class="btn-small" onclick="confirmCashHanded(\'' + rid + '\')"><i class="fa-solid fa-hand-holding-dollar"></i> Confirmer : argent remis au membre</button></div>';
+                }
                 html += '</div>';
             });
             setHtmlKeepFields('requestsAdminList', html ||
                 '<p style="color:var(--text-muted);font-size:0.88rem;">Aucune demande pour le moment.</p>');
             document.getElementById('statPendingReq').textContent = requests.filter(r => r.status === 'en attente').length;
-            setBadge('tabBadgeReq', requests.filter(r => r.status === 'en attente').length);
+            setBadge('tabBadgeReq', requests.filter(r => r.status === 'en attente' || cashToHand(r)).length);
             renderAdminHome();
         }
 
