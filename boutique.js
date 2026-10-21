@@ -16,6 +16,20 @@ function bqSplit(price) {
     return { commission: commission, net: round2(price - commission) };
 }
 function bqCommission(d) { return round2(bqOrders.filter(o => o.status === 'conclue' && devOf(o) === d).reduce((t, o) => t + (Number(o.commission) || 0), 0)); }
+// Activité : un versement d'épargne dans les 14 derniers jours
+const BQ_ACTIVE_DAYS = 14;
+function bqDay(iso) { return Math.floor(Date.parse(String(iso).slice(0, 10) + 'T12:00:00Z') / 86400000); }
+function bqLastSaving(m) {
+    let last = Number(m && m.lastEpargneDay) || 0;
+    ((m && m.history) || []).forEach(h => { if (h.type === 'epargne' && h.date) { const d = bqDay(h.date); if (isFinite(d) && d > last) last = d; } });
+    return last;
+}
+function bqActiveInfo(m) {
+    const last = bqLastSaving(m), today = bqDay(todayISO());
+    if (!last) return { ok: false, last: 0, left: 0 };
+    const age = today - last;
+    return { ok: age <= BQ_ACTIVE_DAYS, last: last, left: BQ_ACTIVE_DAYS - age };
+}
 function bqId(p) { return p + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7); }
 function bqMe() { return currentUser && currentUser.role === 'member' ? currentUser.memberId : ''; }
 function bqMyMember() { return members.find(x => x.id === bqMe()); }
@@ -100,6 +114,15 @@ function bqRenderMember() {
         document.getElementById('bqShopContact').value = myShop ? (myShop.contact || '') : document.getElementById('bqShopContact').value;
     }
     setHidden('bqItemCard', !myShop);
+    const act = m ? bqActiveInfo(m) : { ok: false };
+    const ab = document.getElementById('bqActiveBox');
+    if (ab && m) {
+        ab.className = 'alert ' + (act.ok ? 'alert-success' : 'alert-error');
+        ab.textContent = act.ok ? 'Vous êtes actif : dernier versement d\'épargne le ' + formatISOtoFR(new Date(act.last * 86400000).toISOString().slice(0, 10)) + '. Vous pouvez publier encore pendant ' + Math.max(0, act.left) + ' jour(s) sans nouveau versement.'
+            : 'Pour publier un article, vous devez avoir versé de l\'épargne dans les ' + BQ_ACTIVE_DAYS + ' derniers jours' + (act.last ? ' (dernier versement le ' + formatISOtoFR(new Date(act.last * 86400000).toISOString().slice(0, 10)) + ')' : ' (aucun versement enregistré)') + '. Faites un versement auprès de l\'administrateur, puis revenez.';
+    }
+    const itemForm = document.querySelector('#bqItemCard form');
+    if (itemForm) itemForm.style.display = act.ok ? '' : 'none';
     const mine = bqItems.filter(i => i.ownerId === me).sort((a, b) => String(b.date).localeCompare(String(a.date)));
     const mi = document.getElementById('bqMyItems');
     if (mi) mi.innerHTML = mine.length ? mine.map(i =>
@@ -174,6 +197,7 @@ function bqSaveItem(e) {
     e.preventDefault();
     const me = bqMe(), m = bqMyMember(), shop = bqShops.find(s => s.id === me);
     if (!me || !m || !shop || !F() || !F().saveItem) { bqSay("Créez d'abord votre boutique.", false); return; }
+    if (!bqActiveInfo(m).ok) { bqSay('Pour publier un article, versez de l\'épargne : un versement dans les ' + BQ_ACTIVE_DAYS + ' derniers jours est nécessaire.', false); return; }
     const price = round2(parseFloat(document.getElementById('bqItemPrice').value));
     const qty = parseInt(document.getElementById('bqItemQty').value, 10);
     if (!isFinite(price) || price <= 0) { bqSay('Indiquez un prix valide.', false); return; }
@@ -198,6 +222,8 @@ function bqHideItem(id) {
     F().patchItem(id, { status: 'retiré' }).catch(err => bqSay('Impossible : ' + errText(err), false));
 }
 function bqRepublish(id) {
+    const m = bqMyMember();
+    if (!m || !bqActiveInfo(m).ok) { bqSay('Pour remettre un article en vente, un versement d\'épargne dans les ' + BQ_ACTIVE_DAYS + ' derniers jours est nécessaire.', false); return; }
     F().patchItem(id, { status: 'publié' }).then(() => bqSay('Article remis en vente.', true)).catch(err => bqSay('Impossible : ' + errText(err), false));
 }
 function bqDeleteItem(id) {
@@ -232,8 +258,18 @@ function bqCancelOrder(id) {
 
 // ================= Espace de l'équipe =================
 function bqAdminSay(text, ok) { alert(text); }
+let bqBackfilled = false;
+function bqBackfill() {
+    // une seule fois par session : inscrit sur chaque fiche le jour du dernier versement (utilisé par les règles de sécurité)
+    if (bqBackfilled || !CLOUD || !cloudLoaded.members || !members.length) return;
+    bqBackfilled = true;
+    let changed = false;
+    members.forEach(m => { const d = bqLastSaving(m); if (d && Number(m.lastEpargneDay) !== d) { m.lastEpargneDay = d; changed = true; } });
+    if (changed) store.set('avec_members', members);
+}
 function bqRenderAdmin() {
     if (!currentUser || !isAdmin(currentUser) || !CLOUD) return;
+    bqBackfill();
     bqRenderShowcase();
     const orders = bqOrders.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
     const done = orders.filter(o => o.status === 'conclue');

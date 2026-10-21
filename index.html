@@ -1308,6 +1308,7 @@
                 </section>
                 <section class="card" id="bqItemCard">
                     <div class="card-header"><i class="fa-solid fa-box-open"></i><h3>Ajouter un article</h3></div>
+                    <div id="bqActiveBox" class="alert hidden" style="margin-bottom:10px;"></div>
                     <form onsubmit="bqSaveItem(event)">
                         <div class="form-group"><label>Article</label><input type="text" id="bqItemTitle" maxlength="60" required placeholder="Ex : Sac de riz 25 kg"></div>
                         <div class="form-group"><label>Description (facultatif)</label><textarea id="bqItemDesc" rows="2" maxlength="300"></textarea></div>
@@ -1610,6 +1611,7 @@
             const entry = { date: todayISO(), type: type, amount: round2(amount), note: note || '' };
             if (devise === 'FC') entry.devise = 'FC';
             m.history.push(entry);
+            if (type === 'epargne') m.lastEpargneDay = Math.floor(Date.parse(entry.date + 'T12:00:00Z') / 86400000);
             if (m.history.length > 200) m.history = m.history.slice(-200);
             waAutoOp(m, entry);
             if (note !== 'Épargne initiale') {
@@ -1761,7 +1763,7 @@
             setSync('online');
             if (!currentUser) return;
             if (isAdmin(currentUser)) {
-                if (name === 'members') { normalizeMembers(); maybeImportLocal(); }
+                if (name === 'members') { normalizeMembers(); maybeImportLocal(); if (typeof bqBackfill === 'function') bqBackfill(); }
                 updateDashboard();
             } else {
                 renderMemberPortal();
@@ -5160,6 +5162,6 @@
             }
         };
     </script>
-    <script src="boutique.js?v=20261027"></script>
+    <script src="boutique.js?v=20261028"></script>
 </body>
 </html>

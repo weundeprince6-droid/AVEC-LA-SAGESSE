@@ -279,6 +279,11 @@ service cloud.firestore {
     function myName() {
       return get(/databases/$(database)/documents/members/$(myMemberId())).data.name;
     }
+    // Pour publier un article, le membre doit avoir versé de l'épargne dans les 14 derniers jours
+    // (la fiche porte lastEpargneDay = numéro du jour du dernier versement, tenu à jour par l'application).
+    function activeSaver() {
+      return (get(/databases/$(database)/documents/members/$(myMemberId())).data.get('lastEpargneDay', 0) + 15) * 86400000 >= request.time.toMillis();
+    }
     function itemOf(id) {
       return get(/databases/$(database)/documents/items/$(id)).data;
     }
@@ -319,6 +324,7 @@ service cloud.firestore {
         && request.resource.data.ownerId == myMemberId()
         && request.resource.data.ownerName == myName()
         && exists(/databases/$(database)/documents/shops/$(myMemberId()))
+        && activeSaver()
         && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 60
         && request.resource.data.desc is string && request.resource.data.desc.size() <= 300
         && request.resource.data.price is number && request.resource.data.price > 0 && request.resource.data.price <= 100000000
@@ -334,6 +340,7 @@ service cloud.firestore {
         && request.resource.data.id == resource.data.id
         && resource.data.status in ['publié', 'retiré']
         && request.resource.data.status in ['publié', 'retiré']
+        && (request.resource.data.status == 'retiré' || activeSaver())
         && request.resource.data.keys().hasOnly(['id', 'ownerId', 'ownerName', 'shopName', 'title', 'desc', 'price', 'devise', 'qty', 'photo', 'status', 'date'])
         && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 60
         && request.resource.data.desc is string && request.resource.data.desc.size() <= 300
