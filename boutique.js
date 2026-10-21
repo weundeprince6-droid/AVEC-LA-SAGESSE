@@ -85,7 +85,8 @@ function bqRenderMember() {
                 (i.desc ? '<div style="font-size:0.82rem;margin-top:4px;">' + escapeHtml(i.desc) + '</div>' : '') +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:6px;"><strong style="color:var(--primary);">' + fmt(i.price, i.devise) + '</strong><small style="color:var(--text-muted);">Stock : ' + i.qty + '</small></div>' +
                 (open ? '<div style="margin-top:8px;font-size:0.82rem;">' + bqStatusBadge('en attente') + ' commande en cours</div>'
-                      : '<button type="button" class="btn" style="margin-top:8px;padding:8px;" onclick="bqBuy(\'' + escapeHtml(i.id) + '\')"><i class="fa-solid fa-cart-plus"></i> Acheter</button>') +
+                      : '<button type="button" class="btn" style="margin-top:8px;padding:8px;" onclick="bqBuy(\'' + escapeHtml(i.id) + '\')"><i class="fa-solid fa-wallet"></i> Payer avec mon épargne</button>' +
+                      '<button type="button" class="btn" style="margin-top:6px;padding:8px;background:#128c7e;" onclick="bqContact(\'' + escapeHtml(i.id) + '\')"><i class="fa-solid fa-handshake"></i> Contacter le vendeur</button>') +
                 '</div>';
         }).join('') + '</div>' : '<p style="color:var(--text-muted);">Aucun article disponible pour le moment.</p>';
     }
@@ -95,6 +96,7 @@ function bqRenderMember() {
     const nm = document.getElementById('bqShopName');
     if (nm && document.activeElement !== nm && document.activeElement && !['bqShopDesc', 'bqShopContact'].includes(document.activeElement.id)) {
         nm.value = myShop ? myShop.name : (nm.value || '');
+        if (!myShop && m && !document.getElementById('bqShopContact').value) document.getElementById('bqShopContact').value = m.phone || '';
         document.getElementById('bqShopDesc').value = myShop ? (myShop.desc || '') : document.getElementById('bqShopDesc').value;
         document.getElementById('bqShopContact').value = myShop ? (myShop.contact || '') : document.getElementById('bqShopContact').value;
     }
@@ -369,3 +371,30 @@ function bqShowDrawIn(el, dots, i, sfx) {
     if (dots) dots.innerHTML = many ? bqShowList.map((x, k) => '<span onclick="bqShowGo(' + k + ')" style="width:8px;height:8px;border-radius:50%;cursor:pointer;background:' + (k === bqShowPos ? 'var(--primary)' : '#cbd5e1') + ';"></span>').join('') : '';
 }
 (function () { const st = document.createElement('style'); st.textContent = '@keyframes bqFade{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}'; document.head.appendChild(st); })();
+
+// ================= Contacter le vendeur : accord direct, sans passer par l'épargne ni la base =================
+function bqContact(id) {
+    const it = bqItems.find(x => x.id === id);
+    if (!it) return;
+    const shop = bqShops.find(s => s.id === it.ownerId);
+    const contact = shop && shop.contact ? String(shop.contact) : '';
+    let num = typeof waNumber === 'function' ? waNumber(contact) : ''; if (num.length < 8 || num.length > 15) num = '';
+    const msg = 'Bonjour ' + (it.ownerName || '') + ', je suis intéressé(e) par « ' + it.title + ' » (' + fmt(it.price, it.devise) + ') vu dans la boutique AVEC LA SAGESSE.';
+    let m = document.getElementById('bqContactBox');
+    if (!m) {
+        m = document.createElement('div');
+        m.id = 'bqContactBox';
+        m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:2500;display:flex;align-items:center;justify-content:center;padding:16px;';
+        m.onclick = e => { if (e.target === m) m.style.display = 'none'; };
+        document.body.appendChild(m);
+    }
+    m.innerHTML = '<div style="background:#fff;border-radius:14px;padding:20px;max-width:400px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.35);">' +
+        '<h3 style="margin:0 0 4px;font-size:1.05rem;">Contacter ' + escapeHtml(it.ownerName || 'le vendeur') + '</h3>' +
+        '<p style="margin:0 0 10px;font-size:0.9rem;"><strong>' + escapeHtml(it.title) + '</strong> · ' + fmt(it.price, it.devise) + '<br><span style="color:var(--text-muted);">' + escapeHtml(it.shopName || '') + '</span></p>' +
+        (contact ? '<p style="margin:0 0 12px;font-size:0.95rem;"><i class="fa-solid fa-address-book"></i> ' + escapeHtml(contact) + '</p>' : '<p style="margin:0 0 12px;font-size:0.9rem;color:var(--danger);">Le vendeur n\'a pas indiqué de contact. Passez plutôt par « Payer avec mon épargne », ou demandez-lui son numéro.</p>') +
+        (num ? '<a class="btn" style="display:block;text-align:center;text-decoration:none;background:#128c7e;margin-bottom:8px;" target="_blank" rel="noopener" href="https://wa.me/' + num + '?text=' + encodeURIComponent(msg) + '"><i class="fa-brands fa-whatsapp"></i> Écrire sur WhatsApp</a>' +
+            '<a class="btn" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px;" href="tel:+' + num + '"><i class="fa-solid fa-phone"></i> Appeler</a>' : '') +
+        '<p style="font-size:0.8rem;color:var(--text-muted);margin:6px 0 12px;">Vous vous mettez d\'accord directement avec le vendeur et échangez la marchandise vous-mêmes. L\'AVEC n\'intervient pas : aucun montant n\'est prélevé sur l\'épargne, il n\'y a pas de commission, mais aussi aucune garantie.</p>' +
+        '<button type="button" class="btn-small" style="width:100%;" onclick="document.getElementById(\'bqContactBox\').style.display=\'none\'">Fermer</button></div>';
+    m.style.display = 'flex';
+}
