@@ -438,6 +438,7 @@
             <button class="dtab" data-tab="galerie" onclick="showTab('galerie')"><i class="fa-solid fa-images"></i> Galerie</button>
             <button class="dtab" data-tab="demandes" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes <span class="tab-badge hidden" id="tabBadgeReq">0</span></button>
             <button class="dtab" data-tab="reclamations" onclick="showTab('reclamations')"><i class="fa-solid fa-bell"></i> Réclamations <span class="tab-badge hidden" id="tabBadgeClaims">0</span></button>
+            <button class="dtab hidden" id="tabBtnBoutique" data-tab="boutique" onclick="showTab('boutique')"><i class="fa-solid fa-store"></i> Boutique <span class="tab-badge hidden" id="bqAdminBadge">0</span></button>
             <button class="dtab hidden" id="tabBtnEquipe" data-tab="equipe" onclick="showTab('equipe')"><i class="fa-solid fa-user-shield"></i> Équipe</button>
             <button class="dtab hidden" id="tabBtnJournal" data-tab="journal" onclick="showTab('journal')"><i class="fa-solid fa-clock-rotate-left"></i> Journal</button>
         </nav>
@@ -1005,6 +1006,17 @@
                 </section>
         </div>
 
+        <div class="dpanel hidden" id="panel-boutique">
+            <section class="card">
+                <div class="card-header"><i class="fa-solid fa-store"></i><h3>Boutique des membres</h3></div>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Commission de <strong>5 %</strong> sur chaque vente conclue, versée à la caisse de l'AVEC. Le prix est prélevé sur l'épargne de l'acheteur, le reste est ajouté à l'épargne du vendeur.</p>
+                <div id="bqAdminStats" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
+            </section>
+            <section class="card"><div class="card-header"><i class="fa-solid fa-receipt"></i><h3>Commandes</h3></div><div id="bqAdminOrders"></div></section>
+            <section class="card"><div class="card-header"><i class="fa-solid fa-clipboard-check"></i><h3>À valider</h3></div><div id="bqAdminPending"></div></section>
+            <section class="card"><div class="card-header"><i class="fa-solid fa-shop"></i><h3>Boutiques et articles</h3></div><div id="bqAdminAll"></div></section>
+        </div>
+
         <div class="dpanel hidden" id="panel-journal">
                 <section class="card hidden" id="activitySection">
                                     <div class="card-header">
@@ -1050,6 +1062,7 @@
             <button class="dtab mtab" data-mtab="credits" onclick="showMemberTab('credits')"><i class="fa-solid fa-hand-holding-dollar"></i> Mes crédits</button>
             <button class="dtab mtab" data-mtab="demandes" onclick="showMemberTab('demandes')"><i class="fa-solid fa-paper-plane"></i> Demandes</button>
             <button class="dtab mtab" data-mtab="reclamations" onclick="showMemberTab('reclamations')"><i class="fa-solid fa-circle-exclamation"></i> Réclamations</button>
+            <button class="dtab mtab" data-mtab="boutique" onclick="showMemberTab('boutique')"><i class="fa-solid fa-store"></i> Boutique <span class="tab-badge hidden" id="bqMemberBadge">0</span></button>
             <button class="dtab mtab" data-mtab="compte" onclick="showMemberTab('compte')"><i class="fa-solid fa-user"></i> Mon compte</button>
         </nav>
 
@@ -1255,6 +1268,58 @@
             </div>
         </div>
 
+        <div class="mpanel hidden" id="mp-boutique">
+            <div class="subtabs" style="flex-wrap:wrap;">
+                <button type="button" class="subtab active" id="bqSubBtn-catalogue" onclick="bqShowSub('catalogue')"><i class="fa-solid fa-bag-shopping"></i> Acheter</button>
+                <button type="button" class="subtab" id="bqSubBtn-ma" onclick="bqShowSub('ma')"><i class="fa-solid fa-store"></i> Ma boutique</button>
+                <button type="button" class="subtab" id="bqSubBtn-cmd" onclick="bqShowSub('cmd')"><i class="fa-solid fa-receipt"></i> Mes commandes <span class="tab-badge hidden" id="bqCmdBadge">0</span></button>
+            </div>
+            <div id="bqNotice" class="alert hidden"></div>
+            <div id="bq-catalogue">
+                <section class="card">
+                    <div class="card-header"><i class="fa-solid fa-bag-shopping"></i><h3>Boutiques des membres</h3></div>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Le prix est prélevé sur votre épargne quand l'administrateur conclut la vente. <strong>5 %</strong> du prix reviennent à l'AVEC ; le vendeur reçoit le reste sur son épargne.</p>
+                    <p id="bqBalance" style="font-weight:600;margin-bottom:10px;"></p>
+                    <input type="search" id="bqSearch" placeholder="Rechercher un article ou une boutique" oninput="bqRenderCatalog()" style="margin-bottom:12px;">
+                    <div id="bqCatalog"></div>
+                </section>
+            </div>
+            <div id="bq-ma" class="hidden">
+                <section class="card">
+                    <div class="card-header"><i class="fa-solid fa-store"></i><h3>Ma boutique</h3><span id="bqShopState" style="margin-left:auto;"></span></div>
+                    <form onsubmit="bqSaveShop(event)">
+                        <div class="form-group"><label>Nom de la boutique</label><input type="text" id="bqShopName" maxlength="50" required placeholder="Ex : Boutique de Grâce"></div>
+                        <div class="form-group"><label>Présentation (facultatif)</label><textarea id="bqShopDesc" rows="2" maxlength="300" placeholder="Ce que vous vendez, où vous trouver…"></textarea></div>
+                        <div class="form-group"><label>Contact (facultatif)</label><input type="text" id="bqShopContact" maxlength="60" placeholder="Téléphone ou lieu de remise"></div>
+                        <button type="submit" class="btn"><i class="fa-solid fa-floppy-disk"></i> Enregistrer ma boutique</button>
+                    </form>
+                </section>
+                <section class="card" id="bqItemCard">
+                    <div class="card-header"><i class="fa-solid fa-box-open"></i><h3>Ajouter un article</h3></div>
+                    <form onsubmit="bqSaveItem(event)">
+                        <div class="form-group"><label>Article</label><input type="text" id="bqItemTitle" maxlength="60" required placeholder="Ex : Sac de riz 25 kg"></div>
+                        <div class="form-group"><label>Description (facultatif)</label><textarea id="bqItemDesc" rows="2" maxlength="300"></textarea></div>
+                        <div class="form-group"><label>Prix</label>
+                            <div style="display:flex;gap:8px;"><input type="number" id="bqItemPrice" min="0.01" step="0.01" required style="flex:1;"><select id="bqItemDev" style="width:90px;"><option value="USD">USD</option><option value="FC">FC</option></select></div></div>
+                        <div class="form-group"><label>Quantité disponible</label><input type="number" id="bqItemQty" min="1" max="999" step="1" value="1" required></div>
+                        <div class="form-group"><label>Photo (facultatif)</label>
+                            <input type="file" id="bqItemPhoto" accept="image/*" onchange="bqPhoto(this)">
+                            <div id="bqPhotoPrev" style="margin-top:6px;"></div></div>
+                        <button type="submit" class="btn"><i class="fa-solid fa-plus"></i> Envoyer pour validation</button>
+                    </form>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-top:8px;">Chaque boutique et chaque article sont vérifiés par l'administrateur avant d'être visibles par les autres membres.</p>
+                </section>
+                <section class="card">
+                    <div class="card-header"><i class="fa-solid fa-list"></i><h3>Mes articles</h3></div>
+                    <div id="bqMyItems"></div>
+                </section>
+            </div>
+            <div id="bq-cmd" class="hidden">
+                <section class="card"><div class="card-header"><i class="fa-solid fa-cart-shopping"></i><h3>Mes achats</h3></div><div id="bqOrdersBuy"></div></section>
+                <section class="card"><div class="card-header"><i class="fa-solid fa-hand-holding-dollar"></i><h3>Mes ventes</h3></div><div id="bqOrdersSell"></div></section>
+            </div>
+        </div>
+
         <div class="mpanel hidden" id="mp-compte">
             <div class="compte-grid">
                 <section class="card" id="memberProfileSection">
@@ -1331,7 +1396,7 @@
     </div>
 
     <script src="firebase-config.js"></script>
-    <script type="module" src="firebase-adapter.js?v=20261019"></script>
+    <script type="module" src="firebase-adapter.js?v=20261021"></script>
     <script>
         // ---------- Utilitaires ----------
 
@@ -1512,6 +1577,7 @@
             if (hidden) el.classList.add('hidden'); else el.classList.remove('hidden');
         }
 
+        function bqCom(d) { return typeof bqCommission === 'function' ? bqCommission(d) : 0; }
         const OP_LABELS = {
             epargne: "Versement d'épargne",
             credit: 'Crédit accordé',
@@ -1522,6 +1588,8 @@
             prolongation: 'Échéance prolongée',
             occ: 'Cotisation occasionnelle',
             remise: 'Somme remise (cas social)',
+            achat: 'Achat en boutique',
+            vente: 'Vente en boutique',
             correction: "Correction de l'administrateur"
         };
         // Garde une trace des opérations pour que le membre (et l'admin) puissent vérifier
@@ -1720,11 +1788,13 @@
                 stopWa = F().listenWaSettings(d => { waSettings = Object.assign({}, WA_DEFAULTS, d || {}); renderWaSettings(); applyWaMode(); }, err => { /* sans gravité */ });
                 stopWaQ = F().listenWaQueue(list => { waQueue = list || []; renderWaQueue(); }, err => { /* sans gravité */ });
             }
-            stopListening = () => { stopData(); stopAnn(); stopSet(); stopProf(); stopReg(); stopWa(); stopWaQ(); };
+            let stopBq = () => {};
+            if (F().listenBoutique) stopBq = F().listenBoutique(isAdmin(currentUser), currentUser.memberId, bqOnData, err => { /* sans gravité */ });
+            stopListening = () => { stopData(); stopAnn(); stopSet(); stopProf(); stopReg(); stopWa(); stopWaQ(); stopBq(); };
         }
 
         function resetCloudState() {
-            members = []; claims = []; requests = []; announcements = []; registrations = []; waQueue = []; waSettings = Object.assign({}, WA_DEFAULTS); memberProfiles = {}; socialWeekly = SOCIAL_DEFAULT;
+            members = []; claims = []; requests = []; announcements = []; registrations = []; if (typeof bqReset === 'function') bqReset(); waQueue = []; waSettings = Object.assign({}, WA_DEFAULTS); memberProfiles = {}; socialWeekly = SOCIAL_DEFAULT;
             cloudLoaded.members = cloudLoaded.claims = cloudLoaded.requests = false;
             lastSynced.members = {}; lastSynced.claims = {}; lastSynced.requests = {};
             importChecked = false;
@@ -1883,6 +1953,7 @@
                     setHidden('teamSection', level !== 'total');
                     setHidden('reportSection', level !== 'total');
                     setHidden('activitySection', level !== 'total');
+                    setHidden('tabBtnBoutique', false);
                     setHidden('tabBtnEquipe', level !== 'total');
                     setHidden('tabBtnJournal', level !== 'total');
                     showTab('dashboard');
@@ -2453,8 +2524,8 @@
             document.getElementById('statTotalMembres').textContent = members.length;
             // Argent en caisse (estimation) : épargne + intérêts encaissés − crédits encore dehors ; en francs, on ajoute le fonds « cas sociaux »
             const fund = socialFund();
-            document.getElementById('statCaisseUSD').textContent = fmt(T.USD.epargne + T.USD.interets - T.USD.restant);
-            document.getElementById('statCaisseFC').textContent = fmt(T.FC.epargne + T.FC.interets - T.FC.restant + fund.balance + occFund().balance, 'FC');
+            document.getElementById('statCaisseUSD').textContent = fmt(T.USD.epargne + T.USD.interets - T.USD.restant + bqCom('USD'));
+            document.getElementById('statCaisseFC').textContent = fmt(T.FC.epargne + T.FC.interets - T.FC.restant + fund.balance + occFund().balance + bqCom('FC'), 'FC');
             document.getElementById('statCaisseFCNote').textContent = 'dont cas sociaux : ' + fmt(round2(fund.balance + occFund().balance), 'FC');
             document.getElementById('statSocialFund').textContent = fmt(round2(fund.balance + occFund().balance), 'FC');
             renderSocial();
@@ -3600,11 +3671,13 @@
             if (name === 'inscriptions') { name = 'membres'; showMemberSub('inscriptions'); }
             // Équipe et Journal : réservés à l'accès total (en ligne)
             if ((name === 'equipe' || name === 'journal') && (!CLOUD || !currentUser || currentUser.level !== 'total')) name = 'dashboard';
+            if (name === 'boutique' && !CLOUD) name = 'dashboard';
             currentTab = name;
             if (name === 'galerie') { try { renderGallery(); } catch (e) {} }
+            if (name === 'boutique' && typeof bqRenderAdmin === 'function') bqRenderAdmin();
             syncHeaderHeight();
             labelTables();
-            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'equipe', 'journal'].forEach(t => {
+            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'boutique', 'equipe', 'journal'].forEach(t => {
                 setHidden('panel-' + t, t !== name);
             });
             if (document.querySelectorAll) {
@@ -4496,7 +4569,8 @@
             const user = currentUser;
             const must = !!(user && user.mustChange);
             const tab = must ? 'compte' : currentMTab;
-            ['accueil', 'credits', 'demandes', 'reclamations'].forEach(t => setHidden('mp-' + t, must || t !== tab));
+            ['accueil', 'credits', 'demandes', 'reclamations', 'boutique'].forEach(t => setHidden('mp-' + t, must || t !== tab));
+            if (tab === 'boutique' && !must && typeof bqRenderMember === 'function') bqRenderMember();
             setHidden('mp-compte', tab !== 'compte');
             setHidden('memberProfileSection', must);
             setHidden('memberTabs', must);
@@ -5074,5 +5148,6 @@
             }
         };
     </script>
+    <script src="boutique.js?v=20261021"></script>
 </body>
 </html>

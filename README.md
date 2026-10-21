@@ -49,3 +49,10 @@ Une fois Firebase configuré (voir `GUIDE-FIREBASE.md`), l'administrateur et les
 
 ## Rapport par e-mail sans installation (manuel)
 Équipe > « Envoi manuel » > « Préparer l'e-mail avec le rapport PDF » : le PDF s'ouvre (Enregistrer au format PDF), puis Gmail s'ouvre avec le message prêt ; joignez le PDF et envoyez. Gratuit, sans plan Blaze.
+
+## Boutique des membres
+Chaque membre peut ouvrir une boutique (onglet « Boutique » de son espace), publier des articles et en acheter chez les autres. Fonctionne en mode en ligne seulement.
+- L'administrateur valide les boutiques et les articles (onglet « Boutique »).
+- L'acheteur commande ; le vendeur accepte ou refuse ; l'administrateur clique « Conclure la vente ».
+- À la conclusion, le prix est prélevé sur l'épargne de l'acheteur, le vendeur reçoit 95 % sur son épargne et 5 % vont à la caisse de l'AVEC (commission). Tout est écrit en une seule opération.
+- **Important : republiez `firestore.rules`** (nouvelles collections shops, items, orders), puis Ctrl+F5.

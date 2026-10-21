@@ -5,6 +5,9 @@
 //   members/{MBR-001}   fiche du membre (épargne, crédits, historique)  -> écrite par l'administrateur
 //   whatsappQueue/{id}  messages WhatsApp à envoyer automatiquement (traités par la Cloud Function)
 //   reportRequests/{id}  demandes d'envoi immédiat du rapport PDF par e-mail (traitées par la Cloud Function)
+//   shops/{MBR-001}     boutique d'un membre (validée par l'équipe)
+//   items/{id}          articles à vendre (publiés après validation)
+//   orders/{id}         commandes entre membres (conclues par l'équipe : épargne acheteur -> vendeur, 5 % à l'AVEC)
 //   announcements/{id}  annonces de l'administrateur, lues par tous les membres
 //   claims/{id}         réclamations                                    -> créées par le membre, traitées par l'admin
 //   requests/{id}       demandes de crédit / retrait                    -> créées par le membre, traitées par l'admin
@@ -255,6 +258,55 @@ window.FB_READY = (async () => {
         listenAnnouncements(cb, onError) {
             const q = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(50));
             return onSnapshot(q, snap => cb(snap.docs.map(d => Object.assign({}, d.data(), { id: d.id }))), err => onError(err));
+        },
+
+
+        // ----- Boutique des membres -----
+        async saveShop(data) { await setDoc(doc(db, 'shops', data.id), data); },
+        async saveItem(data) { await setDoc(doc(db, 'items', data.id), data); },
+        async patchItem(id, patch) { await updateDoc(doc(db, 'items', id), patch); },
+        async patchShop(id, patch) { await updateDoc(doc(db, 'shops', id), patch); },
+        async removeItem(id) { await deleteDoc(doc(db, 'items', id)); },
+        async createOrder(entry) { await setDoc(doc(db, 'orders', entry.id), entry); },
+        async patchOrder(id, patch) { await updateDoc(doc(db, 'orders', id), patch); },
+        // Vente conclue : épargne de l'acheteur, épargne du vendeur, commande et stock changent en UNE seule opération
+        async concludeOrder(buyer, seller, order, item) {
+            const batch = writeBatch(db);
+            batch.set(doc(db, 'members', buyer.id), buyer);
+            batch.set(doc(db, 'members', seller.id), seller);
+            batch.set(doc(db, 'orders', order.id), order);
+            batch.set(doc(db, 'items', item.id), item);
+            await batch.commit();
+        },
+        // L'équipe suit tout ; un membre suit les boutiques validées, les articles publiés, et ses propres données
+        listenBoutique(admin, memberId, h, onError) {
+            const stops = [];
+            const sources = {};
+            const emit = (name) => { const m = {}; Object.keys(sources[name]).forEach(k => Object.assign(m, sources[name][k])); h[name](Object.keys(m).map(k => m[k])); };
+            const watch = (name, key, q) => {
+                sources[name] = sources[name] || {};
+                stops.push(onSnapshot(q, snap => {
+                    const m = {}; snap.docs.forEach(d => { m[d.id] = withId(d); });
+                    sources[name][key] = m; emit(name);
+                }, err => onError(err)));
+            };
+            if (admin) {
+                watch('shops', 'all', collection(db, 'shops'));
+                watch('items', 'all', collection(db, 'items'));
+                watch('orders', 'all', collection(db, 'orders'));
+            } else {
+                watch('shops', 'ok', query(collection(db, 'shops'), where('status', '==', 'validée')));
+                stops.push(onSnapshot(doc(db, 'shops', memberId), s => {
+                    sources.shops = sources.shops || {};
+                    sources.shops.mine = s.exists() ? { [s.id]: withId(s) } : {};
+                    emit('shops');
+                }, err => onError(err)));
+                watch('items', 'ok', query(collection(db, 'items'), where('status', '==', 'publié')));
+                watch('items', 'mine', query(collection(db, 'items'), where('ownerId', '==', memberId)));
+                watch('orders', 'buy', query(collection(db, 'orders'), where('buyerId', '==', memberId)));
+                watch('orders', 'sell', query(collection(db, 'orders'), where('sellerId', '==', memberId)));
+            }
+            return () => stops.forEach(s => s());
         },
 
         // ----- Données -----
