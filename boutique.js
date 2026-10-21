@@ -69,6 +69,7 @@ function bqRenderMember() {
         const bal = document.getElementById('bqBalance');
         if (bal) bal.innerHTML = 'Votre épargne disponible pour acheter : <span style="color:var(--primary);">' + fmt(availableWithdrawal(m, 'USD'), 'USD') + '</span> · <span style="color:var(--primary);">' + fmt(availableWithdrawal(m, 'FC'), 'FC') + '</span>';
     }
+    bqRenderShowcase();
     // --- catalogue ---
     const q = normText((document.getElementById('bqSearch') || {}).value || '');
     const shopOf = id => bqShops.find(s => s.id === id);
@@ -312,3 +313,47 @@ function bqConclude(id) {
         .then(() => logActivity('Vente conclue : ' + o.itemTitle + ' ' + fmt(price, dev) + ' (' + bOrig.name + ' → ' + sOrig.name + '), commission ' + fmt(sp.commission, dev), o.buyerId))
         .catch(err => alert('Vente non enregistrée : ' + errText(err)));
 }
+
+// ================= Vitrine sur l'accueil du membre : les articles des autres membres défilent en continu =================
+let bqShowIds = '', bqShowList = [], bqShowPos = 0, bqShowTimer = null, bqShowPaused = false;
+function bqShowItems() {
+    const me = bqMe();
+    const shopOf = id => bqShops.find(s => s.id === id);
+    return bqItems.filter(i => i.status === 'publié' && i.ownerId !== me && (i.qty || 0) > 0 && (!shopOf(i.ownerId) || shopOf(i.ownerId).status === 'validée'))
+        .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+}
+function bqRenderShowcase() {
+    const box = document.getElementById('bqShowcase');
+    if (!box) return;
+    const list = currentUser && currentUser.role === 'member' ? bqShowItems() : [];
+    setHidden('bqShowcase', list.length === 0);
+    const ids = list.map(i => i.id + i.price + i.qty + (i.photo ? i.photo.length : 0)).join('|');
+    bqShowList = list;
+    if (!list.length) { bqStopShow(); bqShowIds = ''; return; }
+    if (ids !== bqShowIds) { bqShowIds = ids; if (bqShowPos >= list.length) bqShowPos = 0; bqShowDraw(); }
+    if (!bqShowTimer && list.length > 1) bqShowTimer = setInterval(() => { if (!bqShowPaused) bqShowGo(bqShowPos + 1); }, 3500);
+    if (list.length < 2) bqStopShow();
+}
+function bqStopShow() { if (bqShowTimer) { clearInterval(bqShowTimer); bqShowTimer = null; } }
+function bqPause(on) { bqShowPaused = !!on; }
+function bqShowGo(n) {
+    if (!bqShowList.length) return;
+    bqShowPos = ((n % bqShowList.length) + bqShowList.length) % bqShowList.length;
+    bqShowDraw();
+}
+function bqShowDraw() {
+    const el = document.getElementById('bqSlide'), dots = document.getElementById('bqDots');
+    const i = bqShowList[bqShowPos];
+    if (!el || !i) return;
+    const many = bqShowList.length > 1;
+    el.innerHTML = '<div style="display:flex;gap:12px;align-items:center;cursor:pointer;animation:bqFade .5s;" onclick="showMemberTab(\'boutique\');bqShowSub(\'catalogue\')">' +
+        '<div style="width:110px;flex:0 0 110px;">' + bqImg(i.photo, 110) + '</div>' +
+        '<div style="min-width:0;flex:1;"><div style="font-weight:700;font-size:1.02rem;">' + escapeHtml(i.title) + '</div>' +
+        '<div style="font-size:0.82rem;color:var(--text-muted);">' + escapeHtml(i.shopName || '') + ' · ' + escapeHtml(i.ownerName || '') + '</div>' +
+        (i.desc ? '<div style="font-size:0.85rem;margin-top:4px;max-height:2.6em;overflow:hidden;">' + escapeHtml(i.desc) + '</div>' : '') +
+        '<div style="margin-top:6px;font-weight:800;color:var(--primary);">' + fmt(i.price, i.devise) + '</div></div></div>' +
+        (many ? '<button type="button" aria-label="Précédent" onclick="bqShowGo(bqShowPos-1)" style="position:absolute;left:-4px;top:40%;border:none;background:rgba(255,255,255,.85);border-radius:50%;width:28px;height:28px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25);">‹</button>' +
+        '<button type="button" aria-label="Suivant" onclick="bqShowGo(bqShowPos+1)" style="position:absolute;right:-4px;top:40%;border:none;background:rgba(255,255,255,.85);border-radius:50%;width:28px;height:28px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25);">›</button>' : '');
+    if (dots) dots.innerHTML = many ? bqShowList.map((x, k) => '<span onclick="bqShowGo(' + k + ')" style="width:8px;height:8px;border-radius:50%;cursor:pointer;background:' + (k === bqShowPos ? 'var(--primary)' : '#cbd5e1') + ';"></span>').join('') : '';
+}
+(function () { const st = document.createElement('style'); st.textContent = '@keyframes bqFade{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}'; document.head.appendChild(st); })();

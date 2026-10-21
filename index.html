@@ -1085,6 +1085,12 @@
                         <button type="button" class="ghost" onclick="showMemberTab('credits')"><i class="fa-solid fa-hand-holding-dollar"></i> Mes crédits</button>
                     </div>
                 </div>
+                <section class="card hidden" id="bqShowcase" style="overflow:hidden;">
+                    <div class="card-header"><i class="fa-solid fa-store"></i><h3>Dans la boutique des membres</h3>
+                        <button type="button" class="btn-small" style="margin-left:auto;" onclick="showMemberTab('boutique');bqShowSub('catalogue')">Tout voir</button></div>
+                    <div id="bqSlide" style="position:relative;" onmouseenter="bqPause(true)" onmouseleave="bqPause(false)" ontouchstart="bqPause(true)" ontouchend="bqPause(false)"></div>
+                    <div id="bqDots" style="display:flex;justify-content:center;gap:6px;margin-top:10px;"></div>
+                </section>
                 <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon bg-blue"><i class="fa-solid fa-wallet"></i></div>
@@ -5148,6 +5154,6 @@
             }
         };
     </script>
-    <script src="boutique.js?v=20261021"></script>
+    <script src="boutique.js?v=20261022"></script>
 </body>
 </html>
