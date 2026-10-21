@@ -333,7 +333,7 @@ function bqRenderShowcase() {
     bqShowList = list;
     if (!list.length) { bqStopShow(); bqShowIds = ''; return; }
     if (ids !== bqShowIds) { bqShowIds = ids; if (bqShowPos >= list.length) bqShowPos = 0; bqShowDraw(); }
-    if (!bqShowTimer && list.length > 1) bqShowTimer = setInterval(() => { if (!bqShowPaused) bqShowGo(bqShowPos + 1); }, 3500);
+    if (!bqShowTimer && list.length > 1) bqShowTimer = setInterval(() => { if (!bqShowPaused) bqShowGo(bqShowPos + 1); }, 10000);
     if (list.length < 2) bqStopShow();
 }
 function bqStopShow() { if (bqShowTimer) { clearInterval(bqShowTimer); bqShowTimer = null; } }
