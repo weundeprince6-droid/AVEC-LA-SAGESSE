@@ -320,8 +320,14 @@ let bqShowIds = '', bqShowList = [], bqShowPos = 0, bqShowTimer = null, bqShowPa
 function bqShowItems() {
     const me = bqMe();
     const shopOf = id => bqShops.find(s => s.id === id);
-    return bqItems.filter(i => i.status === 'publié' && (!me || i.ownerId !== me) && (i.qty || 0) > 0 && (!shopOf(i.ownerId) || shopOf(i.ownerId).status === 'validée'))
+    const list = bqItems.filter(i => i.status === 'publié' && (!me || i.ownerId !== me) && (i.qty || 0) > 0 && (!shopOf(i.ownerId) || shopOf(i.ownerId).status === 'validée'))
         .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    // Chaque article suivant vient d'un AUTRE membre : on alterne entre les vendeurs (1er article de chacun, puis le 2e de chacun...)
+    const byOwner = {}, owners = [];
+    list.forEach(i => { if (!byOwner[i.ownerId]) { byOwner[i.ownerId] = []; owners.push(i.ownerId); } byOwner[i.ownerId].push(i); });
+    const out = [];
+    for (let round = 0; out.length < list.length; round++) owners.forEach(o => { if (byOwner[o][round]) out.push(byOwner[o][round]); });
+    return out;
 }
 function bqRenderShowcase() {
     const box = document.getElementById('bqShowcase');
