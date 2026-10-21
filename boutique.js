@@ -352,60 +352,153 @@ function bqConclude(id) {
         .catch(err => alert('Vente non enregistrée : ' + errText(err)));
 }
 
-// ================= Vitrine sur l'accueil du membre : les articles des autres membres défilent en continu =================
-let bqShowIds = '', bqShowList = [], bqShowPos = 0, bqShowTimer = null, bqShowPaused = false;
+// ================= Vitrine horizontale : plusieurs articles, vendeurs alternés =================
+let bqShowIds = '', bqShowList = [], bqShowTimer = null, bqShowPaused = false;
+
 function bqShowItems() {
     const me = bqMe();
     const shopOf = id => bqShops.find(s => s.id === id);
-    const list = bqItems.filter(i => i.status === 'publié' && (!me || i.ownerId !== me) && (i.qty || 0) > 0 && (!shopOf(i.ownerId) || shopOf(i.ownerId).status === 'validée'))
-        .sort((a, b) => String(a.id).localeCompare(String(b.id)));
-    // Chaque article suivant vient d'un AUTRE membre : on alterne entre les vendeurs (1er article de chacun, puis le 2e de chacun...)
-    const byOwner = {}, owners = [];
-    list.forEach(i => { if (!byOwner[i.ownerId]) { byOwner[i.ownerId] = []; owners.push(i.ownerId); } byOwner[i.ownerId].push(i); });
+    const list = bqItems
+        .filter(i => i.status === 'publié' && (!me || i.ownerId !== me) &&
+            (Number(i.qty) || 0) > 0 &&
+            (!shopOf(i.ownerId) || shopOf(i.ownerId).status === 'validée'))
+        .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    // Alternance équitable : un article de chaque vendeur, puis leur deuxième article, etc.
+    const byOwner = Object.create(null), owners = [];
+    list.forEach(i => {
+        if (!byOwner[i.ownerId]) { byOwner[i.ownerId] = []; owners.push(i.ownerId); }
+        byOwner[i.ownerId].push(i);
+    });
     const out = [];
-    for (let round = 0; out.length < list.length; round++) owners.forEach(o => { if (byOwner[o][round]) out.push(byOwner[o][round]); });
+    for (let round = 0; out.length < list.length; round++) {
+        owners.forEach(o => { if (byOwner[o][round]) out.push(byOwner[o][round]); });
+    }
     return out;
 }
+
 function bqRenderShowcase() {
     const box = document.getElementById('bqShowcase');
     if (!box) return;
     const list = currentUser && (currentUser.role === 'member' || (CLOUD && isAdmin(currentUser))) ? bqShowItems() : [];
     setHidden('bqShowcase', list.length === 0);
     setHidden('bqShowcaseA', list.length === 0);
-    const ids = list.map(i => i.id + i.price + i.qty + (i.photo ? i.photo.length : 0)).join('|');
+    const ids = list.map(i => [i.id, i.title, i.ownerId, i.price, i.qty, i.photo ? i.photo.length : 0].join(':')).join('|');
+    const changed = ids !== bqShowIds;
     bqShowList = list;
-    if (!list.length) { bqStopShow(); bqShowIds = ''; return; }
-    if (ids !== bqShowIds) { bqShowIds = ids; if (bqShowPos >= list.length) bqShowPos = 0; bqShowDraw(); }
-    if (!bqShowTimer && list.length > 1) bqShowTimer = setInterval(() => { if (!bqShowPaused) bqShowGo(bqShowPos + 1); }, 10000);
+    if (!list.length) {
+        bqStopShow();
+        bqShowIds = '';
+        ['', 'A'].forEach(sfx => {
+            const el = document.getElementById('bqSlide' + sfx);
+            const dots = document.getElementById('bqDots' + sfx);
+            if (el) el.innerHTML = '';
+            if (dots) dots.innerHTML = '';
+        });
+        return;
+    }
+    if (changed) {
+        bqShowIds = ids;
+        bqShowDraw();
+    }
+    if (!bqShowTimer && list.length > 1) {
+        bqShowTimer = setInterval(() => {
+            if (!bqShowPaused) bqShowAdvance();
+        }, 3500);
+    }
     if (list.length < 2) bqStopShow();
 }
-function bqStopShow() { if (bqShowTimer) { clearInterval(bqShowTimer); bqShowTimer = null; } }
+
+function bqStopShow() {
+    if (bqShowTimer) { clearInterval(bqShowTimer); bqShowTimer = null; }
+}
 function bqPause(on) { bqShowPaused = !!on; }
+
+function bqShowAdvance() {
+    ['', 'A'].forEach(sfx => {
+        const el = document.getElementById('bqSlide' + sfx);
+        const viewport = el && el.querySelector('.bq-show-viewport');
+        if (!viewport) return;
+        const card = viewport.querySelector('.bq-show-card');
+        const step = card ? card.getBoundingClientRect().width + 12 : 232;
+        const end = viewport.scrollWidth - viewport.clientWidth;
+        if (end <= 4 || viewport.scrollLeft >= end - step / 2) {
+            viewport.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+            viewport.scrollBy({ left: step, behavior: 'smooth' });
+        }
+    });
+}
+
 function bqShowGo(n) {
     if (!bqShowList.length) return;
-    bqShowPos = ((n % bqShowList.length) + bqShowList.length) % bqShowList.length;
-    bqShowDraw();
+    const target = bqShowList[((n % bqShowList.length) + bqShowList.length) % bqShowList.length];
+    if (!target) return;
+    ['', 'A'].forEach(sfx => {
+        const el = document.getElementById('bqSlide' + sfx);
+        const card = el && el.querySelector('[data-bq-item="' + String(target.id).replace(/"/g, '') + '"]');
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+    });
 }
+
 function bqShowDraw() {
-    const i = bqShowList[bqShowPos];
-    if (!i) return;
-    ['', 'A'].forEach(sfx => bqShowDrawIn(document.getElementById('bqSlide' + sfx), document.getElementById('bqDots' + sfx), i, sfx));
+    ['', 'A'].forEach(sfx => {
+        bqShowDrawIn(document.getElementById('bqSlide' + sfx), document.getElementById('bqDots' + sfx), sfx);
+    });
 }
-function bqShowDrawIn(el, dots, i, sfx) {
+
+function bqShowDrawIn(el, dots, sfx) {
     if (!el) return;
     const go = sfx === 'A' ? "showTab('boutique')" : "showMemberTab('boutique');bqShowSub('catalogue')";
-    const many = bqShowList.length > 1;
-    el.innerHTML = '<div style="display:flex;gap:12px;align-items:center;cursor:pointer;animation:bqFade .5s;" onclick="' + go + '">' +
-        '<div style="width:110px;flex:0 0 110px;">' + bqImg(i.photo, 110) + '</div>' +
-        '<div style="min-width:0;flex:1;"><div style="font-weight:700;font-size:1.02rem;">' + escapeHtml(i.title) + '</div>' +
-        '<div style="font-size:0.82rem;color:var(--text-muted);">' + escapeHtml(i.shopName || '') + ' · ' + escapeHtml(i.ownerName || '') + '</div>' +
-        (i.desc ? '<div style="font-size:0.85rem;margin-top:4px;max-height:2.6em;overflow:hidden;">' + escapeHtml(i.desc) + '</div>' : '') +
-        '<div style="margin-top:6px;font-weight:800;color:var(--primary);">' + fmt(i.price, i.devise) + '</div></div></div>' +
-        (many ? '<button type="button" aria-label="Précédent" onclick="bqShowGo(bqShowPos-1)" style="position:absolute;left:-4px;top:40%;border:none;background:rgba(255,255,255,.85);border-radius:50%;width:28px;height:28px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25);">‹</button>' +
-        '<button type="button" aria-label="Suivant" onclick="bqShowGo(bqShowPos+1)" style="position:absolute;right:-4px;top:40%;border:none;background:rgba(255,255,255,.85);border-radius:50%;width:28px;height:28px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25);">›</button>' : '');
-    if (dots) dots.innerHTML = many ? bqShowList.map((x, k) => '<span onclick="bqShowGo(' + k + ')" style="width:8px;height:8px;border-radius:50%;cursor:pointer;background:' + (k === bqShowPos ? 'var(--primary)' : '#cbd5e1') + ';"></span>').join('') : '';
+    const items = bqShowList.map(i =>
+        '<article class="bq-show-card" data-bq-item="' + escapeHtml(i.id) + '" role="button" tabindex="0" aria-label="Voir le catalogue : ' + escapeHtml(i.title || 'Article') + '" onclick="' + go + '" onkeydown="if(event.keyCode===13||event.keyCode===32){event.preventDefault();' + go + '}">' +
+            '<div class="bq-show-photo">' + bqImg(i.photo, 150) + '</div>' +
+            '<div class="bq-show-info">' +
+                '<div class="bq-show-title">' + escapeHtml(i.title || 'Article sans titre') + '</div>' +
+                '<div class="bq-show-owner">' + escapeHtml(i.shopName || 'Boutique') + '</div>' +
+                '<div class="bq-show-member">' + escapeHtml(i.ownerName || 'Membre') + '</div>' +
+                (i.desc ? '<div class="bq-show-desc">' + escapeHtml(i.desc) + '</div>' : '') +
+                '<div class="bq-show-price">' + fmt(i.price, i.devise) + '</div>' +
+                '<div class="bq-show-stock">Disponible : ' + Math.max(0, Number(i.qty) || 0) + '</div>' +
+            '</div></article>'
+    ).join('');
+    el.innerHTML = '<div class="bq-show-viewport" aria-label="Articles des boutiques des membres"><div class="bq-show-track">' + items + '</div></div>';
+    const viewport = el.querySelector('.bq-show-viewport');
+    if (viewport) {
+        viewport.addEventListener('mouseenter', () => bqPause(true));
+        viewport.addEventListener('mouseleave', () => bqPause(false));
+        viewport.addEventListener('touchstart', () => bqPause(true), { passive: true });
+        viewport.addEventListener('touchend', () => bqPause(false), { passive: true });
+        viewport.addEventListener('focusin', () => bqPause(true));
+        viewport.addEventListener('focusout', () => bqPause(false));
+    }
+    if (dots) {
+        const shops = new Set(bqShowList.map(i => i.ownerId)).size;
+        dots.innerHTML = '<span class="bq-show-count">' + bqShowList.length + ' article(s) · ' + shops + ' vendeur(s) · faites défiler pour tout voir</span>';
+    }
 }
-(function () { const st = document.createElement('style'); st.textContent = '@keyframes bqFade{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}'; document.head.appendChild(st); })();
+
+(function () {
+    const st = document.createElement('style');
+    st.textContent =
+        '.bq-show-viewport{width:100%;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:thin;padding:2px 2px 9px;}' +
+        '.bq-show-track{display:flex;align-items:stretch;gap:12px;width:max-content;min-width:100%;}' +
+        '.bq-show-card{box-sizing:border-box;display:flex;flex-direction:column;flex:0 0 220px;width:220px;max-width:78vw;overflow:hidden;border:1px solid var(--border);border-radius:12px;background:var(--card-bg,#fff);scroll-snap-align:start;cursor:pointer;transition:box-shadow .18s,transform .18s;}' +
+        '.bq-show-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.10);transform:translateY(-2px);}' +
+        '.bq-show-card:focus-visible{outline:2px solid var(--primary);outline-offset:2px;}' +
+        '.bq-show-photo{height:132px;display:flex;align-items:center;justify-content:center;background:var(--bg,#f8fafc);overflow:hidden;}' +
+        '.bq-show-photo img{width:100%;height:100%;object-fit:cover;}' +
+        '.bq-show-info{padding:10px;display:flex;flex-direction:column;gap:4px;min-width:0;flex:1;}' +
+        '.bq-show-title{font-weight:750;font-size:.96rem;line-height:1.3;overflow-wrap:anywhere;}' +
+        '.bq-show-owner{font-size:.82rem;font-weight:650;color:var(--primary);overflow-wrap:anywhere;}' +
+        '.bq-show-member,.bq-show-desc,.bq-show-stock{font-size:.78rem;color:var(--text-muted);overflow-wrap:anywhere;}' +
+        '.bq-show-desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.2em;}' +
+        '.bq-show-price{font-size:1rem;font-weight:800;color:var(--primary);margin-top:auto;padding-top:5px;}' +
+        '.bq-show-count{font-size:.78rem;color:var(--text-muted);}' +
+        '.bq-show-viewport::-webkit-scrollbar{height:6px;}.bq-show-viewport::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:8px;}' +
+        '@media(max-width:480px){.bq-show-card{flex-basis:190px;width:190px;}.bq-show-photo{height:112px;}}' +
+        '@media(prefers-reduced-motion:reduce){.bq-show-card{transition:none;}}';
+    document.head.appendChild(st);
+})();
 
 // ================= Contacter le vendeur : accord direct, sans passer par l'épargne ni la base =================
 function bqContact(id) {
