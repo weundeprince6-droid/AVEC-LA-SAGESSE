@@ -283,7 +283,7 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/items/$(id)).data;
     }
 
-    // Boutique : une par membre (document = identifiant du membre). Visible par les membres seulement une fois validée.
+    // Boutique : une par membre (document = identifiant du membre). Visible tout de suite ; l'équipe peut la masquer.
     match /shops/{shopId} {
       allow read: if isStaff() || (hasProfile() && (resource.data.status == 'validée' || shopId == myMemberId()));
       allow create: if isStaff() || (
@@ -294,7 +294,7 @@ service cloud.firestore {
         && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 50
         && request.resource.data.desc is string && request.resource.data.desc.size() <= 300
         && request.resource.data.contact is string && request.resource.data.contact.size() <= 60
-        && request.resource.data.status == 'en attente'
+        && request.resource.data.status == 'validée'
       );
       // le membre modifie les textes de sa boutique, jamais son statut (la validation reste à l'équipe)
       allow update: if isStaff() || (
@@ -309,7 +309,7 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Articles : publiés seulement après validation par l'équipe.
+    // Articles : publiés tout de suite par le vendeur ; l'équipe peut les masquer (le vendeur ne peut alors plus les remettre).
     match /items/{itemId} {
       allow read: if isStaff() || (hasProfile() && (resource.data.status == 'publié' || resource.data.ownerId == myMemberId()));
       allow create: if isStaff() || (
@@ -325,27 +325,22 @@ service cloud.firestore {
         && request.resource.data.devise in ['USD', 'FC']
         && request.resource.data.qty is int && request.resource.data.qty >= 1 && request.resource.data.qty <= 999
         && request.resource.data.photo is string && request.resource.data.photo.size() <= 120000
-        && request.resource.data.status == 'en attente'
+        && request.resource.data.status == 'publié'
       );
-      // le vendeur peut retirer son article (masqué) ; toute modification de son contenu le renvoie en validation
+      // le vendeur peut modifier son article, le retirer ou le remettre en vente ; s'il a été masqué par l'équipe, il ne peut plus y toucher
       allow update: if isStaff() || (
         hasProfile() && resource.data.ownerId == myMemberId()
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.id == resource.data.id
-        && resource.data.status != 'vendu'
-        && (
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status in ['masqué', 'en attente'])
-          || (
-            request.resource.data.status == 'en attente'
-            && request.resource.data.keys().hasOnly(['id', 'ownerId', 'ownerName', 'shopName', 'title', 'desc', 'price', 'devise', 'qty', 'photo', 'status', 'date'])
-            && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 60
-            && request.resource.data.desc is string && request.resource.data.desc.size() <= 300
-            && request.resource.data.price is number && request.resource.data.price > 0 && request.resource.data.price <= 100000000
-            && request.resource.data.devise in ['USD', 'FC']
-            && request.resource.data.qty is int && request.resource.data.qty >= 1 && request.resource.data.qty <= 999
-            && request.resource.data.photo is string && request.resource.data.photo.size() <= 120000
-          )
-        )
+        && resource.data.status in ['publié', 'retiré']
+        && request.resource.data.status in ['publié', 'retiré']
+        && request.resource.data.keys().hasOnly(['id', 'ownerId', 'ownerName', 'shopName', 'title', 'desc', 'price', 'devise', 'qty', 'photo', 'status', 'date'])
+        && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 60
+        && request.resource.data.desc is string && request.resource.data.desc.size() <= 300
+        && request.resource.data.price is number && request.resource.data.price > 0 && request.resource.data.price <= 100000000
+        && request.resource.data.devise in ['USD', 'FC']
+        && request.resource.data.qty is int && request.resource.data.qty >= 1 && request.resource.data.qty <= 999
+        && request.resource.data.photo is string && request.resource.data.photo.size() <= 120000
       );
       allow delete: if isAdmin() || (hasProfile() && resource.data.ownerId == myMemberId() && resource.data.status != 'vendu');
     }

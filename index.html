@@ -444,6 +444,13 @@
         </nav>
 
         <div class="dpanel" id="panel-dashboard">
+            <section class="card hidden" id="bqShowcaseA" style="overflow:hidden;">
+                <div class="card-header"><i class="fa-solid fa-store"></i><h3>Articles publiés par les membres</h3>
+                    <button type="button" class="btn-small" style="margin-left:auto;" onclick="showTab('boutique')">Gérer</button></div>
+                <div id="bqSlideA" style="position:relative;" onmouseenter="bqPause(true)" onmouseleave="bqPause(false)" ontouchstart="bqPause(true)" ontouchend="bqPause(false)"></div>
+                <div id="bqDotsA" style="display:flex;justify-content:center;gap:6px;margin-top:10px;"></div>
+            </section>
+
         <!-- TABLEAU DE BORD - STATS CAISSE GLOBALE -->
         <div class="stats-grid">
             <div class="stat-card">
@@ -1013,7 +1020,6 @@
                 <div id="bqAdminStats" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
             </section>
             <section class="card"><div class="card-header"><i class="fa-solid fa-receipt"></i><h3>Commandes</h3></div><div id="bqAdminOrders"></div></section>
-            <section class="card"><div class="card-header"><i class="fa-solid fa-clipboard-check"></i><h3>À valider</h3></div><div id="bqAdminPending"></div></section>
             <section class="card"><div class="card-header"><i class="fa-solid fa-shop"></i><h3>Boutiques et articles</h3></div><div id="bqAdminAll"></div></section>
         </div>
 
@@ -1311,9 +1317,9 @@
                         <div class="form-group"><label>Photo (facultatif)</label>
                             <input type="file" id="bqItemPhoto" accept="image/*" onchange="bqPhoto(this)">
                             <div id="bqPhotoPrev" style="margin-top:6px;"></div></div>
-                        <button type="submit" class="btn"><i class="fa-solid fa-plus"></i> Envoyer pour validation</button>
+                        <button type="submit" class="btn"><i class="fa-solid fa-plus"></i> Publier l'article</button>
                     </form>
-                    <p style="font-size:0.82rem;color:var(--text-muted);margin-top:8px;">Chaque boutique et chaque article sont vérifiés par l'administrateur avant d'être visibles par les autres membres.</p>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-top:8px;">Votre article est visible tout de suite par les autres membres. L'administrateur peut masquer un article non conforme.</p>
                 </section>
                 <section class="card">
                     <div class="card-header"><i class="fa-solid fa-list"></i><h3>Mes articles</h3></div>
@@ -5154,6 +5160,6 @@
             }
         };
     </script>
-    <script src="boutique.js?v=20261022"></script>
+    <script src="boutique.js?v=20261023"></script>
 </body>
 </html>

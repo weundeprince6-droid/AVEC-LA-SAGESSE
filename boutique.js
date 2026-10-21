@@ -29,7 +29,7 @@ function bqSay(text, ok) {
 }
 function bqStatusBadge(st) {
     const cls = { 'validée': 'badge-ok', 'publié': 'badge-ok', 'conclue': 'badge-ok', 'acceptée': 'badge-due', 'en attente': 'badge-due' }[st] || 'badge-late';
-    const txt = { 'validée': 'Validée', 'publié': 'Publié', 'conclue': 'Vente conclue', 'acceptée': 'Acceptée', 'en attente': 'En attente', 'refusée': 'Refusée', 'annulée': 'Annulée', 'masqué': 'Masqué', 'vendu': 'Épuisé' }[st] || st;
+    const txt = { 'validée': 'Ouverte', 'masquée': 'Masquée', 'publié': 'Publié', 'conclue': 'Vente conclue', 'acceptée': 'Acceptée', 'en attente': 'En attente', 'refusée': 'Refusée', 'annulée': 'Annulée', 'masqué': 'Masqué par l\'administrateur', 'retiré': 'Retiré', 'vendu': 'Épuisé' }[st] || st;
     return '<span class="badge ' + cls + '">' + escapeHtml(txt) + '</span>';
 }
 function bqRefresh() {
@@ -105,8 +105,8 @@ function bqRenderMember() {
         '<div style="display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--border);padding:8px 0;flex-wrap:wrap;">' +
         '<div style="width:56px;">' + bqImg(i.photo, 56) + '</div>' +
         '<div style="flex:1;min-width:160px;"><strong>' + escapeHtml(i.title) + '</strong> ' + bqStatusBadge(i.status) + '<br><span style="font-size:0.85rem;">' + fmt(i.price, i.devise) + ' · stock ' + i.qty + '</span></div>' +
-        (i.status === 'publié' || i.status === 'en attente' ? '<button type="button" class="btn-small" onclick="bqHideItem(\'' + escapeHtml(i.id) + '\')">Retirer</button>' : '') +
-        (i.status === 'masqué' ? '<button type="button" class="btn-small" onclick="bqRepublish(\'' + escapeHtml(i.id) + '\')">Remettre en vente</button>' : '') +
+        (i.status === 'publié' ? '<button type="button" class="btn-small" onclick="bqHideItem(\'' + escapeHtml(i.id) + '\')">Retirer</button>' : '') +
+        (i.status === 'retiré' ? '<button type="button" class="btn-small" onclick="bqRepublish(\'' + escapeHtml(i.id) + '\')">Remettre en vente</button>' : '') +
         (i.status !== 'vendu' ? '<button type="button" class="btn-small danger" onclick="bqDeleteItem(\'' + escapeHtml(i.id) + '\')"><i class="fa-solid fa-trash"></i></button>' : '') +
         '</div>').join('') : '<p style="color:var(--text-muted);">Vous n\'avez pas encore d\'article.</p>';
     // --- commandes ---
@@ -138,12 +138,12 @@ function bqSaveShop(e) {
         name: document.getElementById('bqShopName').value.trim().slice(0, 50),
         desc: document.getElementById('bqShopDesc').value.trim().slice(0, 300),
         contact: document.getElementById('bqShopContact').value.trim().slice(0, 60),
-        status: old ? old.status : 'en attente',
+        status: old ? old.status : 'validée',
         date: old ? old.date : new Date().toISOString()
     };
     if (!shop.name) { bqSay('Donnez un nom à votre boutique.', false); return; }
     F().saveShop(shop)
-        .then(() => bqSay(old ? 'Boutique mise à jour.' : "Boutique envoyée. Elle sera visible après validation par l'administrateur.", true))
+        .then(() => bqSay(old ? 'Boutique mise à jour.' : 'Boutique créée. Vous pouvez maintenant ajouter vos articles.', true))
         .catch(err => bqSay('Enregistrement impossible : ' + errText(err), false));
 }
 function bqPhoto(input) {
@@ -182,11 +182,11 @@ function bqSaveItem(e) {
         title: document.getElementById('bqItemTitle').value.trim().slice(0, 60),
         desc: document.getElementById('bqItemDesc').value.trim().slice(0, 300),
         price: price, devise: document.getElementById('bqItemDev').value === 'FC' ? 'FC' : 'USD',
-        qty: qty, photo: bqPhotoData || '', status: 'en attente', date: new Date().toISOString()
+        qty: qty, photo: bqPhotoData || '', status: 'publié', date: new Date().toISOString()
     };
     if (!item.title) { bqSay("Donnez un nom à l'article.", false); return; }
     F().saveItem(item).then(() => {
-        bqSay("Article envoyé. Il sera visible après validation par l'administrateur.", true);
+        bqSay('Article publié : les autres membres peuvent le voir.', true);
         ['bqItemTitle', 'bqItemDesc', 'bqItemPrice'].forEach(id => { document.getElementById(id).value = ''; });
         document.getElementById('bqItemQty').value = '1'; document.getElementById('bqItemPhoto').value = '';
         document.getElementById('bqPhotoPrev').innerHTML = ''; bqPhotoData = '';
@@ -194,10 +194,10 @@ function bqSaveItem(e) {
 }
 function bqHideItem(id) {
     if (!confirm('Retirer cet article de la vente ?')) return;
-    F().patchItem(id, { status: 'masqué' }).catch(err => bqSay('Impossible : ' + errText(err), false));
+    F().patchItem(id, { status: 'retiré' }).catch(err => bqSay('Impossible : ' + errText(err), false));
 }
 function bqRepublish(id) {
-    F().patchItem(id, { status: 'en attente' }).then(() => bqSay("Article renvoyé pour validation.", true)).catch(err => bqSay('Impossible : ' + errText(err), false));
+    F().patchItem(id, { status: 'publié' }).then(() => bqSay('Article remis en vente.', true)).catch(err => bqSay('Impossible : ' + errText(err), false));
 }
 function bqDeleteItem(id) {
     if (!confirm('Supprimer définitivement cet article ?')) return;
@@ -233,17 +233,18 @@ function bqCancelOrder(id) {
 function bqAdminSay(text, ok) { alert(text); }
 function bqRenderAdmin() {
     if (!currentUser || !isAdmin(currentUser) || !CLOUD) return;
+    bqRenderShowcase();
     const orders = bqOrders.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
     const done = orders.filter(o => o.status === 'conclue');
     const com = d => round2(done.filter(o => devOf(o) === d).reduce((t, o) => t + (Number(o.commission) || 0), 0));
-    const pendShops = bqShops.filter(s => s.status === 'en attente'), pendItems = bqItems.filter(i => i.status === 'en attente');
+    const pendShops = [], pendItems = [];
     const toConclude = orders.filter(o => o.status === 'acceptée' || o.status === 'en attente');
     const badge = document.getElementById('bqAdminBadge');
-    const n = pendShops.length + pendItems.length + orders.filter(o => o.status === 'acceptée').length;
+    const n = orders.filter(o => o.status === 'acceptée').length;
     if (badge) { badge.textContent = n; setHidden('bqAdminBadge', !(n > 0)); }
     const stat = (t, v) => '<div style="flex:1;min-width:150px;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:10px;"><div style="font-size:0.78rem;color:var(--text-muted);">' + t + '</div><div style="font-weight:800;font-size:1.1rem;">' + v + '</div></div>';
     const stats = document.getElementById('bqAdminStats');
-    if (stats) stats.innerHTML = stat('Commissions encaissées (USD)', fmt(com('USD'), 'USD')) + stat('Commissions encaissées (FC)', fmt(com('FC'), 'FC')) + stat('Ventes conclues', done.length) + stat('À traiter', n);
+    if (stats) stats.innerHTML = stat('Commissions encaissées (USD)', fmt(com('USD'), 'USD')) + stat('Commissions encaissées (FC)', fmt(com('FC'), 'FC')) + stat('Ventes conclues', done.length) + stat('Commandes à conclure', n);
 
     const sellerInfo = o => escapeHtml(o.buyerName || o.buyerId) + ' → ' + escapeHtml(o.sellerName || o.sellerId);
     const ob = document.getElementById('bqAdminOrders');
@@ -266,9 +267,9 @@ function bqRenderAdmin() {
     const all = document.getElementById('bqAdminAll');
     if (all) all.innerHTML = (bqShops.length || bqItems.length) ?
         bqShops.map(s => '<div style="border-bottom:1px solid var(--border);padding:8px 0;"><i class="fa-solid fa-shop"></i> <strong>' + escapeHtml(s.name) + '</strong> · ' + escapeHtml(s.ownerName || s.id) + ' ' + bqStatusBadge(s.status) +
-            (s.status === 'validée' ? ' <button type="button" class="btn-small danger" onclick="bqShopStatus(\'' + escapeHtml(s.id) + '\',\'masquée\')">Masquer</button>' : (s.status === 'masquée' ? ' <button type="button" class="btn-small" onclick="bqShopStatus(\'' + escapeHtml(s.id) + '\',\'validée\')">Rétablir</button>' : '')) + '</div>' +
+            (s.status === 'validée' ? ' <button type="button" class="btn-small danger" onclick="bqShopStatus(\'' + escapeHtml(s.id) + '\',\'masquée\')">Masquer</button>' : ' <button type="button" class="btn-small" onclick="bqShopStatus(\'' + escapeHtml(s.id) + '\',\'validée\')">Rétablir</button>') + '</div>' +
             bqItems.filter(i => i.ownerId === s.id).map(i => '<div style="padding:4px 0 4px 22px;font-size:0.88rem;">• ' + escapeHtml(i.title) + ' · ' + fmt(i.price, i.devise) + ' · stock ' + i.qty + ' ' + bqStatusBadge(i.status) +
-                (i.status === 'publié' ? ' <button type="button" class="btn-small danger" onclick="bqItemStatus(\'' + escapeHtml(i.id) + '\',\'masqué\')">Masquer</button>' : '') + '</div>').join('')).join('')
+                (i.status === 'publié' ? ' <button type="button" class="btn-small danger" onclick="bqItemStatus(\'' + escapeHtml(i.id) + '\',\'masqué\')">Masquer</button>' : '') + (i.status === 'masqué' || i.status === 'en attente' ? ' <button type="button" class="btn-small" onclick="bqItemStatus(\'' + escapeHtml(i.id) + '\',\'publié\')">Publier</button>' : '') + '</div>').join('')).join('')
         : '<p style="color:var(--text-muted);">Aucune boutique pour le moment.</p>';
 }
 function bqShopStatus(id, st) {
@@ -319,14 +320,15 @@ let bqShowIds = '', bqShowList = [], bqShowPos = 0, bqShowTimer = null, bqShowPa
 function bqShowItems() {
     const me = bqMe();
     const shopOf = id => bqShops.find(s => s.id === id);
-    return bqItems.filter(i => i.status === 'publié' && i.ownerId !== me && (i.qty || 0) > 0 && (!shopOf(i.ownerId) || shopOf(i.ownerId).status === 'validée'))
+    return bqItems.filter(i => i.status === 'publié' && (!me || i.ownerId !== me) && (i.qty || 0) > 0 && (!shopOf(i.ownerId) || shopOf(i.ownerId).status === 'validée'))
         .sort((a, b) => String(a.id).localeCompare(String(b.id)));
 }
 function bqRenderShowcase() {
     const box = document.getElementById('bqShowcase');
     if (!box) return;
-    const list = currentUser && currentUser.role === 'member' ? bqShowItems() : [];
+    const list = currentUser && (currentUser.role === 'member' || (CLOUD && isAdmin(currentUser))) ? bqShowItems() : [];
     setHidden('bqShowcase', list.length === 0);
+    setHidden('bqShowcaseA', list.length === 0);
     const ids = list.map(i => i.id + i.price + i.qty + (i.photo ? i.photo.length : 0)).join('|');
     bqShowList = list;
     if (!list.length) { bqStopShow(); bqShowIds = ''; return; }
@@ -342,11 +344,15 @@ function bqShowGo(n) {
     bqShowDraw();
 }
 function bqShowDraw() {
-    const el = document.getElementById('bqSlide'), dots = document.getElementById('bqDots');
     const i = bqShowList[bqShowPos];
-    if (!el || !i) return;
+    if (!i) return;
+    ['', 'A'].forEach(sfx => bqShowDrawIn(document.getElementById('bqSlide' + sfx), document.getElementById('bqDots' + sfx), i, sfx));
+}
+function bqShowDrawIn(el, dots, i, sfx) {
+    if (!el) return;
+    const go = sfx === 'A' ? "showTab('boutique')" : "showMemberTab('boutique');bqShowSub('catalogue')";
     const many = bqShowList.length > 1;
-    el.innerHTML = '<div style="display:flex;gap:12px;align-items:center;cursor:pointer;animation:bqFade .5s;" onclick="showMemberTab(\'boutique\');bqShowSub(\'catalogue\')">' +
+    el.innerHTML = '<div style="display:flex;gap:12px;align-items:center;cursor:pointer;animation:bqFade .5s;" onclick="' + go + '">' +
         '<div style="width:110px;flex:0 0 110px;">' + bqImg(i.photo, 110) + '</div>' +
         '<div style="min-width:0;flex:1;"><div style="font-weight:700;font-size:1.02rem;">' + escapeHtml(i.title) + '</div>' +
         '<div style="font-size:0.82rem;color:var(--text-muted);">' + escapeHtml(i.shopName || '') + ' · ' + escapeHtml(i.ownerName || '') + '</div>' +
