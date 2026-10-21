@@ -450,7 +450,7 @@ function bqShowDrawIn(el, dots, sfx) {
     if (!el) return;
     const go = sfx === 'A' ? "showTab('boutique')" : "showMemberTab('boutique');bqShowSub('catalogue')";
     const items = bqShowList.map(i =>
-        '<article class="bq-show-card" data-bq-item="' + escapeHtml(i.id) + '" role="button" tabindex="0" aria-label="Voir le catalogue : ' + escapeHtml(i.title || 'Article') + '" onclick="' + go + '" onkeydown="if(event.key===\\'Enter\\'||event.key===\\' \\'){event.preventDefault();' + go + '}">' +
+        '<article class="bq-show-card" data-bq-item="' + escapeHtml(i.id) + '" role="button" tabindex="0" aria-label="Voir le catalogue : ' + escapeHtml(i.title || 'Article') + '" onclick="' + go + '" onkeydown="if(event.keyCode===13||event.keyCode===32){event.preventDefault();' + go + '}">' +
             '<div class="bq-show-photo">' + bqImg(i.photo, 150) + '</div>' +
             '<div class="bq-show-info">' +
                 '<div class="bq-show-title">' + escapeHtml(i.title || 'Article sans titre') + '</div>' +
