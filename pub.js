@@ -5,6 +5,17 @@
    Sans Firebase Storage (formule gratuite) : photos réduites et enregistrées dans la publication,
    vidéos = lien (YouTube ou autre), documents = lien ou petit PDF (≤ 350 Ko). */
 
+(function () {
+    const s = document.createElement('style');
+    s.textContent = '.pub-feed{display:grid;gap:12px;grid-template-columns:minmax(0,1fr);}' +
+        '.pub-side{display:none;margin-top:8px;}.pub-side.open{display:block;}' +
+        '.pub-side-h{font-weight:700;font-size:0.9rem;margin-bottom:4px;}' +
+        '@media (min-width:900px){.pub-card{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start;}' +
+        '.pub-side,.pub-side.open{display:block;margin-top:0;border-left:1px solid var(--border);padding-left:16px;max-height:560px;overflow-y:auto;}' +
+        '.pub-cbtn{display:none!important;}}';
+    document.head.appendChild(s);
+})();
+
 let pubPosts = [], pubLikes = [], pubComments = [];
 let pubDraftImages = [], pubDraftDoc = null, pubFilter = 'all', pubOpenComments = {}, pubBusy = false;
 const PUB_MAX_IMAGES = 3, PUB_IMG_CHARS = 118000, PUB_PDF_MAX = 350 * 1024;
@@ -74,13 +85,13 @@ function pubCard(p) {
             imgs.map((s, i) => '<img alt="" src="' + s + '" onclick="pubZoom(\'' + E(p.id) + '\',' + i + ')" style="width:100%;' + (imgs.length === 3 && i === 0 ? 'grid-row:span 2;height:100%;min-height:220px;' : 'height:' + (imgs.length === 1 ? 'auto;max-height:420px' : '150px') + ';') + 'object-fit:cover;border-radius:8px;cursor:zoom-in;background:#f1f5f9;">').join('') + '</div>';
     }
     const yt = pubYoutubeId(p.videoUrl);
-    if (yt) media += '<div style="position:relative;padding-top:56.25%;margin-bottom:10px;border-radius:8px;overflow:hidden;background:#000;"><iframe src="https://www.youtube-nocookie.com/embed/' + yt + '" title="Vidéo" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;inset:0;width:100%;height:100%;border:0;"></iframe></div>';
+    if (yt) media += '<div style="position:relative;padding-top:min(56.25%,360px);max-width:640px;margin-bottom:10px;border-radius:8px;overflow:hidden;background:#000;"><iframe src="https://www.youtube-nocookie.com/embed/' + yt + '" title="Vidéo" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;inset:0;width:100%;height:100%;border:0;"></iframe></div>';
     else if (pubOkUrl(p.videoUrl)) media += '<a class="btn-small" href="' + E(p.videoUrl) + '" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 6px 10px 0;text-decoration:none;"><i class="fa-solid fa-circle-play"></i> Voir la vidéo</a>';
     if (pubOkUrl(p.docUrl)) media += '<a class="btn-small" href="' + E(p.docUrl) + '" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 6px 10px 0;text-decoration:none;"><i class="fa-solid fa-file-lines"></i> ' + E(p.docName || 'Ouvrir le document') + '</a>';
     if (pubOkPdf(p.docData)) media += '<button type="button" class="btn-small" onclick="pubOpenDoc(\'' + E(p.id) + '\')" style="margin:0 6px 10px 0;"><i class="fa-solid fa-file-pdf"></i> ' + E(p.docName || 'Document PDF') + '</button>';
     const open = !!pubOpenComments[p.id];
-    let h = '<article class="card" style="padding:14px 16px;' + (p.status === 'masqué' ? 'opacity:.55;' : '') + '">' +
-        '<div style="display:flex;align-items:flex-start;gap:8px;"><div style="flex:1;min-width:0;">' +
+    let h = '<article class="card pub-card" style="padding:14px 16px;' + (p.status === 'masqué' ? 'opacity:.55;' : '') + '">' +
+        '<div class="pub-main"><div style="display:flex;align-items:flex-start;gap:8px;"><div style="flex:1;min-width:0;">' +
         '<h3 style="margin:0;font-size:1.05rem;">' + E(p.title || '') + (p.status === 'masqué' ? ' <span class="badge badge-due">Masquée</span>' : '') + '</h3>' +
         '<div style="font-size:0.78rem;color:var(--text-muted);margin:2px 0 8px;">' + E(pubAgo(p.date)) + '</div></div>' +
         (admin ? '<div style="display:flex;gap:6px;">' +
@@ -91,9 +102,10 @@ function pubCard(p) {
         '<div style="display:flex;gap:14px;align-items:center;border-top:1px solid var(--border);padding-top:8px;">' +
         (me ? '<button type="button" onclick="pubLike(\'' + E(p.id) + '\')" style="background:none;border:none;cursor:pointer;font-size:0.95rem;padding:2px 4px;color:' + (liked ? '#e11d48' : 'var(--text-muted)') + ';"><i class="fa-' + (liked ? 'solid' : 'regular') + ' fa-heart"></i> ' + likes.length + '</button>'
             : '<span style="font-size:0.9rem;color:var(--text-muted);"><i class="fa-solid fa-heart"></i> ' + likes.length + '</span>') +
-        '<button type="button" onclick="pubToggleComments(\'' + E(p.id) + '\')" style="background:none;border:none;cursor:pointer;font-size:0.95rem;padding:2px 4px;color:var(--text-muted);"><i class="fa-regular fa-comment"></i> ' + coms.length + '</button></div>';
-    if (open) {
-        h += '<div style="margin-top:8px;">' + (coms.length ? coms.map(c =>
+        '<button type="button" class="pub-cbtn" onclick="pubToggleComments(\'' + E(p.id) + '\')" style="background:none;border:none;cursor:pointer;font-size:0.95rem;padding:2px 4px;color:var(--text-muted);"><i class="fa-regular fa-comment"></i> ' + coms.length + '</button></div>';
+    h += '</div>';   // fin de la colonne de la publication
+    {
+        h += '<div class="pub-side' + (open ? ' open' : '') + '"><div class="pub-side-h">Commentaires (' + coms.length + ')</div>' + (coms.length ? coms.map(c =>
             '<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:0.88rem;"><strong>' + E(c.name || '') + '</strong> <span style="color:var(--text-muted);font-size:0.75rem;">' + E(pubAgo(c.date)) + '</span>' +
             ((c.memberId === me || (admin && canDelete(currentUser))) ? ' <button type="button" onclick="pubDeleteComment(\'' + E(c.id) + '\')" title="Supprimer" style="background:none;border:none;cursor:pointer;color:#b91c1c;font-size:0.8rem;"><i class="fa-solid fa-xmark"></i></button>' : '') +
             '<div style="white-space:pre-wrap;word-break:break-word;">' + E(c.text || '') + '</div></div>').join('') : '<div style="font-size:0.85rem;color:var(--text-muted);padding:4px 0;">Aucun commentaire pour le moment.</div>');
@@ -107,7 +119,7 @@ function pubFeedHtml() {
     const chips = [['all', 'Tout', 'fa-border-all'], ['photo', 'Photos', 'fa-image'], ['video', 'Vidéos', 'fa-circle-play'], ['doc', 'Documents', 'fa-file-lines']].map(c =>
         '<button type="button" class="subtab' + (pubFilter === c[0] ? ' active' : '') + '" onclick="pubSetFilter(\'' + c[0] + '\')"><i class="fa-solid ' + c[2] + '"></i> ' + c[1] + '</button>').join('');
     return '<div class="subtabs" style="flex-wrap:wrap;margin-bottom:12px;">' + chips + '</div>' +
-        (list.length ? '<div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));align-items:start;">' + list.map(pubCard).join('') + '</div>'
+        (list.length ? '<div class="pub-feed">' + list.map(pubCard).join('') + '</div>'
             : '<div class="card" style="text-align:center;color:var(--text-muted);padding:28px 16px;"><i class="fa-solid fa-images" style="font-size:1.8rem;margin-bottom:8px;display:block;"></i>Aucune publication pour le moment.</div>');
 }
 function pubKeepFocus(fn) {
