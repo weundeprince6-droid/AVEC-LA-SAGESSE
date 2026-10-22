@@ -81,7 +81,7 @@ function bqRenderMember() {
 
     if (m) {
         const bal = document.getElementById('bqBalance');
-        if (bal) bal.innerHTML = 'Votre épargne disponible pour acheter : <span style="color:var(--primary);">' + fmt(availableWithdrawal(m, 'USD'), 'USD') + '</span> · <span style="color:var(--primary);">' + fmt(availableWithdrawal(m, 'FC'), 'FC') + '</span>';
+        if (bal) bal.innerHTML = 'Votre épargne disponible pour acheter (en gardant le tiers de votre crédit) : <span style="color:var(--primary);">' + fmt(availableWithdrawal(m, 'USD'), 'USD') + '</span> · <span style="color:var(--primary);">' + fmt(availableWithdrawal(m, 'FC'), 'FC') + '</span>';
     }
     bqRenderShowcase();
     // --- catalogue ---
@@ -234,7 +234,8 @@ function bqBuy(id) {
     const me = bqMe(), m = bqMyMember(), it = bqItems.find(x => x.id === id);
     if (!m || !it || it.status !== 'publié' || it.ownerId === me) return;
     if (round2(it.price) > availableWithdrawal(m, it.devise)) {
-        bqSay('Votre épargne disponible (' + fmt(availableWithdrawal(m, it.devise), it.devise) + ') ne suffit pas pour acheter cet article à ' + fmt(it.price, it.devise) + '.', false);
+        const keepB = round2(memberOutstanding(m, it.devise) / 3);
+        bqSay('Votre épargne disponible pour acheter (' + fmt(availableWithdrawal(m, it.devise), it.devise) + ') ne suffit pas pour cet article à ' + fmt(it.price, it.devise) + '.' + (keepB > 0 ? ' Votre épargne doit rester au moins égale au tiers de votre crédit en cours (' + fmt(keepB, it.devise) + ').' : ''), false);
         return;
     }
     if (!confirm('Commander « ' + it.title + ' » pour ' + fmt(it.price, it.devise) + ' ?\nLe montant sera prélevé sur votre épargne quand l\'administrateur conclura la vente, après accord du vendeur.')) return;
@@ -334,7 +335,9 @@ function bqConclude(id) {
     const dev = devOf(o), price = round2(o.price);
     if (round2(item.price) !== price || devOf(item) !== dev) { alert('Le prix de l\'article a changé depuis la commande. Refusez la commande.'); return; }
     if (price > availableWithdrawal(bOrig, dev)) {
-        alert('L\'épargne disponible de ' + bOrig.name + ' (' + fmt(availableWithdrawal(bOrig, dev), dev) + ') ne suffit pas pour payer ' + fmt(price, dev) + '. Refusez la commande.');
+        const keep = round2(memberOutstanding(bOrig, dev) / 3);
+        alert('Vente impossible : après ce paiement, l\'épargne de ' + bOrig.name + ' (' + fmt(sav(bOrig, dev), dev) + ') passerait sous le tiers de son crédit en cours (' + fmt(keep, dev) + ' à conserver). ' +
+            'Il peut dépenser au maximum ' + fmt(availableWithdrawal(bOrig, dev), dev) + ' ; le prix est de ' + fmt(price, dev) + '. Refusez la commande.');
         return;
     }
     const sp = bqSplit(price);

@@ -58,3 +58,4 @@ Chaque membre peut ouvrir une boutique (onglet « Boutique » de son espace), pu
 - **Important : republiez `firestore.rules`** (nouvelles collections shops, items, orders), puis Ctrl+F5.
 - Pour publier ou remettre en vente un article, le membre doit avoir fait un versement d'épargne dans les 14 derniers jours (règle appliquée par l'application et par `firestore.rules`, via le champ `lastEpargneDay` de la fiche).
 - Retrait : après l'approbation, l'administrateur confirme « Argent remis au membre » (onglet Demandes) ; le membre voit « Argent remis le … ».
+- Une vente (paiement par l'épargne) ne peut être conclue que si, après le paiement, l'épargne de l'acheteur reste au moins égale au tiers de son crédit en cours (même règle que pour un retrait).
