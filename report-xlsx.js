@@ -149,7 +149,7 @@
             (this.merges.length ? '<mergeCells count="' + this.merges.length + '">' + this.merges.map(function (m) { return '<mergeCell ref="' + m + '"/>'; }).join('') + '</mergeCells>' : '') +
             '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>' +
             '<pageSetup paperSize="9" orientation="' + (o.landscape === false ? 'portrait' : 'landscape') + '" fitToWidth="1" fitToHeight="0"/>' +
-            '<headerFooter><oddFooter>&amp;LAVEC LA SAGESSE&amp;CPage &amp;P / &amp;N&amp;R&amp;D</oddFooter></headerFooter>' +
+            '<headerFooter><oddFooter>&amp;L' + esc(typeof orgName==='function'?orgName():'AVEC LA SAGESSE') + '&amp;CPage &amp;P / &amp;N&amp;R&amp;D</oddFooter></headerFooter>' +
             (drawingRid ? '<drawing r:id="' + drawingRid + '"/>' : '') + '</worksheet>';
     };
 
@@ -233,7 +233,7 @@
         wbRels += '<Relationship Id="rId' + (this.sheets.length + 1) + '" Type="' + NS_R + '/styles" Target="styles.xml"/>';
         z.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' + types + '</Types>');
         z.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="' + NS_R + '/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>');
-        z.file('docProps/core.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>' + esc(this.props.title || 'Rapport') + '</dc:title><dc:creator>' + esc(this.props.creator || 'AVEC LA SAGESSE') + '</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">' + new Date().toISOString() + '</dcterms:created></cp:coreProperties>');
+        z.file('docProps/core.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>' + esc(this.props.title || 'Rapport') + '</dc:title><dc:creator>' + esc(this.props.creator || (typeof orgName==='function'?orgName():'AVEC LA SAGESSE')) + '</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">' + new Date().toISOString() + '</dcterms:created></cp:coreProperties>');
         z.file('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="' + NS_MAIN + '" xmlns:r="' + NS_R + '"><bookViews><workbookView activeTab="0"/></bookViews><sheets>' + wbSheets + '</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>');
         z.file('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + wbRels + '</Relationships>');
         z.file('xl/styles.xml', this.styles.xml());

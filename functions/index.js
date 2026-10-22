@@ -140,17 +140,18 @@ async function sendMonthlyReport() {
   const settings = st.exists ? st.data() : {};
   const to = String(settings.to || '').trim();
   if (!EMAIL_RE.test(to)) throw new Error("Aucune adresse e-mail valide pour le rapport (onglet Équipe).");
-  const [members, requests, claims, social] = await Promise.all([readAll('members'), readAll('requests'), readAll('claims'), db.doc('settings/social').get()]);
+  const [members, requests, claims, social, orgDoc] = await Promise.all([readAll('members'), readAll('requests'), readAll('claims'), db.doc('settings/social').get(), db.doc('settings/org').get()]);
+  const org = (orgDoc.exists && String(orgDoc.data().name || '').trim()) || 'AVEC LA SAGESSE';
   const weekly = social.exists ? Number(social.data().weekly) : 1000;
-  const r = await buildPdf(PDFLib, { members, requests, claims, weekly, now: new Date() });
+  const r = await buildPdf(PDFLib, { members, requests, claims, weekly, org, now: new Date() });
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + RESEND_KEY.value(), 'Content-Type': 'application/json' },
     body: JSON.stringify({
       from: REPORT_FROM.value(),
       to: [to],
-      subject: 'AVEC LA SAGESSE : rapport de ' + r.monthLabel,
-      html: '<p>Bonjour,</p><p>Veuillez trouver en pièce jointe le rapport mensuel de l\'AVEC LA SAGESSE pour <strong>' + r.monthLabel + '</strong> (situation des membres, crédits, opérations du mois, cas sociaux, points à traiter).</p><p>Message envoyé automatiquement.</p>',
+      subject: org + ' : rapport de ' + r.monthLabel,
+      html: '<p>Bonjour,</p><p>Veuillez trouver en pièce jointe le rapport mensuel de « ' + org.replace(/[<>&]/g, '') + ' » pour <strong>' + r.monthLabel + '</strong> (situation des membres, crédits, opérations du mois, cas sociaux, points à traiter).</p><p>Message envoyé automatiquement.</p>',
       attachments: [{ filename: 'rapport-avec-' + r.monthKey + '.pdf', content: Buffer.from(r.bytes).toString('base64') }]
     })
   });

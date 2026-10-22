@@ -242,7 +242,7 @@ function bqBuy(id) {
     if (!confirm('Commander « ' + it.title + ' » pour ' + fmt(it.price, it.devise) + ' ?\nLe montant sera prélevé sur votre épargne quand l\'administrateur conclura la vente' + (it.ownerId === ORG_ID ? '.' : ', après accord du vendeur.'))) return;
     const sp = it.ownerId === ORG_ID ? { commission: round2(it.price), net: 0 } : bqSplit(it.price);   // organisation : tout le prix revient à l'AVEC
     const order = {
-        id: bqId('CMD'), itemId: it.id, itemTitle: it.title, sellerId: it.ownerId, sellerName: it.ownerId === ORG_ID ? (it.shopName || 'AVEC LA SAGESSE') : (it.ownerName || ''),
+        id: bqId('CMD'), itemId: it.id, itemTitle: it.title, sellerId: it.ownerId, sellerName: it.ownerId === ORG_ID ? (it.shopName || orgName()) : (it.ownerName || ''),
         buyerId: me, buyerName: m.name, price: it.price, devise: it.devise, commission: sp.commission, net: sp.net, qty: 1,
         note: '', status: 'en attente', decision: '', date: new Date().toISOString(), decisionDate: ''
     };
@@ -498,7 +498,7 @@ function bqContact(id) {
     const shop = bqShops.find(s => s.id === it.ownerId);
     const contact = shop && shop.contact ? String(shop.contact) : '';
     let num = typeof waNumber === 'function' ? waNumber(contact) : ''; if (num.length < 8 || num.length > 15) num = '';
-    const msg = 'Bonjour ' + (it.ownerName || '') + ', je suis intéressé(e) par « ' + it.title + ' » (' + fmt(it.price, it.devise) + ') vu dans la boutique AVEC LA SAGESSE.';
+    const msg = 'Bonjour ' + (it.ownerName || '') + ', je suis intéressé(e) par « ' + it.title + ' » (' + fmt(it.price, it.devise) + ') vu dans la boutique ' + orgName() + '.';
     let m = document.getElementById('bqContactBox');
     if (!m) {
         m = document.createElement('div');
@@ -526,7 +526,7 @@ function bqOrgSaveShop(e) {
     const old = bqShops.find(s => s.id === ORG_ID);
     const shop = {
         id: ORG_ID, ownerId: ORG_ID, ownerName: 'Organisation',
-        name: document.getElementById('bqOrgName').value.trim().slice(0, 50) || 'AVEC LA SAGESSE',
+        name: document.getElementById('bqOrgName').value.trim().slice(0, 50) || orgName(),
         desc: document.getElementById('bqOrgDesc').value.trim().slice(0, 300),
         contact: document.getElementById('bqOrgContact').value.trim().slice(0, 60),
         status: old ? old.status : 'validée', date: old ? old.date : new Date().toISOString()

@@ -61,3 +61,8 @@ Chaque membre peut ouvrir une boutique (onglet « Boutique » de son espace), pu
 - Une vente (paiement par l'épargne) ne peut être conclue que si, après le paiement, l'épargne de l'acheteur reste au moins égale au tiers de son crédit en cours (même règle que pour un retrait).
 - L'organisation a sa propre boutique (onglet « Boutique » de l'administrateur > « Boutique de l'organisation ») : produits de l'AVEC visibles par tous les membres ; à la conclusion d'une vente, tout le prix va à la caisse de l'AVEC (sans commission).
 - Rapport PDF et Excel : un encadré « Commentaires » sous chaque tableau (chiffres clés, points à surveiller, retards, tendances), calculé automatiquement à partir des données (fichier `report-notes.js`).
+
+## Nom et logo de l'organisation
+- Le nom (et un logo facultatif) se règlent dans le tableau de bord, carte « Identité de l'organisation » (administrateur à accès total). Ils s'affichent sur la page de connexion, dans les espaces admin et membre, les messages WhatsApp, les rapports PDF/Excel et la boutique.
+- À la création du compte administrateur, le champ « Nom de votre organisation » est enregistré à la première connexion ; sans nom, l'application le demande.
+- Stockage : document `settings/org` (lisible avant connexion, modifiable par l'administrateur) : republier `firestore.rules`.

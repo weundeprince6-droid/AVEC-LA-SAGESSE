@@ -222,6 +222,14 @@ window.FB_READY = (async () => {
             return onSnapshot(q, snap => cb(snap.docs.map(d => Object.assign({}, d.data(), { id: d.id }))), err => onError(err));
         },
 
+        // ----- Identité de l'organisation (nom + logo) : settings/org, lisible avant la connexion -----
+        async saveOrg(data) {
+            await setDoc(doc(db, 'settings', 'org'), data);
+        },
+        listenOrg(cb, onError) {
+            return onSnapshot(doc(db, 'settings', 'org'), s => cb(s.exists() ? s.data() : null), err => onError(err));
+        },
+
         // ----- Rapport mensuel par e-mail : réglage (settings/report) et demande d'envoi immédiat -----
         async saveReportSettings(data) {
             await setDoc(doc(db, 'settings', 'report'), data, { merge: true });

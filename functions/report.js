@@ -43,6 +43,7 @@ function buildPdf(PDFLib, input) {
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
   const members = input.members || [], requests = input.requests || [], claims = input.claims || [], weekly = Number(input.weekly) > 0 ? Number(input.weekly) : 1000;
   const now = input.now || new Date();
+  const ORG = safe(String(input.org || 'AVEC LA SAGESSE').slice(0, 60));
   const local = new Date(now.getTime() + 2 * 3600000);                       // heure de Lubumbashi (UTC+2)
   const iso = d => d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
   const today = iso(local);
@@ -62,7 +63,7 @@ function buildPdf(PDFLib, input) {
 
   return (async () => {
     const pdf = await PDFDocument.create();
-    pdf.setTitle('Rapport mensuel AVEC LA SAGESSE - ' + monthLabel); pdf.setAuthor('AVEC LA SAGESSE'); pdf.setCreator('AVEC LA SAGESSE');
+    pdf.setTitle('Rapport mensuel ' + ORG + ' - ' + monthLabel); pdf.setAuthor(ORG); pdf.setCreator(ORG);
     const F = await pdf.embedFont(StandardFonts.Helvetica), B = await pdf.embedFont(StandardFonts.HelveticaBold), I = await pdf.embedFont(StandardFonts.HelveticaOblique);
     const col = c => rgb(c[0], c[1], c[2]);
     const W = A4[0], H = A4[1], M = 34;
@@ -118,7 +119,7 @@ function buildPdf(PDFLib, input) {
     // ---------- Page 1 : synthèse ----------
     newPage();
     rect(M, y - 62, W - 2 * M, 62, C.navy);
-    text('AVEC LA SAGESSE', M + 16, y - 28, 24, { bold: true, color: C.white });
+    text(ORG, M + 16, y - 28, 24, { bold: true, color: C.white });
     text('Rapport mensuel : ' + monthLabel, M + 16, y - 48, 12, { color: [0.85, 0.9, 1] });
     text('Situation au ' + frDate(today), W - M - 16, y - 28, 11, { align: 'right', color: C.white });
     text('Généré automatiquement', W - M - 16, y - 46, 9, { align: 'right', color: [0.85, 0.9, 1] });
@@ -198,7 +199,7 @@ function buildPdf(PDFLib, input) {
 
     // pied de page sur chaque page
     pages.forEach((p, i) => {
-      p.drawText(safe('AVEC LA SAGESSE · Rapport mensuel · ' + monthLabel), { x: M, y: 16, size: 7.5, font: F, color: col(C.grey) });
+      p.drawText(safe(ORG + ' · Rapport mensuel · ' + monthLabel), { x: M, y: 16, size: 7.5, font: F, color: col(C.grey) });
       const t = 'Page ' + (i + 1) + ' / ' + pages.length; p.drawText(t, { x: W - M - F.widthOfTextAtSize(t, 7.5), y: 16, size: 7.5, font: F, color: col(C.grey) });
     });
     return { bytes: await pdf.save(), monthLabel, monthKey };

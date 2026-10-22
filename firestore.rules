@@ -81,9 +81,15 @@ service cloud.firestore {
     // Réglages : « social » = cotisation hebdomadaire (lue par tous, modifiée par l'accès total) ;
     // « whatsapp » = envoi manuel ou automatique, « report » = rapport mensuel par e-mail (lus par l'équipe, modifiés par l'accès total)
     match /settings/{settingId} {
-      allow read: if isStaff() || (hasProfile() && settingId == 'social');
+      allow read: if settingId == 'org' || isStaff() || (hasProfile() && settingId == 'social');
       allow create, update: if isAdmin() && (
-        (settingId == 'social'
+        (settingId == 'org'
+          && request.resource.data.keys().hasOnly(['name', 'logo', 'ratio', 'by', 'date'])
+          && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 60
+          && request.resource.data.logo is string && request.resource.data.logo.size() <= 150000
+          && (request.resource.data.logo == '' || request.resource.data.logo[0:23] == 'data:image/jpeg;base64,')
+          && request.resource.data.ratio is number)
+        || (settingId == 'social'
           && request.resource.data.keys().hasOnly(['weekly', 'by', 'date'])
           && request.resource.data.weekly is number
           && request.resource.data.weekly > 0

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion AVEC - Caisse &amp; Suivi Complet</title>
+    <title>Gestion AVEC LA SAGESSE - Caisse &amp; Suivi</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -329,8 +329,9 @@
     <!-- FORMULAIRE D'INSCRIPTION PUBLIC (lien à partager : ?inscription) -->
     <div id="signupSection" class="auth-container hidden" style="max-width:640px;">
         <div class="auth-header">
-            <i class="fa-solid fa-user-plus"></i>
-            <h2>Demande d'inscription — AVEC LA SAGESSE</h2>
+            <img class="org-logo" alt="" style="display:none;max-height:72px;max-width:220px;margin:0 auto 6px;border-radius:10px;">
+            <i class="fa-solid fa-user-plus org-logo-alt"></i>
+            <h2>Demande d'inscription — <span class="org-name">AVEC LA SAGESSE</span></h2>
         </div>
         <div id="signupFormWrap">
             <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:14px;">Remplissez vos informations. Votre demande sera examinée par l'administrateur : vous serez prévenu(e) dès qu'elle est confirmée. Les champs marqués d'une * sont obligatoires.</p>
@@ -375,8 +376,9 @@
     <!-- SECTION AUTHENTIFICATION -->
     <div id="authSection" class="auth-container">
         <div class="auth-header">
-            <i class="fa-solid fa-users-gear"></i>
-            <h2>AVEC - Accès Portail</h2>
+            <img class="org-logo" alt="" style="display:none;max-height:72px;max-width:220px;margin:0 auto 6px;border-radius:10px;">
+            <i class="fa-solid fa-users-gear org-logo-alt"></i>
+            <h2><span class="org-name">AVEC LA SAGESSE</span> - Accès Portail</h2>
         </div>
 
         <div class="tabs">
@@ -408,6 +410,10 @@
                 <label>Créez un mot de passe (6 caractères minimum)</label>
                 <input type="password" id="regPassword" required minlength="6" placeholder="••••••••" autocomplete="new-password">
             </div>
+            <div class="form-group">
+                <label>Nom de votre organisation <small style="color:var(--text-muted);font-weight:400;">(administrateur : il sera affiché partout dans l'application)</small></label>
+                <input type="text" id="regOrg" maxlength="60" placeholder="Ex : AVEC LA SAGESSE">
+            </div>
             <button type="submit" class="btn"><i class="fa-solid fa-user-plus"></i> S'inscrire</button>
         </form>
 
@@ -418,7 +424,7 @@
     <div id="dashboardSection" class="hidden">
         <header class="dashboard-header">
             <div>
-                <h2><i class="fa-solid fa-piggy-bank"></i> Gestion AVEC</h2>
+                <h2><img class="org-logo" alt="" style="display:none;height:30px;width:auto;vertical-align:middle;border-radius:6px;margin-right:6px;"><i class="fa-solid fa-piggy-bank org-logo-alt"></i> Gestion <span class="org-name">AVEC LA SAGESSE</span></h2>
                 <p>Suivi de Caisse, Épargne et Crédits Membres</p>
             </div>
             <div class="header-actions">
@@ -533,7 +539,23 @@
         </div>
             <div class="grid-2" style="margin-top:24px;">
                 <div>
-                    <section class="card">
+                    <section class="card hidden" id="orgSection">
+                    <div class="card-header"><i class="fa-solid fa-building-columns"></i><h3>Identité de l'organisation</h3></div>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Le nom et le logo s'affichent sur la page de connexion, dans les espaces, dans les messages WhatsApp et dans les rapports PDF et Excel.</p>
+                    <form onsubmit="orgSave(event)">
+                        <div class="form-group"><label>Nom de l'organisation</label><input type="text" id="orgNameInput" maxlength="60" required placeholder="Ex : AVEC LA SAGESSE"></div>
+                        <div class="form-group"><label>Logo (facultatif)</label>
+                            <div id="orgLogoPrev" style="margin-bottom:8px;"></div>
+                            <input type="file" id="orgLogoFile" accept="image/*" class="hidden" onchange="orgPickLogo(this)">
+                            <button type="button" class="btn-small" onclick="document.getElementById('orgLogoFile').click()"><i class="fa-solid fa-image"></i> Choisir un logo</button>
+                            <button type="button" class="btn-small danger" id="orgLogoDel" onclick="orgRemoveLogo()" style="display:none;"><i class="fa-solid fa-trash"></i> Retirer</button>
+                            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Image carrée ou rectangulaire (JPG ou PNG). Elle est réduite automatiquement.</div>
+                        </div>
+                        <button type="submit" class="btn" style="width:auto;"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+                    </form>
+                    <div id="orgMsg" class="alert hidden" style="margin-top:10px;"></div>
+                </section>
+                <section class="card">
                         <div class="card-header">
                             <i class="fa-solid fa-id-badge"></i>
                             <h3>Mon profil</h3>
@@ -1029,9 +1051,9 @@
             </section>
             <section class="card" id="bqOrgSection">
                 <div class="card-header"><i class="fa-solid fa-building-columns"></i><h3>Boutique de l'organisation</h3><span id="bqOrgState" style="margin-left:auto;"></span></div>
-                <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">L'AVEC peut aussi vendre ses propres produits. Les membres les voient comme une boutique « AVEC LA SAGESSE ». Quand vous concluez une vente, la totalité du prix va à la caisse de l'AVEC (pas de commission, pas de vendeur membre).</p>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">L'AVEC peut aussi vendre ses propres produits. Les membres les voient comme la boutique de l'organisation, sous son nom. Quand vous concluez une vente, la totalité du prix va à la caisse de l'AVEC (pas de commission, pas de vendeur membre).</p>
                 <form onsubmit="bqOrgSaveShop(event)">
-                    <div class="form-group"><label>Nom de la boutique</label><input type="text" id="bqOrgName" maxlength="50" required value="AVEC LA SAGESSE"></div>
+                    <div class="form-group"><label>Nom de la boutique</label><input type="text" id="bqOrgName" maxlength="50" required placeholder="Nom de l'organisation"></div>
                     <div class="form-group"><label>Présentation (facultatif)</label><textarea id="bqOrgDesc" rows="2" maxlength="300"></textarea></div>
                     <div class="form-group"><label>Numéro WhatsApp / téléphone à contacter (facultatif)</label><input type="text" id="bqOrgContact" maxlength="60" placeholder="Ex : 0990000000"></div>
                     <button type="submit" class="btn" style="width:auto;"><i class="fa-solid fa-floppy-disk"></i> Enregistrer la boutique</button>
@@ -1077,7 +1099,7 @@
     <div id="memberSection" class="hidden">
         <header class="dashboard-header">
             <div>
-                <h2><i class="fa-solid fa-piggy-bank"></i> Mon Espace AVEC</h2>
+                <h2><img class="org-logo" alt="" style="display:none;height:30px;width:auto;vertical-align:middle;border-radius:6px;margin-right:6px;"><i class="fa-solid fa-piggy-bank org-logo-alt"></i> Mon Espace <span class="org-name">AVEC LA SAGESSE</span></h2>
                 <p id="memberWelcome">Consultez votre épargne et vos crédits</p>
             </div>
             <div class="user-info">
@@ -1438,7 +1460,7 @@
     </div>
 
     <script src="firebase-config.js"></script>
-    <script type="module" src="firebase-adapter.js?v=20261021"></script>
+    <script type="module" src="firebase-adapter.js?v=20261041"></script>
     <script>
         // ---------- Utilitaires ----------
 
@@ -2000,7 +2022,9 @@
                     setHidden('tabBtnEquipe', level !== 'total');
                     setHidden('tabBtnJournal', level !== 'total');
                     showTab('dashboard');
+                    setHidden('orgSection', level !== 'total');
                     if (level === 'total') {
+                        orgRenderForm(); orgAfterAdminLogin();
                         stopStaff = F().listenStaff(list => { staffList = list; renderTeam(); }, err => { /* sans gravité */ });
                         if (F().listenReportSettings) stopReport = F().listenReportSettings(d => { reportSettings = Object.assign({ enabled: false, to: '' }, d || {}); renderReportSettings(); }, err => { /* sans gravité */ });
                         stopActivity = F().listenActivity(list => { activityList = list; renderActivity(); }, err => { /* sans gravité */ });
@@ -2051,6 +2075,7 @@
                 showAlert('authAlert', 'Impossible de charger Firebase. Vérifiez votre connexion internet puis rechargez la page.', 'error');
                 return;
             }
+            if (F().listenOrg) F().listenOrg(d => orgSet(d || {}, true), () => { /* sans gravité */ });
             F().onAuth(onCloudAuth);
         }
 
@@ -2073,6 +2098,7 @@
             e.preventDefault();
             const u = document.getElementById('regUsername').value.trim();
             const p = document.getElementById('regPassword').value;
+            try { const on = (document.getElementById('regOrg').value || '').trim(); if (on) localStorage.setItem('avec_org_pending', on.slice(0, 60)); } catch (e1) { /* ignoré */ }
             if (CLOUD) return cloudRegister(e, u, p);
 
             if (!cryptoAvailable()) {
@@ -2164,6 +2190,8 @@
                 setHidden('dashboardSection', false);
                 document.getElementById('currentUserDisplay').textContent = user.username;
                 showTab('dashboard');
+                setHidden('orgSection', !canDelete(user));
+                orgRenderForm(); orgAfterAdminLogin();
                 updateDashboard();
             } else {
                 setHidden('dashboardSection', true);
@@ -2702,7 +2730,7 @@
             catch (e) { inp.select(); try { document.execCommand('copy'); ok(); } catch (err) { msg.textContent = 'Sélectionnez le lien et copiez-le.'; } }
         }
         function shareInscLink() {
-            waOpen('', "Bonjour,\nPour rejoindre notre groupe AVEC LA SAGESSE, remplissez votre demande d'inscription ici :\n" + signupLink() + "\nL'administrateur confirmera votre inscription.");
+            waOpen('', "Bonjour,\nPour rejoindre notre groupe " + orgName() + ", remplissez votre demande d'inscription ici :\n" + signupLink() + "\nL'administrateur confirmera votre inscription.");
         }
         function renderRegistrations() {
             const pend = document.getElementById('inscPending');
@@ -2768,7 +2796,7 @@
             } catch (err) { /* le profil pourra être complété par le membre */ }
             try { await setRegStatus(r, { status: 'accepted', memberId: member.id, decidedBy: (currentUser && (currentUser.email || currentUser.username)) || '', decidedAt: new Date().toISOString() }); } catch (err) {}
             logActivity('Inscription acceptée : ' + r.name + ' (' + member.id + ')', member.id);
-            const msg = 'Bonjour ' + String(r.name).split(' ')[0] + ",\nVotre inscription à l'AVEC LA SAGESSE est confirmée ✅\nIdentifiant : " + member.id + '\nMot de passe provisoire : ' + password + '\nConnectez-vous ici : ' + signupLink().replace('?inscription', '') + '\nVous choisirez votre propre mot de passe à la première connexion.';
+            const msg = 'Bonjour ' + String(r.name).split(' ')[0] + ",\nVotre inscription à « " + orgName() + " » est confirmée ✅\nIdentifiant : " + member.id + '\nMot de passe provisoire : ' + password + '\nConnectez-vous ici : ' + signupLink().replace('?inscription', '') + '\nVous choisirez votre propre mot de passe à la première connexion.';
             box.className = 'alert alert-success';
             box.innerHTML = '<strong>' + escapeHtml(r.name) + ' est inscrit(e).</strong><br>Identifiant : <strong>' + escapeHtml(member.id) + '</strong> · Mot de passe par défaut : <strong>' + escapeHtml(password) + '</strong><br>' +
                 '<button class="btn-small wa" style="margin-top:6px;" id="inscWaBtn"><i class="fa-brands fa-whatsapp"></i> Envoyer ses accès par WhatsApp</button>';
@@ -2944,7 +2972,7 @@
             if (open.length) open.forEach(c => lines.push('• Crédit à rembourser : ' + fmt(creditRemaining(c), devOf(c)) + (c.dueDate ? ' (échéance ' + formatISOtoFR(c.dueDate) + ')' : '')));
             else lines.push('• Aucun crédit en cours');
             lines.push('• Cotisation cas sociaux : ' + String(arrearsText(m)).replace(/<[^>]*>/g, ''));
-            lines.push('Merci. — AVEC LA SAGESSE');
+            lines.push('Merci. — ' + orgName());
             return lines.join('\n');
         }
         function waRappelText(m) {
@@ -2952,13 +2980,13 @@
             const open = (m.credits || []).filter(c => creditRemaining(c) > 0);
             if (!open.length) return '';
             const parts = open.map(c => fmt(creditRemaining(c), devOf(c)) + (c.dueDate ? ' avant le ' + formatISOtoFR(c.dueDate) : ''));
-            return 'Bonjour ' + first + ',\nPetit rappel : il vous reste à rembourser ' + parts.join(' et ') + '.\nMerci de votre ponctualité. — AVEC LA SAGESSE';
+            return 'Bonjour ' + first + ',\nPetit rappel : il vous reste à rembourser ' + parts.join(' et ') + '.\nMerci de votre ponctualité. — ' + orgName();
         }
         // Texte de confirmation d'une opération (même texte en manuel et en automatique)
         function waReceiptText(m, h) {
             const amt = Number(h.amount) || 0;
             return 'Bonjour ' + String(m.name || '').split(' ')[0] + ',\nConfirmation : ' + (OP_LABELS[h.type] || 'Opération') + ' de ' + fmt(Math.abs(amt), devOf(h)) + ' le ' + formatISOtoFR(h.date) + '.' +
-                (h.note ? '\n' + h.note : '') + '\nVotre épargne : ' + fmt(m.epargne) + ' · ' + fmt(sav(m, 'FC'), 'FC') + '.\n— AVEC LA SAGESSE';
+                (h.note ? '\n' + h.note : '') + '\nVotre épargne : ' + fmt(m.epargne) + ' · ' + fmt(sav(m, 'FC'), 'FC') + '.\n— ' + orgName();
         }
         // ----- Envoi automatique : le message est déposé dans la file « whatsappQueue », la Cloud Function l'envoie via Meta -----
         function waAuto() { return CLOUD && !!F() && !!F().queueWhatsapp && !!currentUser && isAdmin(currentUser) && waSettings.mode === 'auto'; }
@@ -3030,7 +3058,7 @@
         function waAnnounce(annId) {
             const a = announcements.find(x => x.id === annId);
             if (!a) return;
-            const text = '📢 ' + a.title + '\n\n' + a.text + '\n\n— AVEC LA SAGESSE';
+            const text = '📢 ' + a.title + '\n\n' + a.text + '\n\n— ' + orgName();
             if (waAuto()) {
                 const list = waBcMembers();
                 if (!list.length) { alert('Aucun membre avec un numéro de téléphone.'); return; }
@@ -3863,8 +3891,8 @@
             if (!requireAdmin()) return;
             const to = (document.getElementById('reportTo').value || reportSettings.to || (currentUser && currentUser.email) || '').trim();
             const month = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-            const subject = 'Rapport AVEC LA SAGESSE - ' + month;
-            const body = 'Bonjour,\n\nVeuillez trouver ci-joint le rapport AVEC LA SAGESSE (' + month + ').\n\n(Joindre ici le fichier PDF enregistré à l\'étape précédente.)\n\nCordialement.';
+            const subject = 'Rapport ' + orgName() + ' - ' + month;
+            const body = 'Bonjour,\n\nVeuillez trouver ci-joint le rapport ' + orgName() + ' (' + month + ').\n\n(Joindre ici le fichier PDF enregistré à l\'étape précédente.)\n\nCordialement.';
             exportPDF();
             try { localStorage.setItem('avec_report_manual_last', todayISO()); } catch (e) {}
             renderReportManualLast();
@@ -4160,7 +4188,7 @@
             if (!requireAdmin()) return;
             try {
                 await loadScriptOnce('vendor/jszip.min.js?v=3.10.1');
-                await loadScriptOnce('report-xlsx.js?v=20261032');
+                await loadScriptOnce('report-xlsx.js?v=20261041');
             } catch (e) {
                 if (confirm("Le rapport Excel n'a pas pu être préparé (fichiers non chargés : connexion ou ancienne version en cache).\n\nTélécharger à la place le rapport simplifié (CSV) ?")) exportCSV();
                 return;
@@ -4182,7 +4210,7 @@
             const X = window.AvecXlsx, today = todayISO(), U = X.util, nowFR = formatISOtoFR(today);
             const wb = new X(window.JSZip);
             const who = currentUser ? String(currentUser.username) : '';
-            wb.props = { title: 'Rapport AVEC LA SAGESSE ' + nowFR, creator: who || 'AVEC LA SAGESSE' };
+            wb.props = { title: 'Rapport ' + orgName() + ' ' + nowFR, creator: who || orgName() };
             const sub = (extra) => 'Situation au ' + nowFR + (extra ? ' · ' + extra : '') + (who ? ' · par ' + who : '');
             const nameOf = id => { const m = members.find(x => x.id === id); return m ? m.name : id; };
             const num = v => round2(Number(v) || 0);
@@ -4197,7 +4225,8 @@
 
             // 1. Tableau de bord
             const d = wb.sheet('Tableau de bord', { tab: '1E3A8A', first: true, grid: false, widths: [12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12], zoom: 100 });
-            d.merge(1, 1, 1, 12, { b: true, sz: 20, color: 'FFFFFF', bg: '1E3A8A', indent: 1 }); d.set(1, 1, 'AVEC LA SAGESSE · Rapport', { b: true, sz: 20, color: 'FFFFFF', bg: '1E3A8A', indent: 1 }); d.height(1, 40);
+            d.merge(1, 1, 1, 12, { b: true, sz: 20, color: 'FFFFFF', bg: '1E3A8A', indent: 1 }); d.set(1, 1, orgName() + ' · Rapport', { b: true, sz: 20, color: 'FFFFFF', bg: '1E3A8A', indent: 1 }); d.height(1, 40);
+            { const lg = orgLogo(), lm = lg && lg.match(/^data:image\/jpeg;base64,(.+)$/); if (lm) d.image({ data: lm[1], ext: 'jpeg', col: 11, row: 0, w: Math.round(36 * (orgState.ratio || 1)), h: 36, alt: orgName() }); }
             d.merge(2, 1, 2, 12, { i: true, color: '6B7280', indent: 1 }); d.set(2, 1, sub(), { i: true, color: '6B7280', indent: 1 }); d.height(2, 20); d.height(3, 8);
             const card = (r, i, label, value, subtxt, color, fmt) => {
                 const c = 1 + i * 2, bg = 'F4F7FB';
@@ -4454,7 +4483,7 @@
             const nProf = PROFILE_FIELDS.length;
             let html = '';
             // Tableau de bord
-            html += '<section class="page first"><div class="banner"><div class="bt">AVEC LA SAGESSE</div><div class="bs">Rapport au ' + E(nowFR) + (who ? ' · par ' + E(who) : '') + '</div></div>' +
+            html += '<section class="page first"><div class="banner"><div class="bt">' + (orgLogo() ? '<img src="' + orgLogo() + '" alt="" style="height:34px;vertical-align:middle;margin-right:10px;border-radius:6px;background:#fff;">' : '') + E(orgName()) + '</div><div class="bs">Rapport au ' + E(nowFR) + (who ? ' · par ' + E(who) : '') + '</div></div>' +
                 '<div class="kpis">' +
                 kpi('MEMBRES', members.length, members.filter(hasActiveCredit).length + ' avec un crédit en cours', '#2563eb') +
                 kpi('ÉPARGNE ($)', money(sum(members, m => sav(m, 'USD')), 'USD'), '', '#059669') +
@@ -4530,7 +4559,7 @@
                 '.note{margin-top:14px;background:#fffbeb;border:1px solid #fcd34d;border-left:5px solid #f59e0b;border-radius:6px;padding:9px 14px;break-inside:avoid}.note h4{margin:0 0 5px;color:#92400e;font-size:12.5px}.note ul{margin:0;padding-left:18px}.note li{margin:3px 0;line-height:1.45}' +
                 '.tot td{background:#e0e7ff!important;color:#1e3a8a;font-weight:700}.gal{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}figure{margin:0;text-align:center;break-inside:avoid}figure img{width:100%;max-width:130px;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid #d9e1ec}figcaption{margin-top:4px;font-weight:700}figcaption small{color:#6b7280;font-weight:400}' +
                 '@media print{body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}.bar{display:none}.page{box-shadow:none;margin:0;padding:0;max-width:none}}';
-            return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport AVEC LA SAGESSE ' + E(nowFR) + '</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style></head><body>' +
+            return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport ' + E(orgName()) + ' ' + E(nowFR) + '</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style></head><body>' +
                 '<div class="bar"><button onclick="window.print()">Enregistrer en PDF / Imprimer</button><span>Dans la fenêtre qui s\'ouvre, choisissez « Enregistrer au format PDF » comme imprimante (orientation paysage).</span></div>' + html + '</body></html>';
         }
 
@@ -5203,7 +5232,7 @@
                 setHidden('authSection', true);
                 setHidden('signupSection', false);
                 document.getElementById('su_avatar').innerHTML = avatarHtml({ id: 'X', name: '?' }, 72);
-                if (CLOUD) { setSync('connecting'); Promise.resolve(window.FB_READY).then(() => setSync('online')).catch(() => {}); }
+                if (CLOUD) { setSync('connecting'); Promise.resolve(window.FB_READY).then(() => { setSync('online'); if (F() && F().listenOrg) F().listenOrg(d => orgSet(d || {}, true), () => {}); }).catch(() => {}); }
                 return;
             }
             loadAutoLock();
@@ -5225,7 +5254,8 @@
             }
         };
     </script>
-    <script src="report-notes.js?v=20261032"></script>
-    <script src="boutique.js?v=20261031"></script>
+    <script src="org.js?v=20261040"></script>
+<script src="report-notes.js?v=20261032"></script>
+    <script src="boutique.js?v=20261041"></script>
 </body>
 </html>
