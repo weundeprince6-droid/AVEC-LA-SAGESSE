@@ -66,3 +66,7 @@ Chaque membre peut ouvrir une boutique (onglet « Boutique » de son espace), pu
 - Le nom (et un logo facultatif) se règlent dans le tableau de bord, carte « Identité de l'organisation » (administrateur à accès total). Ils s'affichent sur la page de connexion, dans les espaces admin et membre, les messages WhatsApp, les rapports PDF/Excel et la boutique.
 - À la création du compte administrateur, le champ « Nom de votre organisation » est enregistré à la première connexion ; sans nom, l'application le demande.
 - Stockage : document `settings/org` (lisible avant connexion, modifiable par l'administrateur) : republier `firestore.rules`.
+
+## Rapports en PDF uniquement
+- Le bouton « Rapport PDF » de l'administrateur télécharge directement un vrai fichier PDF (plus d'Excel ni de fenêtre d'impression). Il est construit dans le navigateur avec `vendor/pdf-lib.min.js` et `functions/report.js` (le même code sert au rapport mensuel du serveur).
+- Chaque membre a un bouton « Mon relevé PDF » (carte « Mes Opérations ») : synthèse épargne/crédits, crédits, mouvements, référence unique, date et heure d'édition. PDF à plat, sans champ modifiable.

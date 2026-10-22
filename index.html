@@ -428,7 +428,7 @@
                 <p>Suivi de Caisse, Épargne et Crédits Membres</p>
             </div>
             <div class="header-actions">
-                <button class="btn-export" onclick="openExportMenu()" title="Enregistrer le rapport en Excel ou en PDF"><i class="fa-solid fa-file-arrow-down"></i> Exporter</button>
+                <button class="btn-export" onclick="exportPDF()" title="Télécharger le rapport en PDF"><i class="fa-solid fa-file-pdf"></i> Rapport PDF</button>
                 <div class="user-info">
                     <select id="lockSelAdmin" class="lock-select" onchange="setAutoLock(this.value)" title="Verrouillage automatique : vous êtes déconnecté après ce temps sans utiliser l'application">
                         <option value="0">🔒 Aucun</option>
@@ -1232,6 +1232,7 @@
                         <div class="card-header">
                             <i class="fa-solid fa-clock-rotate-left"></i>
                             <h3>Mes Opérations</h3>
+                            <button type="button" class="btn-small" style="margin-left:auto;" onclick="exportStatementPDF()" title="Télécharger mon relevé de compte en PDF"><i class="fa-solid fa-file-pdf"></i> Mon relevé PDF</button>
                         </div>
                         <div style="overflow-x: auto;">
                             <table>
@@ -4403,19 +4404,43 @@
         function closeExportMenu() { const m = document.getElementById('exportMenu'); if (m) m.style.display = 'none'; }
 
         // ---------- Rapport PDF : page de rapport mise en forme, enregistrée en PDF par la fenêtre d'impression ----------
-        function exportPDF() {
+        async function preparePdfLib() {
+            await loadScriptOnce('vendor/pdf-lib.min.js?v=1171');
+            await loadScriptOnce('functions/report.js?v=20261050');
+            if (!window.PDFLib || !window.AvecPdf) throw new Error('bibliothèque PDF non chargée');
+        }
+        function savePdfFile(bytes, fileName) {
+            const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+            const a = document.createElement('a');
+            a.href = url; a.download = fileName;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        }
+        async function exportPDF() {
             if (!requireAdmin()) return;
-            const w = window.open('', '_blank');   // ouvert tout de suite (clic de l'utilisateur) pour ne pas être bloqué
-            if (!w) { alert("Le navigateur a bloqué l'ouverture de la fenêtre du rapport. Autorisez les fenêtres pop-up pour ce site, puis recommencez."); return; }
             try {
-                w.document.open();
-                w.document.write(buildReportHtml());
-                w.document.close();
-                logActivity('Rapport PDF généré');
+                await preparePdfLib();
+                const r = await AvecPdf.buildPdf(PDFLib, { members: members, requests: requests, claims: claims, weekly: (typeof socialWeekly !== 'undefined' ? socialWeekly : 1000), org: orgName(), logo: orgLogo(), current: true, now: new Date() });
+                savePdfFile(r.bytes, 'rapport-' + todayISO() + '.pdf');
+                logActivity('Rapport PDF téléchargé');
             } catch (err) {
                 console.error(err);
-                try { w.close(); } catch (e) {}
-                alert('Le rapport PDF n\'a pas pu être créé : ' + errText(err));
+                alert('Le rapport PDF n\'a pas pu être créé : ' + errText(err) + '\n(Connexion internet ? Actualisez la page avec Ctrl+F5.)');
+            }
+        }
+        // Relevé de compte du membre connecté (ou d'un membre choisi par l'administrateur) : PDF à plat, non modifiable
+        async function exportStatementPDF(memberId) {
+            const id = memberId || (currentUser && currentUser.memberId);
+            const m = members.find(x => x.id === id);
+            if (!m) { alert('Fiche membre introuvable.'); return; }
+            if (currentUser && currentUser.role === 'member' && currentUser.memberId !== m.id) return;
+            try {
+                await preparePdfLib();
+                const r = await AvecPdf.buildStatement(PDFLib, { member: m, org: orgName(), logo: orgLogo(), now: new Date() });
+                savePdfFile(r.bytes, r.fileName);
+            } catch (err) {
+                console.error(err);
+                alert('Le relevé PDF n\'a pas pu être créé : ' + errText(err) + '\n(Connexion internet ? Actualisez la page avec Ctrl+F5.)');
             }
         }
         function buildReportHtml() {

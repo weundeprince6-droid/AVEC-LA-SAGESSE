@@ -3,6 +3,8 @@
  * buildPdf(PDFLib, { members, requests, claims, weekly, now }) -> Uint8Array
  * `now` : Date ; le rapport couvre le mois civil précédent (activité) et la situation à la date du jour.
  */
+(function (exports) {
+'use strict';
 const A4 = [841.89, 595.28];
 const C = { navy: [0.118, 0.227, 0.541], blue: [0.145, 0.388, 0.922], ink: [0.122, 0.161, 0.216], grey: [0.42, 0.45, 0.5], band: [0.957, 0.969, 0.984], line: [0.85, 0.88, 0.925],
   green: [0.063, 0.725, 0.506], amber: [0.961, 0.62, 0.043], red: [0.937, 0.267, 0.267], violet: [0.545, 0.361, 0.965], white: [1, 1, 1] };
@@ -47,7 +49,7 @@ function buildPdf(PDFLib, input) {
   const local = new Date(now.getTime() + 2 * 3600000);                       // heure de Lubumbashi (UTC+2)
   const iso = d => d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
   const today = iso(local);
-  const prev = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth() - 1, 1));
+  const prev = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth() - (input.current ? 0 : 1), 1));
   const monthKey = prev.getUTCFullYear() + '-' + String(prev.getUTCMonth() + 1).padStart(2, '0');
   const monthLabel = MONTHS[prev.getUTCMonth()] + ' ' + prev.getUTCFullYear();
   const in30 = iso(new Date(local.getTime() + 30 * 86400000));
@@ -63,7 +65,7 @@ function buildPdf(PDFLib, input) {
 
   return (async () => {
     const pdf = await PDFDocument.create();
-    pdf.setTitle('Rapport mensuel ' + ORG + ' - ' + monthLabel); pdf.setAuthor(ORG); pdf.setCreator(ORG);
+    pdf.setTitle('Rapport ' + ORG + ' - ' + monthLabel); pdf.setAuthor(ORG); pdf.setCreator(ORG); pdf.setProducer(ORG);
     const F = await pdf.embedFont(StandardFonts.Helvetica), B = await pdf.embedFont(StandardFonts.HelveticaBold), I = await pdf.embedFont(StandardFonts.HelveticaOblique);
     const col = c => rgb(c[0], c[1], c[2]);
     const W = A4[0], H = A4[1], M = 34;
@@ -119,10 +121,12 @@ function buildPdf(PDFLib, input) {
     // ---------- Page 1 : synthèse ----------
     newPage();
     rect(M, y - 62, W - 2 * M, 62, C.navy);
-    text(ORG, M + 16, y - 28, 24, { bold: true, color: C.white });
-    text('Rapport mensuel : ' + monthLabel, M + 16, y - 48, 12, { color: [0.85, 0.9, 1] });
+    const lg = await embedLogo(pdf, input.logo); let lx = M + 16;
+    if (lg) { const lh = 46, lw = Math.min(120, lh * lg.width / lg.height); page.drawImage(lg, { x: M + 8, y: y - 54, width: lw, height: lh }); lx = M + 8 + lw + 10; }
+    text(ORG, lx, y - 28, 24, { bold: true, color: C.white });
+    text((input.current ? 'Rapport : ' : 'Rapport mensuel : ') + monthLabel, lx, y - 48, 12, { color: [0.85, 0.9, 1] });
     text('Situation au ' + frDate(today), W - M - 16, y - 28, 11, { align: 'right', color: C.white });
-    text('Généré automatiquement', W - M - 16, y - 46, 9, { align: 'right', color: [0.85, 0.9, 1] });
+    text(input.current ? 'Document PDF non modifiable' : 'Généré automatiquement', W - M - 16, y - 46, 9, { align: 'right', color: [0.85, 0.9, 1] });
     y -= 78;
     const kw = (W - 2 * M - 4 * 8) / 5;
     const late = all.filter(x => st(x.c) === 'En retard');
@@ -205,4 +209,98 @@ function buildPdf(PDFLib, input) {
     return { bytes: await pdf.save(), monthLabel, monthKey };
   })();
 }
-module.exports = { buildPdf };
+
+// Logo (JPEG en data URL) : incorporé dans le PDF s'il est valide, sinon ignoré
+async function embedLogo(pdf, dataUrl) {
+  const m = /^data:image\/jpeg;base64,([A-Za-z0-9+\/=]+)$/.exec(String(dataUrl || ''));
+  if (!m) return null;
+  try {
+    const bin = typeof atob === 'function' ? atob(m[1]) : Buffer.from(m[1], 'base64').toString('binary');
+    const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return await pdf.embedJpg(u);
+  } catch (e) { return null; }
+}
+
+/**
+ * Relevé de compte d'un membre : buildStatement(PDFLib, { member, org, logo, now }) -> { bytes, fileName }
+ * Document à plat (aucun champ modifiable), signé d'une référence et de la date de génération.
+ */
+function buildStatement(PDFLib, input) {
+  const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  const m = input.member || {}, ORG = safe(String(input.org || 'AVEC LA SAGESSE').slice(0, 60));
+  const now = input.now || new Date();
+  const local = new Date(now.getTime() + 2 * 3600000);
+  const todayIso = local.getUTCFullYear() + '-' + String(local.getUTCMonth() + 1).padStart(2, '0') + '-' + String(local.getUTCDate()).padStart(2, '0');
+  const hh = String(local.getUTCHours()).padStart(2, '0') + ':' + String(local.getUTCMinutes()).padStart(2, '0');
+  const ref = 'REL-' + safe(m.id || 'X') + '-' + todayIso.replace(/-/g, '') + '-' + hh.replace(':', '');
+  return (async () => {
+    const pdf = await PDFDocument.create();
+    pdf.setTitle('Relevé de compte - ' + safe(m.name) + ' - ' + frDate(todayIso)); pdf.setAuthor(ORG); pdf.setCreator(ORG); pdf.setProducer(ORG); pdf.setSubject(ref);
+    const F = await pdf.embedFont(StandardFonts.Helvetica), B = await pdf.embedFont(StandardFonts.HelveticaBold), I = await pdf.embedFont(StandardFonts.HelveticaOblique);
+    const col = c => rgb(c[0], c[1], c[2]);
+    const W = 595.28, H = 841.89, M = 36, pages = [];
+    let page, y;
+    const wid = (t, s, f) => (f || F).widthOfTextAtSize(safe(t), s);
+    const fit = (t, s, mw, f) => { t = safe(t); if (wid(t, s, f) <= mw) return t; while (t.length > 1 && wid(t + '...', s, f) > mw) t = t.slice(0, -1); return t + '...'; };
+    const text = (t, x, yy, s, o) => { o = o || {}; const f = o.bold ? B : (o.italic ? I : F); const v = safe(t); let xx = x; if (o.align === 'right') xx = x - wid(v, s, f); else if (o.align === 'center') xx = x - wid(v, s, f) / 2; page.drawText(v, { x: xx, y: yy, size: s, font: f, color: col(o.color || C.ink) }); };
+    const rect = (x, yy, w, h, c, o) => page.drawRectangle(Object.assign({ x, y: yy, width: w, height: h, color: col(c) }, o || {}));
+    const lg = await embedLogo(pdf, input.logo);
+    const newPage = (first) => {
+      page = pdf.addPage([W, H]); pages.push(page); y = H - M;
+      if (first) {
+        rect(M, y - 64, W - 2 * M, 64, C.navy); let lx = M + 14;
+        if (lg) { const lh = 46, lw = Math.min(110, lh * lg.width / lg.height); page.drawImage(lg, { x: M + 8, y: y - 55, width: lw, height: lh }); lx = M + 8 + lw + 10; }
+        text(ORG, lx, y - 28, 20, { bold: true, color: C.white });
+        text('Relevé de compte', lx, y - 48, 12, { color: [0.85, 0.9, 1] });
+        text('Édité le ' + frDate(todayIso) + ' à ' + hh, W - M - 14, y - 28, 9.5, { align: 'right', color: C.white });
+        text('Réf. ' + ref, W - M - 14, y - 46, 8.5, { align: 'right', color: [0.85, 0.9, 1] });
+        y -= 82;
+      } else { text(ORG + ' · Relevé de ' + (m.name || ''), M, y - 8, 9, { color: C.grey }); y -= 26; }
+    };
+    const section = t => { text(t, M, y - 10, 12, { bold: true, color: C.navy }); page.drawLine({ start: { x: M, y: y - 15 }, end: { x: W - M, y: y - 15 }, thickness: 1, color: col(C.blue) }); y -= 28; };
+    function table(cols, rows, empty) {
+      const tw = W - 2 * M, sw = cols.reduce((t, c) => t + c.w, 0), ws = cols.map(c => c.w / sw * tw), rh = 17;
+      const head = () => { rect(M, y - rh - 3, tw, rh + 3, C.blue); let x = M; cols.forEach((c, i) => { text(fit(c.h, 8.5, ws[i] - 8, B), x + ws[i] / 2, y - 13, 8.5, { bold: true, color: C.white, align: 'center' }); x += ws[i]; }); y -= rh + 3; };
+      if (!rows.length) { text(empty, M, y - 12, 9.5, { italic: true, color: C.grey }); y -= 26; return; }
+      if (y - rh * 3 < M + 20) newPage(false);
+      head();
+      rows.forEach((r, ri) => {
+        if (y - rh < M + 22) { newPage(false); head(); }
+        rect(M, y - rh, tw, rh, ri % 2 ? C.band : C.white);
+        let x = M;
+        r.forEach((v, i) => { const c = cols[i], s = fit(v, 8.5, ws[i] - 8); if (c.a === 'r') text(s, x + ws[i] - 4, y - 12, 8.5, { align: 'right' }); else if (c.a === 'c') text(s, x + ws[i] / 2, y - 12, 8.5, { align: 'center' }); else text(s, x + 4, y - 12, 8.5); x += ws[i]; });
+        page.drawLine({ start: { x: M, y: y - rh }, end: { x: W - M, y: y - rh }, thickness: 0.4, color: col(C.line) });
+        y -= rh;
+      });
+      y -= 14;
+    }
+    newPage(true);
+    text(m.name || '', M, y - 10, 15, { bold: true }); text('Identifiant : ' + (m.id || '') + (m.phone ? '   ·   Tél. : ' + m.phone : ''), M, y - 26, 9.5, { color: C.grey }); y -= 44;
+    // synthèse
+    const credits = m.credits || [];
+    const kw = (W - 2 * M - 3 * 8) / 4;
+    [['ÉPARGNE ($)', fmt(sav(m, 'USD'), 'USD'), C.green], ['ÉPARGNE (FC)', fmt(sav(m, 'FC'), 'FC'), C.green], ['CRÉDIT À REMBOURSER ($)', fmt(outstanding(m, 'USD'), 'USD'), C.amber], ['CRÉDIT À REMBOURSER (FC)', fmt(outstanding(m, 'FC'), 'FC'), C.amber]].forEach((k, i) => {
+      const x = M + i * (kw + 8); rect(x, y - 50, kw, 50, C.band); rect(x, y - 3, kw, 3, k[2]);
+      text(k[0], x + kw / 2, y - 16, 7, { bold: true, color: C.grey, align: 'center' }); text(fit(k[1], 13, kw - 8, B), x + kw / 2, y - 37, 13, { bold: true, color: k[2], align: 'center' });
+    });
+    y -= 68;
+    section('Crédits (' + credits.length + ')');
+    const stOf = c => creditRemaining(c) === 0 ? 'Remboursé' : (c.dueDate && c.dueDate < todayIso ? 'En retard' : 'En cours');
+    table([{ h: 'Accordé le', w: 1.5, a: 'c' }, { h: 'Montant', w: 1.7, a: 'r' }, { h: 'Intérêt', w: 1.4, a: 'r' }, { h: 'Remboursé', w: 1.7, a: 'r' }, { h: 'Reste', w: 1.7, a: 'r' }, { h: 'Échéance', w: 1.5, a: 'c' }, { h: 'Statut', w: 1.4, a: 'c' }],
+      credits.map(c => { const d = devOf(c); return [frDate(c.date), fmt(c.amount, d), fmt(c.interet || 0, d), fmt(c.repaid || 0, d), fmt(creditRemaining(c), d), frDate(c.dueDate), stOf(c)]; }), 'Aucun crédit enregistré.');
+    const hist = (m.history || []).slice().reverse();
+    section('Mouvements (' + hist.length + ')');
+    table([{ h: 'Date', w: 1.4, a: 'c' }, { h: 'Opération', w: 3 }, { h: 'Montant', w: 1.8, a: 'r' }, { h: 'Détail', w: 4 }],
+      hist.map(h => { const a = Number(h.amount) || 0, d = devOf(h); return [frDate(h.date), OP_LABELS[h.type] || 'Opération', h.type === 'correction' ? (a > 0 ? '+' : '-') + fmt(Math.abs(a), d) : fmt(a, d), h.note || '']; }), 'Aucune opération enregistrée.');
+    y -= 4;
+    if (y - 40 < M + 22) newPage(false);
+    text('Ce relevé est un document PDF à plat, généré par l\'application le ' + frDate(todayIso) + ' à ' + hh + '. Il fait foi à cette date.', M, y - 8, 8, { italic: true, color: C.grey });
+    pages.forEach((p, i) => {
+      p.drawText(safe(ORG + ' · Relevé de compte · ' + ref), { x: M, y: 16, size: 7.5, font: F, color: col(C.grey) });
+      const t = 'Page ' + (i + 1) + ' / ' + pages.length; p.drawText(t, { x: W - M - F.widthOfTextAtSize(t, 7.5), y: 16, size: 7.5, font: F, color: col(C.grey) });
+    });
+    return { bytes: await pdf.save(), fileName: 'releve-' + safe(m.id || 'membre') + '-' + todayIso + '.pdf', ref };
+  })();
+}
+exports.buildPdf = buildPdf; exports.buildStatement = buildStatement;
+})(typeof module !== 'undefined' && module.exports ? module.exports : (window.AvecPdf = {}));
