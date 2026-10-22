@@ -1103,6 +1103,7 @@
                 <p id="memberWelcome">Consultez votre épargne et vos crédits</p>
             </div>
             <div class="user-info">
+                <button class="btn-export" onclick="exportStatementPDF()" title="Télécharger mon rapport (relevé de compte) en PDF"><i class="fa-solid fa-file-pdf"></i> Mon rapport PDF</button>
                 <select id="lockSelMember" class="lock-select" onchange="setAutoLock(this.value)" title="Verrouillage automatique : vous êtes déconnecté après ce temps sans utiliser l'application">
                         <option value="0">🔒 Aucun</option>
                         <option value="5">🔒 5 min</option>
@@ -1232,7 +1233,7 @@
                         <div class="card-header">
                             <i class="fa-solid fa-clock-rotate-left"></i>
                             <h3>Mes Opérations</h3>
-                            <button type="button" class="btn-small" style="margin-left:auto;" onclick="exportStatementPDF()" title="Télécharger mon relevé de compte en PDF"><i class="fa-solid fa-file-pdf"></i> Mon relevé PDF</button>
+                            <button type="button" class="btn-small" style="margin-left:auto;" onclick="exportStatementPDF()" title="Télécharger mon rapport en PDF"><i class="fa-solid fa-file-pdf"></i> Mon rapport PDF</button>
                         </div>
                         <div style="overflow-x: auto;">
                             <table>
