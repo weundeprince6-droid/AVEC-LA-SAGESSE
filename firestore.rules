@@ -359,6 +359,46 @@ service cloud.firestore {
     }
 
     // Commandes : créées par l'acheteur ; le vendeur accepte ou refuse ; l'équipe conclut (c'est elle qui déplace l'argent).
+    // Exposition : publications de l'équipe (photos, liens vidéo / documents), « j'aime » et commentaires des membres
+    match /posts/{postId} {
+      allow read: if isStaff() || (hasProfile() && resource.data.status == 'publié');
+      allow create, update: if isStaff()
+        && request.resource.data.keys().hasOnly(['id', 'title', 'text', 'images', 'videoUrl', 'docUrl', 'docName', 'docData', 'status', 'date', 'by'])
+        && request.resource.data.id == postId
+        && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 80
+        && request.resource.data.text is string && request.resource.data.text.size() <= 1000
+        && request.resource.data.images is list && request.resource.data.images.size() <= 3
+        && request.resource.data.videoUrl is string && request.resource.data.videoUrl.size() <= 300
+        && request.resource.data.docUrl is string && request.resource.data.docUrl.size() <= 300
+        && request.resource.data.docName is string && request.resource.data.docName.size() <= 60
+        && request.resource.data.docData is string && request.resource.data.docData.size() <= 480000
+        && request.resource.data.status in ['publié', 'masqué']
+        && request.resource.data.date is string && request.resource.data.by is string;
+      allow delete: if isAdmin();
+    }
+    match /postLikes/{likeId} {
+      allow read: if isStaff() || hasProfile();
+      allow create: if hasProfile()
+        && request.resource.data.keys().hasOnly(['postId', 'memberId', 'date'])
+        && request.resource.data.memberId == myMemberId()
+        && likeId == request.resource.data.postId + '_' + myMemberId()
+        && get(/databases/$(database)/documents/posts/$(request.resource.data.postId)).data.status == 'publié';
+      allow delete: if isStaff() || (hasProfile() && resource.data.memberId == myMemberId());
+      allow update: if false;
+    }
+    match /postComments/{commentId} {
+      allow read: if isStaff() || hasProfile();
+      allow create: if hasProfile()
+        && request.resource.data.keys().hasOnly(['id', 'postId', 'memberId', 'name', 'text', 'date'])
+        && request.resource.data.id == commentId
+        && request.resource.data.memberId == myMemberId()
+        && request.resource.data.name == myName()
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 300
+        && get(/databases/$(database)/documents/posts/$(request.resource.data.postId)).data.status == 'publié';
+      allow delete: if isAdmin() || (hasProfile() && resource.data.memberId == myMemberId());
+      allow update: if false;
+    }
+
     match /orders/{orderId} {
       allow read: if isStaff() || (hasProfile() && (resource.data.buyerId == myMemberId() || resource.data.sellerId == myMemberId()));
       allow create: if isStaff() || (

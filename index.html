@@ -453,6 +453,7 @@
             <button class="dtab" data-tab="demandes" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes <span class="tab-badge hidden" id="tabBadgeReq">0</span></button>
             <button class="dtab" data-tab="reclamations" onclick="showTab('reclamations')"><i class="fa-solid fa-bell"></i> Réclamations <span class="tab-badge hidden" id="tabBadgeClaims">0</span></button>
             <button class="dtab hidden" id="tabBtnBoutique" data-tab="boutique" onclick="showTab('boutique')"><i class="fa-solid fa-store"></i> Boutique <span class="tab-badge hidden" id="bqAdminBadge">0</span></button>
+            <button class="dtab hidden" id="tabBtnExpo" data-tab="pub" onclick="showTab('pub')"><i class="fa-solid fa-images"></i> Exposition</button>
             <button class="dtab hidden" id="tabBtnEquipe" data-tab="equipe" onclick="showTab('equipe')"><i class="fa-solid fa-user-shield"></i> Équipe</button>
             <button class="dtab hidden" id="tabBtnJournal" data-tab="journal" onclick="showTab('journal')"><i class="fa-solid fa-clock-rotate-left"></i> Journal</button>
         </nav>
@@ -1043,6 +1044,32 @@
                 </section>
         </div>
 
+        <div class="dpanel hidden" id="panel-pub">
+            <section class="card">
+                <div class="card-header"><i class="fa-solid fa-images"></i><h3>Exposition : publier pour les membres</h3></div>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Photos, vidéos et documents sur la pub et les œuvres de l'organisation. Les membres peuvent les voir, les aimer et les commenter.</p>
+                <form onsubmit="pubSave(event)">
+                    <div class="form-group"><label>Titre</label><input type="text" id="pubTitle" maxlength="80" required placeholder="Ex : Notre nouvelle campagne"></div>
+                    <div class="form-group"><label>Texte (facultatif)</label><textarea id="pubText" rows="3" maxlength="1000" placeholder="Décrivez la publication…"></textarea></div>
+                    <div class="form-group"><label>Photos (3 au maximum, réduites automatiquement)</label>
+                        <div id="pubDraftImgs"></div>
+                        <input type="file" id="pubImgFile" accept="image/*" multiple class="hidden" onchange="pubPickImages(this)">
+                        <button type="button" class="btn-small" onclick="document.getElementById('pubImgFile').click()"><i class="fa-solid fa-image"></i> Ajouter des photos</button>
+                    </div>
+                    <div class="form-group"><label>Lien d'une vidéo (YouTube, Facebook, TikTok…)</label><input type="url" id="pubVideo" maxlength="300" placeholder="https://www.youtube.com/watch?v=…"></div>
+                    <div class="form-group"><label>Document : lien (Google Drive…) ou petit PDF</label>
+                        <input type="url" id="pubDocUrl" maxlength="300" placeholder="https://…" style="margin-bottom:6px;">
+                        <input type="text" id="pubDocName" maxlength="60" placeholder="Nom affiché du document (facultatif)" style="margin-bottom:6px;">
+                        <input type="file" id="pubPdfFile" accept="application/pdf" class="hidden" onchange="pubPickPdf(this)">
+                        <button type="button" class="btn-small" onclick="document.getElementById('pubPdfFile').click()"><i class="fa-solid fa-file-pdf"></i> Joindre un PDF (350 Ko max.)</button>
+                    </div>
+                    <button type="submit" class="btn" style="width:auto;"><i class="fa-solid fa-paper-plane"></i> Publier</button>
+                </form>
+                <div id="pubMsg" class="alert" style="margin-top:10px;display:none;"></div>
+            </section>
+            <div id="pubAdminFeed"></div>
+        </div>
+
         <div class="dpanel hidden" id="panel-boutique">
             <section class="card">
                 <div class="card-header"><i class="fa-solid fa-store"></i><h3>Boutique des membres</h3></div>
@@ -1121,6 +1148,7 @@
             <button class="dtab mtab" data-mtab="demandes" onclick="showMemberTab('demandes')"><i class="fa-solid fa-paper-plane"></i> Demandes</button>
             <button class="dtab mtab" data-mtab="reclamations" onclick="showMemberTab('reclamations')"><i class="fa-solid fa-circle-exclamation"></i> Réclamations</button>
             <button class="dtab mtab" data-mtab="boutique" onclick="showMemberTab('boutique')"><i class="fa-solid fa-store"></i> Boutique <span class="tab-badge hidden" id="bqMemberBadge">0</span></button>
+            <button class="dtab mtab" data-mtab="expo" onclick="showMemberTab('expo')"><i class="fa-solid fa-images"></i> Exposition <span class="tab-badge hidden" id="pubMemberBadge">0</span></button>
             <button class="dtab mtab" data-mtab="compte" onclick="showMemberTab('compte')"><i class="fa-solid fa-user"></i> Mon compte</button>
         </nav>
 
@@ -1333,6 +1361,10 @@
             </div>
         </div>
 
+        <div class="mpanel hidden" id="mp-expo">
+            <div id="pubMemberFeed"></div>
+        </div>
+
         <div class="mpanel hidden" id="mp-boutique">
             <div class="subtabs" style="flex-wrap:wrap;">
                 <button type="button" class="subtab active" id="bqSubBtn-catalogue" onclick="bqShowSub('catalogue')"><i class="fa-solid fa-bag-shopping"></i> Acheter</button>
@@ -1462,7 +1494,7 @@
     </div>
 
     <script src="firebase-config.js"></script>
-    <script type="module" src="firebase-adapter.js?v=20261041"></script>
+    <script type="module" src="firebase-adapter.js?v=20261060"></script>
     <script>
         // ---------- Utilitaires ----------
 
@@ -1857,11 +1889,13 @@
             }
             let stopBq = () => {};
             if (F().listenBoutique) stopBq = F().listenBoutique(isAdmin(currentUser), currentUser.memberId, bqOnData, err => { /* sans gravité */ });
-            stopListening = () => { stopData(); stopAnn(); stopSet(); stopProf(); stopReg(); stopWa(); stopWaQ(); stopBq(); };
+            let stopPub = () => {};
+            if (F().listenPubs) stopPub = F().listenPubs(isAdmin(currentUser), pubOnData, err => { /* sans gravité */ });
+            stopListening = () => { stopData(); stopAnn(); stopSet(); stopProf(); stopReg(); stopWa(); stopWaQ(); stopBq(); stopPub(); };
         }
 
         function resetCloudState() {
-            members = []; claims = []; requests = []; announcements = []; registrations = []; if (typeof bqReset === 'function') bqReset(); waQueue = []; waSettings = Object.assign({}, WA_DEFAULTS); memberProfiles = {}; socialWeekly = SOCIAL_DEFAULT;
+            members = []; claims = []; requests = []; announcements = []; registrations = []; if (typeof bqReset === 'function') bqReset(); if (typeof pubReset === 'function') pubReset(); waQueue = []; waSettings = Object.assign({}, WA_DEFAULTS); memberProfiles = {}; socialWeekly = SOCIAL_DEFAULT;
             cloudLoaded.members = cloudLoaded.claims = cloudLoaded.requests = false;
             lastSynced.members = {}; lastSynced.claims = {}; lastSynced.requests = {};
             importChecked = false;
@@ -2021,6 +2055,7 @@
                     setHidden('reportSection', level !== 'total');
                     setHidden('activitySection', level !== 'total');
                     setHidden('tabBtnBoutique', false);
+                    setHidden('tabBtnExpo', false);
                     setHidden('tabBtnEquipe', level !== 'total');
                     setHidden('tabBtnJournal', level !== 'total');
                     showTab('dashboard');
@@ -3744,15 +3779,16 @@
             if (name === 'inscriptions') { name = 'membres'; showMemberSub('inscriptions'); }
             // Équipe et Journal : réservés à l'accès total (en ligne)
             if ((name === 'equipe' || name === 'journal') && (!CLOUD || !currentUser || currentUser.level !== 'total')) name = 'dashboard';
-            if (name === 'boutique' && !CLOUD) name = 'dashboard';
+            if ((name === 'boutique' || name === 'pub') && !CLOUD) name = 'dashboard';
             currentTab = name;
             if (name === 'galerie') { try { renderGallery(); } catch (e) {} }
             if (name === 'boutique' && typeof bqRenderAdmin === 'function') bqRenderAdmin();
             syncHeaderHeight();
             labelTables();
-            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'boutique', 'equipe', 'journal'].forEach(t => {
+            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'boutique', 'pub', 'equipe', 'journal'].forEach(t => {
                 setHidden('panel-' + t, t !== name);
             });
+            if (name === 'pub' && typeof pubRenderAdmin === 'function') pubRenderAdmin();
             if (document.querySelectorAll) {
                 document.querySelectorAll('.dtab').forEach(b => {
                     if (typeof b.getAttribute !== 'function') return;
@@ -4674,7 +4710,8 @@
             const user = currentUser;
             const must = !!(user && user.mustChange);
             const tab = must ? 'compte' : currentMTab;
-            ['accueil', 'credits', 'demandes', 'reclamations', 'boutique'].forEach(t => setHidden('mp-' + t, must || t !== tab));
+            ['accueil', 'credits', 'demandes', 'reclamations', 'boutique', 'expo'].forEach(t => setHidden('mp-' + t, must || t !== tab));
+            if (tab === 'expo' && !must && typeof pubShowMember === 'function') pubShowMember();
             if (tab === 'boutique' && !must && typeof bqRenderMember === 'function') bqRenderMember();
             setHidden('mp-compte', tab !== 'compte');
             setHidden('memberProfileSection', must);
@@ -5281,6 +5318,7 @@
         };
     </script>
     <script src="org.js?v=20261040"></script>
+<script src="pub.js?v=20261060"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>

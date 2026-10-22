@@ -7,6 +7,7 @@
 //   reportRequests/{id}  demandes d'envoi immédiat du rapport PDF par e-mail (traitées par la Cloud Function)
 //   shops/{MBR-001}     boutique d'un membre (validée par l'équipe)
 //   items/{id}          articles à vendre (publiés après validation)
+//   posts, postLikes, postComments   exposition : publications de l'organisation, « j'aime », commentaires
 //   orders/{id}         commandes entre membres (conclues par l'équipe : épargne acheteur -> vendeur, 5 % à l'AVEC)
 //   announcements/{id}  annonces de l'administrateur, lues par tous les membres
 //   claims/{id}         réclamations                                    -> créées par le membre, traitées par l'admin
@@ -314,6 +315,16 @@ window.FB_READY = (async () => {
                 watch('orders', 'buy', query(collection(db, 'orders'), where('buyerId', '==', memberId)));
                 watch('orders', 'sell', query(collection(db, 'orders'), where('sellerId', '==', memberId)));
             }
+            return () => stops.forEach(s => s());
+        },
+
+        // ----- Exposition : publications, « j'aime » et commentaires -----
+        listenPubs(admin, h, onError) {
+            const stops = [];
+            const watch = (name, q) => stops.push(onSnapshot(q, snap => h[name](snap.docs.map(withId)), err => onError(err)));
+            watch('posts', admin ? collection(db, 'posts') : query(collection(db, 'posts'), where('status', '==', 'publié')));
+            watch('likes', collection(db, 'postLikes'));
+            watch('comments', collection(db, 'postComments'));
             return () => stops.forEach(s => s());
         },
 

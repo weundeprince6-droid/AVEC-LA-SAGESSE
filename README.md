@@ -70,3 +70,8 @@ Chaque membre peut ouvrir une boutique (onglet « Boutique » de son espace), pu
 ## Rapports en PDF uniquement
 - Le bouton « Rapport PDF » de l'administrateur télécharge directement un vrai fichier PDF (plus d'Excel ni de fenêtre d'impression). Il est construit dans le navigateur avec `vendor/pdf-lib.min.js` et `functions/report.js` (le même code sert au rapport mensuel du serveur).
 - Chaque membre a un bouton « Mon relevé PDF » (carte « Mes Opérations ») : synthèse épargne/crédits, crédits, mouvements, référence unique, date et heure d'édition. PDF à plat, sans champ modifiable.
+
+## Exposition (galerie de l'organisation)
+- Onglet « Exposition » côté équipe (publier, masquer, supprimer, modérer les commentaires) et côté membre (voir, aimer ♥, commenter, filtrer Photos / Vidéos / Documents ; pastille pour les nouveautés).
+- Sans Firebase Storage (formule gratuite) : 3 photos par publication (réduites automatiquement), vidéo = lien (YouTube intégré dans la page), document = lien ou PDF de 350 Ko maximum.
+- Données : collections `posts`, `postLikes`, `postComments` (règles à republier dans `firestore.rules`). Cloud uniquement.
