@@ -406,7 +406,7 @@ function bqRenderShowcase() {
     if (!bqShowTimer && list.length > 1) {
         bqShowTimer = setInterval(() => {
             if (!bqShowPaused) bqShowAdvance();
-        }, 3500);
+        }, 10000);
     }
     if (list.length < 2) bqStopShow();
 }
@@ -416,90 +416,72 @@ function bqStopShow() {
 }
 function bqPause(on) { bqShowPaused = !!on; }
 
+// Vitrine légère (sans défilement animé, sans transition) : on remplace simplement le groupe d'articles affiché toutes les 10 secondes.
+let bqShowPos = 0;
+const BQ_SHOW_MAX = 3;
+function bqShowCount() { return (window.innerWidth || 1000) <= 600 ? 1 : BQ_SHOW_MAX; }
 function bqShowAdvance() {
-    ['', 'A'].forEach(sfx => {
-        const el = document.getElementById('bqSlide' + sfx);
-        const viewport = el && el.querySelector('.bq-show-viewport');
-        if (!viewport) return;
-        const card = viewport.querySelector('.bq-show-card');
-        const step = card ? card.getBoundingClientRect().width + 12 : 232;
-        const end = viewport.scrollWidth - viewport.clientWidth;
-        if (end <= 4 || viewport.scrollLeft >= end - step / 2) {
-            viewport.scrollTo({ left: 0, behavior: 'smooth' });
-        } else {
-            viewport.scrollBy({ left: step, behavior: 'smooth' });
-        }
-    });
+    if (document.hidden) return;
+    bqShowPos = (bqShowPos + bqShowCount()) % Math.max(1, bqShowList.length);
+    bqShowDraw();
 }
-
 function bqShowGo(n) {
     if (!bqShowList.length) return;
-    const target = bqShowList[((n % bqShowList.length) + bqShowList.length) % bqShowList.length];
-    if (!target) return;
-    ['', 'A'].forEach(sfx => {
-        const el = document.getElementById('bqSlide' + sfx);
-        const card = el && el.querySelector('[data-bq-item="' + String(target.id).replace(/"/g, '') + '"]');
-        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-    });
+    bqShowPos = ((n % bqShowList.length) + bqShowList.length) % bqShowList.length;
+    bqShowDraw();
 }
-
 function bqShowDraw() {
-    ['', 'A'].forEach(sfx => {
-        bqShowDrawIn(document.getElementById('bqSlide' + sfx), document.getElementById('bqDots' + sfx), sfx);
-    });
+    ['', 'A'].forEach(sfx => bqShowDrawIn(document.getElementById('bqSlide' + sfx), document.getElementById('bqDots' + sfx), sfx));
 }
-
 function bqShowDrawIn(el, dots, sfx) {
     if (!el) return;
+    const n = bqShowList.length;
+    if (!n) { el.innerHTML = ''; return; }
+    if (bqShowPos >= n) bqShowPos = 0;
     const go = sfx === 'A' ? "showTab('boutique')" : "showMemberTab('boutique');bqShowSub('catalogue')";
-    const items = bqShowList.map(i =>
-        '<article class="bq-show-card" data-bq-item="' + escapeHtml(i.id) + '" role="button" tabindex="0" aria-label="Voir le catalogue : ' + escapeHtml(i.title || 'Article') + '" onclick="' + go + '" onkeydown="if(event.keyCode===13||event.keyCode===32){event.preventDefault();' + go + '}">' +
-            '<div class="bq-show-photo">' + bqImg(i.photo, 150) + '</div>' +
+    const cards = [];
+    const cnt = bqShowCount();
+    for (let k = 0; k < Math.min(cnt, n); k++) {
+        const i = bqShowList[(bqShowPos + k) % n];
+        cards.push('<article class="bq-show-card" onclick="' + go + '">' +
+            '<div class="bq-show-photo">' + bqImg(i.photo, 130) + '</div>' +
             '<div class="bq-show-info">' +
-                '<div class="bq-show-title">' + escapeHtml(i.title || 'Article sans titre') + '</div>' +
+                '<div class="bq-show-title">' + escapeHtml(i.title || 'Article') + '</div>' +
                 '<div class="bq-show-owner">' + escapeHtml(i.shopName || 'Boutique') + '</div>' +
                 '<div class="bq-show-member">' + escapeHtml(i.ownerName || 'Membre') + '</div>' +
-                (i.desc ? '<div class="bq-show-desc">' + escapeHtml(i.desc) + '</div>' : '') +
                 '<div class="bq-show-price">' + fmt(i.price, i.devise) + '</div>' +
-                '<div class="bq-show-stock">Disponible : ' + Math.max(0, Number(i.qty) || 0) + '</div>' +
-            '</div></article>'
-    ).join('');
-    el.innerHTML = '<div class="bq-show-viewport" aria-label="Articles des boutiques des membres"><div class="bq-show-track">' + items + '</div></div>';
-    const viewport = el.querySelector('.bq-show-viewport');
-    if (viewport) {
-        viewport.addEventListener('mouseenter', () => bqPause(true));
-        viewport.addEventListener('mouseleave', () => bqPause(false));
-        viewport.addEventListener('touchstart', () => bqPause(true), { passive: true });
-        viewport.addEventListener('touchend', () => bqPause(false), { passive: true });
-        viewport.addEventListener('focusin', () => bqPause(true));
-        viewport.addEventListener('focusout', () => bqPause(false));
+            '</div></article>');
+    }
+    el.innerHTML = '<div class="bq-show-track">' + cards.join('') + '</div>';
+    if (!el.getAttribute('data-bound')) {
+        el.setAttribute('data-bound', '1');
+        el.addEventListener('mouseenter', () => bqPause(true));
+        el.addEventListener('mouseleave', () => bqPause(false));
+        el.addEventListener('touchstart', () => bqPause(true), { passive: true });
+        el.addEventListener('touchend', () => bqPause(false), { passive: true });
     }
     if (dots) {
-        const shops = new Set(bqShowList.map(i => i.ownerId)).size;
-        dots.innerHTML = '<span class="bq-show-count">' + bqShowList.length + ' article(s) · ' + shops + ' vendeur(s) · faites défiler pour tout voir</span>';
+        const shops = new Set(bqShowList.map(x => x.ownerId)).size;
+        dots.innerHTML = n > cnt
+            ? '<button type="button" class="btn-small" onclick="bqShowGo(bqShowPos-' + cnt + ')">‹</button><span class="bq-show-count">' + n + ' article(s) · ' + shops + ' vendeur(s)</span><button type="button" class="btn-small" onclick="bqShowGo(bqShowPos+' + cnt + ')">›</button>'
+            : '<span class="bq-show-count">' + n + ' article(s) · ' + shops + ' vendeur(s)</span>';
     }
 }
 
 (function () {
     const st = document.createElement('style');
     st.textContent =
-        '.bq-show-viewport{width:100%;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:thin;padding:2px 2px 9px;}' +
-        '.bq-show-track{display:flex;align-items:stretch;gap:12px;width:max-content;min-width:100%;}' +
-        '.bq-show-card{box-sizing:border-box;display:flex;flex-direction:column;flex:0 0 220px;width:220px;max-width:78vw;overflow:hidden;border:1px solid var(--border);border-radius:12px;background:var(--card-bg,#fff);scroll-snap-align:start;cursor:pointer;transition:box-shadow .18s,transform .18s;}' +
-        '.bq-show-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.10);transform:translateY(-2px);}' +
-        '.bq-show-card:focus-visible{outline:2px solid var(--primary);outline-offset:2px;}' +
-        '.bq-show-photo{height:132px;display:flex;align-items:center;justify-content:center;background:var(--bg,#f8fafc);overflow:hidden;}' +
-        '.bq-show-photo img{width:100%;height:100%;object-fit:cover;}' +
-        '.bq-show-info{padding:10px;display:flex;flex-direction:column;gap:4px;min-width:0;flex:1;}' +
-        '.bq-show-title{font-weight:750;font-size:.96rem;line-height:1.3;overflow-wrap:anywhere;}' +
+        '.bq-show-track{display:flex;gap:12px;align-items:stretch;}' +
+        '.bq-show-card{box-sizing:border-box;display:flex;flex-direction:column;flex:1 1 0;min-width:0;overflow:hidden;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;}' +
+        '.bq-show-photo{height:130px;overflow:hidden;background:#f1f5f9;}' +
+        '.bq-show-info{padding:10px;display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}' +
+        '.bq-show-title{font-weight:700;font-size:.95rem;line-height:1.3;overflow-wrap:anywhere;}' +
         '.bq-show-owner{font-size:.82rem;font-weight:650;color:var(--primary);overflow-wrap:anywhere;}' +
-        '.bq-show-member,.bq-show-desc,.bq-show-stock{font-size:.78rem;color:var(--text-muted);overflow-wrap:anywhere;}' +
-        '.bq-show-desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.2em;}' +
+        '.bq-show-member{font-size:.78rem;color:var(--text-muted);overflow-wrap:anywhere;}' +
         '.bq-show-price{font-size:1rem;font-weight:800;color:var(--primary);margin-top:auto;padding-top:5px;}' +
         '.bq-show-count{font-size:.78rem;color:var(--text-muted);}' +
-        '.bq-show-viewport::-webkit-scrollbar{height:6px;}.bq-show-viewport::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:8px;}' +
-        '@media(max-width:480px){.bq-show-card{flex-basis:190px;width:190px;}.bq-show-photo{height:112px;}}' +
-        '@media(prefers-reduced-motion:reduce){.bq-show-card{transition:none;}}';
+        '#bqDots,#bqDotsA{align-items:center;}' +
+        '';
     document.head.appendChild(st);
 })();
 
