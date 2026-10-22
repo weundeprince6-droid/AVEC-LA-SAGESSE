@@ -59,3 +59,4 @@ Chaque membre peut ouvrir une boutique (onglet « Boutique » de son espace), pu
 - Pour publier ou remettre en vente un article, le membre doit avoir fait un versement d'épargne dans les 14 derniers jours (règle appliquée par l'application et par `firestore.rules`, via le champ `lastEpargneDay` de la fiche).
 - Retrait : après l'approbation, l'administrateur confirme « Argent remis au membre » (onglet Demandes) ; le membre voit « Argent remis le … ».
 - Une vente (paiement par l'épargne) ne peut être conclue que si, après le paiement, l'épargne de l'acheteur reste au moins égale au tiers de son crédit en cours (même règle que pour un retrait).
+- L'organisation a sa propre boutique (onglet « Boutique » de l'administrateur > « Boutique de l'organisation ») : produits de l'AVEC visibles par tous les membres ; à la conclusion d'une vente, tout le prix va à la caisse de l'AVEC (sans commission).

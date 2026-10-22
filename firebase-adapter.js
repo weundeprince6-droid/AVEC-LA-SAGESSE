@@ -273,7 +273,7 @@ window.FB_READY = (async () => {
         async concludeOrder(buyer, seller, order, item) {
             const batch = writeBatch(db);
             batch.set(doc(db, 'members', buyer.id), buyer);
-            batch.set(doc(db, 'members', seller.id), seller);
+            if (seller) batch.set(doc(db, 'members', seller.id), seller);   // vente de l'organisation : pas de vendeur membre
             batch.set(doc(db, 'orders', order.id), order);
             batch.set(doc(db, 'items', item.id), item);
             await batch.commit();

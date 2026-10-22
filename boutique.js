@@ -5,6 +5,7 @@
 // Ce fichier est chargé après index.html et utilise ses fonctions (fmt, round2, sav, setSav, logOp, ...).
 
 const SHOP_RATE = 0.05;
+const ORG_ID = 'ORG';   // boutique de l'organisation (tenue par l'équipe)
 let bqShops = [], bqItems = [], bqOrders = [], bqSub = 'catalogue', bqPhotoData = '', bqEditId = null;
 
 function bqReset() { bqShops = []; bqItems = []; bqOrders = []; bqPhotoData = ''; bqEditId = null; }
@@ -170,9 +171,9 @@ function bqSaveShop(e) {
         .then(() => bqSay(old ? 'Boutique mise à jour.' : 'Boutique créée. Vous pouvez maintenant ajouter vos articles.', true))
         .catch(err => bqSay('Enregistrement impossible : ' + errText(err), false));
 }
-function bqPhoto(input) {
+function bqPhoto(input, prevId) {
     const f = input && input.files && input.files[0];
-    const prev = document.getElementById('bqPhotoPrev');
+    const prev = document.getElementById(prevId || 'bqPhotoPrev');
     if (!f) { bqPhotoData = ''; if (prev) prev.innerHTML = ''; return; }
     if (!/^image\//.test(f.type)) { bqSay('Choisissez une image.', false); input.value = ''; return; }
     const img = new Image(), url = URL.createObjectURL(f);
@@ -238,14 +239,14 @@ function bqBuy(id) {
         bqSay('Votre épargne disponible pour acheter (' + fmt(availableWithdrawal(m, it.devise), it.devise) + ') ne suffit pas pour cet article à ' + fmt(it.price, it.devise) + '.' + (keepB > 0 ? ' Votre épargne doit rester au moins égale au tiers de votre crédit en cours (' + fmt(keepB, it.devise) + ').' : ''), false);
         return;
     }
-    if (!confirm('Commander « ' + it.title + ' » pour ' + fmt(it.price, it.devise) + ' ?\nLe montant sera prélevé sur votre épargne quand l\'administrateur conclura la vente, après accord du vendeur.')) return;
-    const sp = bqSplit(it.price);
+    if (!confirm('Commander « ' + it.title + ' » pour ' + fmt(it.price, it.devise) + ' ?\nLe montant sera prélevé sur votre épargne quand l\'administrateur conclura la vente' + (it.ownerId === ORG_ID ? '.' : ', après accord du vendeur.'))) return;
+    const sp = it.ownerId === ORG_ID ? { commission: round2(it.price), net: 0 } : bqSplit(it.price);   // organisation : tout le prix revient à l'AVEC
     const order = {
-        id: bqId('CMD'), itemId: it.id, itemTitle: it.title, sellerId: it.ownerId, sellerName: it.ownerName || '',
+        id: bqId('CMD'), itemId: it.id, itemTitle: it.title, sellerId: it.ownerId, sellerName: it.ownerId === ORG_ID ? (it.shopName || 'AVEC LA SAGESSE') : (it.ownerName || ''),
         buyerId: me, buyerName: m.name, price: it.price, devise: it.devise, commission: sp.commission, net: sp.net, qty: 1,
         note: '', status: 'en attente', decision: '', date: new Date().toISOString(), decisionDate: ''
     };
-    F().createOrder(order).then(() => { bqSay('Commande envoyée au vendeur.', true); bqShowSub('cmd'); }).catch(err => bqSay('Commande impossible : ' + errText(err), false));
+    F().createOrder(order).then(() => { bqSay(it.ownerId === ORG_ID ? 'Commande envoyée à l\'administrateur.' : 'Commande envoyée au vendeur.', true); bqShowSub('cmd'); }).catch(err => bqSay('Commande impossible : ' + errText(err), false));
 }
 function bqSellerAnswer(id, yes) {
     if (!yes && !confirm('Refuser cette commande ?')) return;
@@ -271,6 +272,7 @@ function bqBackfill() {
 function bqRenderAdmin() {
     if (!currentUser || !isAdmin(currentUser) || !CLOUD) return;
     bqBackfill();
+    bqRenderOrg();
     bqRenderShowcase();
     const orders = bqOrders.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
     const done = orders.filter(o => o.status === 'conclue');
@@ -282,7 +284,7 @@ function bqRenderAdmin() {
     if (badge) { badge.textContent = n; setHidden('bqAdminBadge', !(n > 0)); }
     const stat = (t, v) => '<div style="flex:1;min-width:150px;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:10px;"><div style="font-size:0.78rem;color:var(--text-muted);">' + t + '</div><div style="font-weight:800;font-size:1.1rem;">' + v + '</div></div>';
     const stats = document.getElementById('bqAdminStats');
-    if (stats) stats.innerHTML = stat('Commissions encaissées (USD)', fmt(com('USD'), 'USD')) + stat('Commissions encaissées (FC)', fmt(com('FC'), 'FC')) + stat('Ventes conclues', done.length) + stat('Commandes à conclure', n);
+    if (stats) stats.innerHTML = stat('Encaissé par l\'AVEC (USD)', fmt(com('USD'), 'USD')) + stat('Encaissé par l\'AVEC (FC)', fmt(com('FC'), 'FC')) + stat('Ventes conclues', done.length) + stat('Commandes à conclure', n);
 
     const sellerInfo = o => escapeHtml(o.buyerName || o.buyerId) + ' → ' + escapeHtml(o.sellerName || o.sellerId);
     const ob = document.getElementById('bqAdminOrders');
@@ -291,7 +293,7 @@ function bqRenderAdmin() {
         '<br><span style="font-size:0.85rem;color:var(--text-muted);">' + sellerInfo(o) + ' · ' + escapeHtml(formatISOtoFR(String(o.date).slice(0, 10))) +
         (o.status === 'conclue' ? ' · commission ' + fmt(o.commission, o.devise) + ' · vendeur reçoit ' + fmt(o.net, o.devise) : '') + '</span>' +
         (o.status === 'acceptée' || o.status === 'en attente' ? '<div style="margin-top:6px;"><button type="button" class="btn-small" onclick="bqConclude(\'' + escapeHtml(o.id) + '\')"><i class="fa-solid fa-handshake"></i> Conclure la vente</button><button type="button" class="btn-small danger" onclick="bqRefuseOrder(\'' + escapeHtml(o.id) + '\')">Refuser</button>' +
-            (o.status === 'en attente' ? ' <small style="color:var(--text-muted);">le vendeur n\'a pas encore répondu</small>' : '') + '</div>' : '') + '</div>').join('') : '<p style="color:var(--text-muted);">Aucune commande.</p>';
+            (o.status === 'en attente' && o.sellerId !== ORG_ID ? ' <small style="color:var(--text-muted);">le vendeur n\'a pas encore répondu</small>' : '') + '</div>' : '') + '</div>').join('') : '<p style="color:var(--text-muted);">Aucune commande.</p>';
 
     const pend = document.getElementById('bqAdminPending');
     if (pend) pend.innerHTML = (pendShops.length || pendItems.length) ?
@@ -329,8 +331,9 @@ function bqConclude(id) {
     const o = bqOrders.find(x => x.id === id);
     if (!o || (o.status !== 'acceptée' && o.status !== 'en attente')) return;
     const item = bqItems.find(x => x.id === o.itemId);
-    const bOrig = members.find(x => x.id === o.buyerId), sOrig = members.find(x => x.id === o.sellerId);
-    if (!bOrig || !sOrig) { alert('Acheteur ou vendeur introuvable.'); return; }
+    const isOrg = o.sellerId === ORG_ID;
+    const bOrig = members.find(x => x.id === o.buyerId), sOrig = isOrg ? null : members.find(x => x.id === o.sellerId);
+    if (!bOrig || (!isOrg && !sOrig)) { alert('Acheteur ou vendeur introuvable.'); return; }
     if (!item || item.status !== 'publié' || (item.qty || 0) < 1) { alert("Cet article n'est plus disponible. Refusez la commande."); return; }
     const dev = devOf(o), price = round2(o.price);
     if (round2(item.price) !== price || devOf(item) !== dev) { alert('Le prix de l\'article a changé depuis la commande. Refusez la commande.'); return; }
@@ -340,18 +343,21 @@ function bqConclude(id) {
             'Il peut dépenser au maximum ' + fmt(availableWithdrawal(bOrig, dev), dev) + ' ; le prix est de ' + fmt(price, dev) + '. Refusez la commande.');
         return;
     }
-    const sp = bqSplit(price);
-    if (!confirm('Conclure la vente « ' + o.itemTitle + ' » ?\n\n' + bOrig.name + ' paie ' + fmt(price, dev) + ' (prélevé sur son épargne)\n' + sOrig.name + ' reçoit ' + fmt(sp.net, dev) + ' (sur son épargne)\nAVEC : commission 5 % = ' + fmt(sp.commission, dev))) return;
-    const b = JSON.parse(JSON.stringify(bOrig)), s = JSON.parse(JSON.stringify(sOrig));
+    const sp = isOrg ? { commission: price, net: 0 } : bqSplit(price);
+    if (!confirm('Conclure la vente « ' + o.itemTitle + ' » ?\n\n' + bOrig.name + ' paie ' + fmt(price, dev) + ' (prélevé sur son épargne)\n' +
+        (isOrg ? 'Produit de l\'organisation : la totalité (' + fmt(price, dev) + ') va à la caisse de l\'AVEC.' : sOrig.name + ' reçoit ' + fmt(sp.net, dev) + ' (sur son épargne)\nAVEC : commission 5 % = ' + fmt(sp.commission, dev)))) return;
+    const b = JSON.parse(JSON.stringify(bOrig)), s = isOrg ? null : JSON.parse(JSON.stringify(sOrig));
     setSav(b, dev, round2(sav(b, dev) - price));
-    logOp(b, 'achat', price, 'Achat : ' + o.itemTitle + ' (vendeur ' + sOrig.name + ')', dev);
-    setSav(s, dev, round2(sav(s, dev) + sp.net));
-    logOp(s, 'vente', sp.net, 'Vente : ' + o.itemTitle + ' (acheteur ' + bOrig.name + ') · commission AVEC ' + fmt(sp.commission, dev), dev);
+    logOp(b, 'achat', price, 'Achat : ' + o.itemTitle + ' (' + (isOrg ? 'boutique de l\'organisation' : 'vendeur ' + sOrig.name) + ')', dev);
+    if (s) {
+        setSav(s, dev, round2(sav(s, dev) + sp.net));
+        logOp(s, 'vente', sp.net, 'Vente : ' + o.itemTitle + ' (acheteur ' + bOrig.name + ') · commission AVEC ' + fmt(sp.commission, dev), dev);
+    }
     const order = Object.assign({}, o, { status: 'conclue', commission: sp.commission, net: sp.net, decision: 'Vente conclue.', decisionDate: todayISO(), concludedBy: String(currentUser.username) });
     const left = (item.qty || 1) - 1;
     const it2 = Object.assign({}, item, { qty: left, status: left > 0 ? 'publié' : 'vendu' });
     F().concludeOrder(b, s, order, it2)
-        .then(() => logActivity('Vente conclue : ' + o.itemTitle + ' ' + fmt(price, dev) + ' (' + bOrig.name + ' → ' + sOrig.name + '), commission ' + fmt(sp.commission, dev), o.buyerId))
+        .then(() => logActivity('Vente conclue : ' + o.itemTitle + ' ' + fmt(price, dev) + ' (' + bOrig.name + ' → ' + (isOrg ? 'organisation' : sOrig.name) + '), commission ' + fmt(sp.commission, dev), o.buyerId))
         .catch(err => alert('Vente non enregistrée : ' + errText(err)));
 }
 
@@ -510,4 +516,70 @@ function bqContact(id) {
         '<p style="font-size:0.8rem;color:var(--text-muted);margin:6px 0 12px;">Vous vous mettez d\'accord directement avec le vendeur et échangez la marchandise vous-mêmes. L\'AVEC n\'intervient pas : aucun montant n\'est prélevé sur l\'épargne, il n\'y a pas de commission, mais aussi aucune garantie.</p>' +
         '<button type="button" class="btn-small" style="width:100%;" onclick="document.getElementById(\'bqContactBox\').style.display=\'none\'">Fermer</button></div>';
     m.style.display = 'flex';
+}
+
+// ================= Boutique de l'organisation (tenue par l'équipe) =================
+function bqOrgSaveShop(e) {
+    e.preventDefault();
+    if (!requireAdmin()) return;
+    if (!F() || !F().saveShop) { alert("La mise à jour n'est pas chargée : appuyez sur Ctrl+F5."); return; }
+    const old = bqShops.find(s => s.id === ORG_ID);
+    const shop = {
+        id: ORG_ID, ownerId: ORG_ID, ownerName: 'Organisation',
+        name: document.getElementById('bqOrgName').value.trim().slice(0, 50) || 'AVEC LA SAGESSE',
+        desc: document.getElementById('bqOrgDesc').value.trim().slice(0, 300),
+        contact: document.getElementById('bqOrgContact').value.trim().slice(0, 60),
+        status: old ? old.status : 'validée', date: old ? old.date : new Date().toISOString()
+    };
+    F().saveShop(shop).then(() => { logActivity("Boutique de l'organisation enregistrée"); alert("Boutique de l'organisation enregistrée."); }).catch(err => alert('Impossible : ' + errText(err)));
+}
+function bqOrgSaveItem(e) {
+    e.preventDefault();
+    if (!requireAdmin()) return;
+    const shop = bqShops.find(s => s.id === ORG_ID);
+    if (!shop) { alert("Enregistrez d'abord la boutique de l'organisation (nom, contact)."); return; }
+    const price = round2(parseFloat(document.getElementById('bqOrgPrice').value)), qty = parseInt(document.getElementById('bqOrgQty').value, 10);
+    if (!isFinite(price) || price <= 0 || !isFinite(qty) || qty < 1) { alert('Prix ou quantité invalide.'); return; }
+    const item = {
+        id: bqId('IT'), ownerId: ORG_ID, ownerName: 'Organisation', shopName: shop.name,
+        title: document.getElementById('bqOrgTitle').value.trim().slice(0, 60), desc: document.getElementById('bqOrgItemDesc').value.trim().slice(0, 300),
+        price: price, devise: document.getElementById('bqOrgDev').value === 'FC' ? 'FC' : 'USD', qty: qty, photo: bqPhotoData || '', status: 'publié', date: new Date().toISOString()
+    };
+    if (!item.title) return;
+    F().saveItem(item).then(() => {
+        logActivity("Produit de l'organisation publié : " + item.title + ' ' + fmt(price, item.devise));
+        ['bqOrgTitle', 'bqOrgItemDesc', 'bqOrgPrice'].forEach(id => { document.getElementById(id).value = ''; });
+        document.getElementById('bqOrgQty').value = '1'; document.getElementById('bqOrgPhoto').value = ''; document.getElementById('bqOrgPhotoPrev').innerHTML = ''; bqPhotoData = '';
+    }).catch(err => alert('Impossible : ' + errText(err)));
+}
+function bqOrgItemStatus(id, st) {
+    if (!requireAdmin()) return;
+    F().patchItem(id, { status: st }).catch(err => alert('Impossible : ' + errText(err)));
+}
+function bqOrgDeleteItem(id) {
+    if (!requireAdmin() || !canDelete(currentUser)) { alert("Seul l'accès total peut supprimer."); return; }
+    if (!confirm('Supprimer définitivement ce produit ?')) return;
+    F().removeItem(id).catch(err => alert('Impossible : ' + errText(err)));
+}
+function bqRenderOrg() {
+    const box = document.getElementById('bqOrgItems');
+    if (!box) return;
+    const shop = bqShops.find(s => s.id === ORG_ID);
+    const st = document.getElementById('bqOrgState');
+    if (st) st.innerHTML = shop ? bqStatusBadge(shop.status) : '<span class="badge badge-due">Pas encore créée</span>';
+    const active = document.activeElement && ['bqOrgName', 'bqOrgDesc', 'bqOrgContact'].indexOf(document.activeElement.id) > -1;
+    if (shop && !active) {
+        document.getElementById('bqOrgName').value = shop.name || '';
+        document.getElementById('bqOrgDesc').value = shop.desc || '';
+        document.getElementById('bqOrgContact').value = shop.contact || '';
+    }
+    setHidden('bqOrgItemForm', !shop);
+    const list = bqItems.filter(i => i.ownerId === ORG_ID).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    box.innerHTML = list.length ? list.map(i =>
+        '<div style="display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--border);padding:8px 0;flex-wrap:wrap;">' +
+        '<div style="width:56px;">' + bqImg(i.photo, 56) + '</div>' +
+        '<div style="flex:1;min-width:160px;"><strong>' + escapeHtml(i.title) + '</strong> ' + bqStatusBadge(i.status) + '<br><span style="font-size:0.85rem;">' + fmt(i.price, i.devise) + ' · stock ' + i.qty + '</span></div>' +
+        (i.status === 'publié' ? '<button type="button" class="btn-small" onclick="bqOrgItemStatus(\'' + escapeHtml(i.id) + '\',\'retiré\')">Retirer</button>' : '') +
+        (i.status !== 'publié' ? '<button type="button" class="btn-small" onclick="bqOrgItemStatus(\'' + escapeHtml(i.id) + '\',\'publié\')">Remettre en vente</button>' : '') +
+        '<button type="button" class="btn-small danger" onclick="bqOrgDeleteItem(\'' + escapeHtml(i.id) + '\')"><i class="fa-solid fa-trash"></i></button></div>').join('') : '<p style="color:var(--text-muted);">Aucun produit de l\'organisation.</p>';
 }

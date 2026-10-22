@@ -1027,6 +1027,27 @@
                 <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Commission de <strong>5 %</strong> sur chaque vente conclue, versée à la caisse de l'AVEC. Le prix est prélevé sur l'épargne de l'acheteur, le reste est ajouté à l'épargne du vendeur.</p>
                 <div id="bqAdminStats" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
             </section>
+            <section class="card" id="bqOrgSection">
+                <div class="card-header"><i class="fa-solid fa-building-columns"></i><h3>Boutique de l'organisation</h3><span id="bqOrgState" style="margin-left:auto;"></span></div>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">L'AVEC peut aussi vendre ses propres produits. Les membres les voient comme une boutique « AVEC LA SAGESSE ». Quand vous concluez une vente, la totalité du prix va à la caisse de l'AVEC (pas de commission, pas de vendeur membre).</p>
+                <form onsubmit="bqOrgSaveShop(event)">
+                    <div class="form-group"><label>Nom de la boutique</label><input type="text" id="bqOrgName" maxlength="50" required value="AVEC LA SAGESSE"></div>
+                    <div class="form-group"><label>Présentation (facultatif)</label><textarea id="bqOrgDesc" rows="2" maxlength="300"></textarea></div>
+                    <div class="form-group"><label>Numéro WhatsApp / téléphone à contacter (facultatif)</label><input type="text" id="bqOrgContact" maxlength="60" placeholder="Ex : 0990000000"></div>
+                    <button type="submit" class="btn" style="width:auto;"><i class="fa-solid fa-floppy-disk"></i> Enregistrer la boutique</button>
+                </form>
+                <hr style="margin:14px 0;border:none;border-top:1px solid var(--border);">
+                <form onsubmit="bqOrgSaveItem(event)" id="bqOrgItemForm">
+                    <strong>Ajouter un produit de l'organisation</strong>
+                    <div class="form-group" style="margin-top:8px;"><label>Produit</label><input type="text" id="bqOrgTitle" maxlength="60" required></div>
+                    <div class="form-group"><label>Description (facultatif)</label><textarea id="bqOrgItemDesc" rows="2" maxlength="300"></textarea></div>
+                    <div class="form-group"><label>Prix</label><div style="display:flex;gap:8px;"><input type="number" id="bqOrgPrice" min="0.01" step="0.01" required style="flex:1;"><select id="bqOrgDev" style="width:90px;"><option value="USD">USD</option><option value="FC">FC</option></select></div></div>
+                    <div class="form-group"><label>Quantité disponible</label><input type="number" id="bqOrgQty" min="1" max="999" step="1" value="1" required></div>
+                    <div class="form-group"><label>Photo (facultatif)</label><input type="file" id="bqOrgPhoto" accept="image/*" onchange="bqPhoto(this, 'bqOrgPhotoPrev')"><div id="bqOrgPhotoPrev" style="margin-top:6px;"></div></div>
+                    <button type="submit" class="btn" style="width:auto;"><i class="fa-solid fa-plus"></i> Publier le produit</button>
+                </form>
+                <div id="bqOrgItems" style="margin-top:14px;"></div>
+            </section>
             <section class="card"><div class="card-header"><i class="fa-solid fa-receipt"></i><h3>Commandes</h3></div><div id="bqAdminOrders"></div></section>
             <section class="card"><div class="card-header"><i class="fa-solid fa-shop"></i><h3>Boutiques et articles</h3></div><div id="bqAdminAll"></div></section>
         </div>
@@ -5197,6 +5218,6 @@
             }
         };
     </script>
-    <script src="boutique.js?v=20261030"></script>
+    <script src="boutique.js?v=20261031"></script>
 </body>
 </html>
