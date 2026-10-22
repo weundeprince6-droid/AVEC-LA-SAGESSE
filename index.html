@@ -4160,7 +4160,7 @@
             if (!requireAdmin()) return;
             try {
                 await loadScriptOnce('vendor/jszip.min.js?v=3.10.1');
-                await loadScriptOnce('report-xlsx.js?v=20261020');
+                await loadScriptOnce('report-xlsx.js?v=20261032');
             } catch (e) {
                 if (confirm("Le rapport Excel n'a pas pu être préparé (fichiers non chargés : connexion ou ancienne version en cache).\n\nTélécharger à la place le rapport simplifié (CSV) ?")) exportCSV();
                 return;
@@ -4193,6 +4193,7 @@
             const cnt = { 'Remboursé': 0, 'En cours': 0, 'En retard': 0 };
             allCredits.forEach(x => { cnt[statusOf(x.c)]++; });
             const fund = socialFund();
+            const RC = (typeof reportComments === 'function') ? reportComments() : {};
 
             // 1. Tableau de bord
             const d = wb.sheet('Tableau de bord', { tab: '1E3A8A', first: true, grid: false, widths: [12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12], zoom: 100 });
@@ -4238,6 +4239,7 @@
             d.merge(32, 7, 32, 12, { b: true, sz: 12, color: '1E3A8A', border: 'bottom', bc: '2563EB' }); d.set(32, 7, 'Données des graphiques', { b: true, sz: 12, color: '1E3A8A', border: 'bottom', bc: '2563EB' });
             if (allCredits.length) d.chart({ type: 'doughnut', title: 'Statut des crédits', name: 'Crédits', cats: stBlk.cats, vals: stBlk.vals, catRef: stBlk.catRef, valRef: stBlk.valRef, from: [0, 12], to: [6, 29], colors: ['10B981', 'F59E0B', 'EF4444'] });
             if (top.length) d.chart({ type: 'bar', title: 'Épargne en dollars : les 10 premiers membres', name: 'Épargne ($)', cats: topBlk.cats, vals: topBlk.vals, catRef: topBlk.catRef, valRef: topBlk.valRef, from: [6, 12], to: [12, 29], fmt: USD, colors: ['2563EB'] });
+            d.notes(51, 12, RC.synthese, 'Commentaires : ce qu\'il faut retenir');
             d.chart({ type: 'col', title: 'Opérations enregistrées par mois', name: 'Opérations', cats: moBlk.cats, vals: moBlk.vals, catRef: moBlk.catRef, valRef: moBlk.valRef, from: [0, 31], to: [6, 48], fmt: '0', colors: ['8B5CF6'] });
 
             // 2. Membres
@@ -4253,7 +4255,7 @@
                     return [m.id, m.name, m.phone || '', num(sav(m, 'USD')), num(sav(m, 'FC')), memberOutstanding(m, 'USD'), memberOutstanding(m, 'FC'), availableCeiling(m, 'USD'), availableCeiling(m, 'FC'),
                         crSt, String(arrearsText(m)).replace(/<[^>]*>/g, ''), access ? 'Actif' : "Pas d'accès", n === nProf ? 'Complet' : (n ? 'Partiel ' + n + '/' + nProf : 'Vide'), p && p.photo ? 'Oui' : '—'];
                 }),
-                totals: { label: 'Total', cols: [3, 4, 5, 6] } });
+                totals: { label: 'Total', cols: [3, 4, 5, 6] }, notes: RC.membres });
 
             // 3. Crédits
             const cs = wb.table('Crédits', { title: 'Crédits', subtitle: sub(allCredits.length + ' crédit(s) · ' + cnt['En cours'] + ' en cours · ' + cnt['En retard'] + ' en retard'), tab: 'D97706',
@@ -4276,6 +4278,7 @@
                     });
                     r++;
                 });
+                cs.notes(t.last + 5, 12, RC.credits);
             }
 
             // 4. Opérations (tous les mouvements)
@@ -4286,7 +4289,7 @@
             ops.forEach(o => { const l = OP_LABELS[o.h.type] || 'Autre'; byType[l] = (byType[l] || 0) + 1; });
             const os = wb.table('Opérations', { title: 'Opérations', subtitle: sub(ops.length + ' mouvement(s) enregistré(s)'), tab: '059669',
                 cols: [{ h: 'Date', w: 12, k: 'date' }, { h: 'Membre', w: 28 }, { h: 'ID', w: 10, k: 'center' }, { h: 'Opération', w: 30 }, { h: 'Devise', w: 9, k: 'center' }, { h: 'Montant', w: 16 }, { h: 'Détail', w: 58 }],
-                rows: ops.map(o => [o.h.date || '', o.m.name, o.m.id, OP_LABELS[o.h.type] || 'Opération', devOf(o.h) === 'FC' ? 'FC' : 'USD', { v: num(o.h.amount), k: devOf(o.h) === 'FC' ? 'fc' : 'usd' }, o.h.note || '']) });
+                rows: ops.map(o => [o.h.date || '', o.m.name, o.m.id, OP_LABELS[o.h.type] || 'Opération', devOf(o.h) === 'FC' ? 'FC' : 'USD', { v: num(o.h.amount), k: devOf(o.h) === 'FC' ? 'fc' : 'usd' }, o.h.note || '']), notes: RC.operations });
             const typeRows = Object.keys(byType).sort((a, b) => byType[b] - byType[a]).map(k => [k, byType[k]]);
             if (typeRows.length) {
                 const tb = os.block(4, 9, 'Opérations par type', ['Type', 'Nombre'], typeRows, [null, 'int']);
@@ -4299,7 +4302,7 @@
                 cols: [{ h: 'ID', w: 10, k: 'center' }, { h: 'Membre', w: 28 }, { h: 'Cotise depuis', w: 14, k: 'date' }, { h: 'Semaines dues', w: 13, k: 'int' }, { h: 'Semaines payées', w: 13, k: 'int' },
                     { h: 'Total cotisé (FC)', w: 17, k: 'fc' }, { h: 'Aides reçues (FC)', w: 17, k: 'fc' }, { h: 'Situation', w: 28, k: 'status' }],
                 rows: members.map(m => [m.id, m.name, m.socialSince || '', socialDueWeeks(m), socialPaidWeeks(m), socialPaidTotal(m), socialAidTotal(m), String(arrearsText(m)).replace(/<[^>]*>/g, '')]),
-                totals: { label: 'Total', cols: [5, 6] } });
+                totals: { label: 'Total', cols: [5, 6] }, notes: RC.social });
             const topS = members.filter(m => socialPaidTotal(m) > 0).sort((a, b) => socialPaidTotal(b) - socialPaidTotal(a)).slice(0, 10).map(m => [m.name, socialPaidTotal(m)]);
             if (topS.length) {
                 ss.widths[8] = 3; ss.widths[9] = 28; ss.widths[10] = 16;
@@ -4310,18 +4313,18 @@
             wb.table('Collectes', { title: 'Cotisations occasionnelles', subtitle: sub(allCollectes().length + ' collecte(s)'), tab: '7C3AED',
                 cols: [{ h: 'Date', w: 12, k: 'date' }, { h: 'Titre', w: 36 }, { h: 'Bénéficiaire', w: 28 }, { h: 'Récolté (FC)', w: 16, k: 'fc' }, { h: 'Remis (FC)', w: 16, k: 'fc' }, { h: 'Reste à remettre (FC)', w: 20, k: 'fc' }],
                 rows: allCollectes().map(x => { const got = collecteCollected(x.c.id), rem = num(x.c.remitted); return [x.c.date || '', x.c.title || '', x.b.name, got, rem, round2(got - rem)]; }),
-                totals: { label: 'Total', cols: [3, 4, 5] }, empty: 'Aucune cotisation occasionnelle.' });
+                totals: { label: 'Total', cols: [3, 4, 5] }, empty: 'Aucune cotisation occasionnelle.', notes: RC.social });
 
             // 6. Annonces
             wb.table('Annonces', { title: 'Annonces', subtitle: sub(announcements.length + ' annonce(s)'), tab: '0891B2', rowHeight: 48,
                 cols: [{ h: 'Date', w: 12, k: 'date' }, { h: 'Titre', w: 32, k: 'wrap' }, { h: 'Message', w: 80, k: 'wrap' }, { h: 'Importante', w: 12, k: 'center' }, { h: 'Publiée par', w: 30 }],
-                rows: annSorted().map(a => [String(a.date || '').slice(0, 10), a.title || '', a.text || '', a.important ? 'Oui' : '—', a.by || '']), empty: 'Aucune annonce publiée.' });
+                rows: annSorted().map(a => [String(a.date || '').slice(0, 10), a.title || '', a.text || '', a.important ? 'Oui' : '—', a.by || '']), empty: 'Aucune annonce publiée.', notes: RC.annonces });
 
             // 7. Galerie
             const withPhoto = members.filter(m => memberProfiles[m.id] && memberProfiles[m.id].photo);
             const gs = wb.table('Galerie', { title: 'Galerie des photos de profil', subtitle: sub(withPhoto.length + ' photo(s) sur ' + members.length + ' membre(s)'), tab: 'EC4899', rowHeight: 66, fixedHeight: true,
                 cols: [{ h: 'Photo', w: 14, k: 'center' }, { h: 'Nom', w: 30 }, { h: 'ID', w: 10, k: 'center' }, { h: 'Téléphone', w: 18 }],
-                rows: withPhoto.map(m => ['', m.name, m.id, m.phone || '']), empty: 'Aucune photo de profil pour le moment.' });
+                rows: withPhoto.map(m => ['', m.name, m.id, m.phone || '']), empty: 'Aucune photo de profil pour le moment.', notes: RC.galerie });
             withPhoto.forEach((m, i) => {
                 const url = String(memberProfiles[m.id].photo), mt = url.match(/^data:image\/jpeg;base64,(.+)$/);
                 if (mt) gs.image({ data: mt[1], ext: 'jpeg', col: 0, row: 4 + i, w: 80, h: 80, alt: m.name });
@@ -4330,12 +4333,12 @@
             // 8. Demandes
             wb.table('Demandes', { title: 'Demandes des membres', subtitle: sub(requests.length + ' demande(s) · ' + requests.filter(r => r.status === 'en attente').length + ' en attente'), tab: 'D97706', rowHeight: 30,
                 cols: [{ h: 'Date', w: 12, k: 'date' }, { h: 'Membre', w: 28 }, { h: 'ID', w: 10, k: 'center' }, { h: 'Demande', w: 22 }, { h: 'Montant', w: 16 }, { h: 'Précision', w: 40, k: 'wrap' }, { h: 'Statut', w: 14, k: 'status' }, { h: 'Réponse', w: 40, k: 'wrap' }],
-                rows: requests.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(r => [r.date || '', nameOf(r.memberId), r.memberId, REQ_LABELS[r.type] || r.type || '', { v: num(r.amount), k: devOf(r) === 'FC' ? 'fc' : 'usd' }, r.note || '', r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : '', r.decision || '']), empty: 'Aucune demande.' });
+                rows: requests.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(r => [r.date || '', nameOf(r.memberId), r.memberId, REQ_LABELS[r.type] || r.type || '', { v: num(r.amount), k: devOf(r) === 'FC' ? 'fc' : 'usd' }, r.note || '', r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : '', r.decision || '']), empty: 'Aucune demande.', notes: RC.demandes });
 
             // 9. Réclamations
             wb.table('Réclamations', { title: 'Réclamations', subtitle: sub(claims.length + ' réclamation(s) · ' + claims.filter(c => c.status !== 'traitée').length + ' ouverte(s)'), tab: 'DC2626', rowHeight: 40,
                 cols: [{ h: 'Date', w: 12, k: 'date' }, { h: 'Membre', w: 28 }, { h: 'ID', w: 10, k: 'center' }, { h: 'Objet', w: 30, k: 'wrap' }, { h: 'Message', w: 60, k: 'wrap' }, { h: 'Statut', w: 14, k: 'status' }, { h: 'Réponse', w: 50, k: 'wrap' }],
-                rows: claims.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(c => [c.date || '', nameOf(c.memberId), c.memberId, c.subject || '', c.message || '', c.status === 'traitée' ? 'Traitée' : 'Ouverte', c.response || '']), empty: 'Aucune réclamation.' });
+                rows: claims.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(c => [c.date || '', nameOf(c.memberId), c.memberId, c.subject || '', c.message || '', c.status === 'traitée' ? 'Traitée' : 'Ouverte', c.response || '']), empty: 'Aucune réclamation.', notes: RC.reclamations });
 
             // 10-11. Équipe et Journal (accès total, en ligne)
             if (CLOUD && currentUser && currentUser.level === 'total') {
@@ -4400,6 +4403,8 @@
             const cnt = { 'Remboursé': 0, 'En cours': 0, 'En retard': 0 };
             allCredits.forEach(x => { cnt[statusOf(x.c)]++; });
             const fund = socialFund();
+            const RC = (typeof reportComments === 'function') ? reportComments() : {};
+            const noteBox = (lines, title) => (lines && lines.length) ? '<div class="note"><h4>' + E(title || 'Commentaires') + '</h4><ul>' + lines.map(l => '<li>' + E(l) + '</li>').join('') + '</ul></div>' : '';
             const ci = (dev, f) => sum(allCredits.filter(x => devOf(x.c) === dev), x => f(x.c));
             // ----- graphiques SVG -----
             const donut = (data, colors) => {
@@ -4444,7 +4449,8 @@
                     rows.map(r => '<tr>' + r.map((v, j) => { const k = cols[j].k || ''; return '<td class="' + (k === 'num' ? 'num' : k === 'c' ? 'ctr' : k === 'st' ? 'ctr ' + stCls(v) : '') + '">' + (k === 'raw' ? v : E(v)) + '</td>'; }).join('') + '</tr>').join('') +
                     (o.total ? '<tr class="tot">' + o.total.map((v, j) => '<td class="' + (cols[j].k === 'num' ? 'num' : '') + '">' + E(v) + '</td>').join('') + '</tr>' : '') + '</tbody></table>';
             };
-            const section = (title, sub, body) => '<section class="page"><h2>' + E(title) + '</h2><p class="sub">' + E(sub) + '</p>' + body + '</section>';
+            const NOTE_KEY = { 'Membres': 'membres', 'Crédits': 'credits', 'Opérations': 'operations', 'Cas sociaux': 'social', 'Annonces': 'annonces', 'Galerie': 'galerie', 'Demandes': 'demandes', 'Réclamations': 'reclamations', 'Équipe': 'equipe', "Journal d'activité": 'journal' };
+            const section = (title, sub, body) => '<section class="page"><h2>' + E(title) + '</h2><p class="sub">' + E(sub) + '</p>' + body + noteBox(RC[NOTE_KEY[title]]) + '</section>';
             const nProf = PROFILE_FIELDS.length;
             let html = '';
             // Tableau de bord
@@ -4462,7 +4468,7 @@
                 kpi('RÉCLAMATIONS OUVERTES', claims.filter(c => c.status !== 'traitée').length, '', '#dc2626') +
                 '</div><div class="charts"><div class="chart"><h3>Statut des crédits</h3>' + donut(Object.keys(cnt).map(k => [k, cnt[k]]), ['#10b981', '#f59e0b', '#ef4444']) + '</div>' +
                 '<div class="chart"><h3>Opérations par mois</h3>' + vbars(perMonth, '#8b5cf6') + '</div>' +
-                '<div class="chart wide"><h3>Épargne en dollars : les 10 premiers membres</h3>' + hbars(top, '#2563eb', v => fmt(v, 'USD')) + '</div></div></section>';
+                '<div class="chart wide"><h3>Épargne en dollars : les 10 premiers membres</h3>' + hbars(top, '#2563eb', v => fmt(v, 'USD')) + '</div></div>' + noteBox(RC.synthese, "Commentaires : ce qu'il faut retenir") + '</section>';
             // Membres
             html += section('Membres', members.length + ' membre(s)', table(
                 [{ h: 'ID', k: 'c' }, { h: 'Nom' }, { h: 'Téléphone' }, { h: 'Épargne ($)', k: 'num' }, { h: 'Épargne (FC)', k: 'num' }, { h: 'Crédit en cours ($)', k: 'num' }, { h: 'Crédit en cours (FC)', k: 'num' }, { h: 'Crédit', k: 'st' }, { h: 'Cas sociaux', k: 'st' }, { h: 'Accès', k: 'st' }, { h: 'Profil', k: 'st' }],
@@ -4521,6 +4527,7 @@
                 '.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px}.chart{border:1px solid #d9e1ec;border-radius:8px;padding:10px 12px;break-inside:avoid}.chart.wide{grid-column:1/3}.chart h3{margin:0 0 6px;font-size:13px;color:#1e3a8a}.svg{width:100%;height:auto;max-height:230px}' +
                 'table{width:100%;border-collapse:collapse;font-size:10.5px}th{background:#2563eb;color:#fff;padding:6px 7px;text-align:center;border:1px solid #1d4ed8}td{padding:5px 7px;border:1px solid #d9e1ec;vertical-align:top}tbody tr:nth-child(even) td{background:#f4f7fb}tr{break-inside:avoid}thead{display:table-header-group}' +
                 '.num{text-align:right;white-space:nowrap}.ctr{text-align:center;white-space:nowrap}.st-g{background:#d1fae5!important;color:#065f46;font-weight:700}.st-a{background:#fef3c7!important;color:#92400e;font-weight:700}.st-r{background:#fee2e2!important;color:#991b1b;font-weight:700}' +
+                '.note{margin-top:14px;background:#fffbeb;border:1px solid #fcd34d;border-left:5px solid #f59e0b;border-radius:6px;padding:9px 14px;break-inside:avoid}.note h4{margin:0 0 5px;color:#92400e;font-size:12.5px}.note ul{margin:0;padding-left:18px}.note li{margin:3px 0;line-height:1.45}' +
                 '.tot td{background:#e0e7ff!important;color:#1e3a8a;font-weight:700}.gal{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}figure{margin:0;text-align:center;break-inside:avoid}figure img{width:100%;max-width:130px;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid #d9e1ec}figcaption{margin-top:4px;font-weight:700}figcaption small{color:#6b7280;font-weight:400}' +
                 '@media print{body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}.bar{display:none}.page{box-shadow:none;margin:0;padding:0;max-width:none}}';
             return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport AVEC LA SAGESSE ' + E(nowFR) + '</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style></head><body>' +
@@ -5218,6 +5225,7 @@
             }
         };
     </script>
+    <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261031"></script>
 </body>
 </html>

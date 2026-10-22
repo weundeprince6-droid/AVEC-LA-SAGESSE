@@ -60,3 +60,4 @@ Chaque membre peut ouvrir une boutique (onglet « Boutique » de son espace), pu
 - Retrait : après l'approbation, l'administrateur confirme « Argent remis au membre » (onglet Demandes) ; le membre voit « Argent remis le … ».
 - Une vente (paiement par l'épargne) ne peut être conclue que si, après le paiement, l'épargne de l'acheteur reste au moins égale au tiers de son crédit en cours (même règle que pour un retrait).
 - L'organisation a sa propre boutique (onglet « Boutique » de l'administrateur > « Boutique de l'organisation ») : produits de l'AVEC visibles par tous les membres ; à la conclusion d'une vente, tout le prix va à la caisse de l'AVEC (sans commission).
+- Rapport PDF et Excel : un encadré « Commentaires » sous chaque tableau (chiffres clés, points à surveiller, retards, tendances), calculé automatiquement à partir des données (fichier `report-notes.js`).

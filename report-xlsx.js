@@ -96,6 +96,21 @@
     };
     Sheet.prototype.height = function (r, h) { this.heights[r] = h; };
     Sheet.prototype.autofilter = function (r1, c1, r2, c2) { this.filter = ref(r1, c1) + ':' + ref(r2, c2); };
+    // Commentaires sous un tableau : titre + une ligne fusionnée par remarque (fond jaune clair, texte à la ligne)
+    Sheet.prototype.notes = function (r, n, lines, title) {
+        if (!lines || !lines.length) return r;
+        var tw = 0, i;
+        for (i = 0; i < n; i++) tw += (this.widths[i] || 14);
+        var hs = { b: true, color: '92400E', bg: 'FEF3C7', border: 'all', bc: 'FCD34D', indent: 1 };
+        this.merge(r, 1, r, n, hs); this.set(r, 1, title || 'Commentaires', hs); this.height(r, 22);
+        var ls = { color: '374151', bg: 'FFFBEB', border: 'all', bc: 'FCD34D', wrap: true, indent: 1, va: 't' };
+        for (i = 0; i < lines.length; i++) {
+            var txt = '\u2022 ' + lines[i], rr = r + 1 + i;
+            this.merge(rr, 1, rr, n, ls); this.set(rr, 1, txt, ls);
+            this.height(rr, Math.max(20, Math.ceil(txt.length / Math.max(20, tw * 1.05)) * 15 + 6));
+        }
+        return r + lines.length + 1;
+    };
     // Graphique natif Excel : { type:'col'|'bar'|'doughnut', title, name, cats:[..], vals:[..], catRef, valRef, from:[col,ligne], to:[col,ligne], fmt, colors }
     Sheet.prototype.chart = function (c) { this.charts.push(c); };
     // Image JPEG/PNG en base64 : { data, ext:'jpeg'|'png', col, row, w, h (pixels) }
@@ -288,6 +303,7 @@
                 sh.height(tr, 22);
             }
         }
+        if (o.notes && o.notes.length) sh.notes(last + ((o.totals && rows.length) ? 3 : 2), n, o.notes);
         sh.table = { r0: r0, last: last, n: n, rangeOf: function (ci) { return absRange(sh.name, ci + 1, r0, ci + 1, last); } };
         return sh;
     };
