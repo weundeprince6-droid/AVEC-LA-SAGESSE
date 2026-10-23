@@ -389,7 +389,8 @@ service cloud.firestore {
     match /postComments/{commentId} {
       allow read: if isStaff() || hasProfile();
       allow create: if hasProfile()
-        && request.resource.data.keys().hasOnly(['id', 'postId', 'memberId', 'name', 'text', 'date'])
+        && request.resource.data.keys().hasOnly(['id', 'postId', 'memberId', 'name', 'text', 'date', 'photo'])
+        && (!('photo' in request.resource.data) || (request.resource.data.photo is int && request.resource.data.photo >= 0 && request.resource.data.photo <= 2))
         && request.resource.data.id == commentId
         && request.resource.data.memberId == myMemberId()
         && request.resource.data.name == myName()

@@ -75,3 +75,4 @@ Chaque membre peut ouvrir une boutique (onglet « Boutique » de son espace), pu
 - Onglet « Exposition » côté équipe (publier, masquer, supprimer, modérer les commentaires) et côté membre (voir, aimer ♥, commenter, filtrer Photos / Vidéos / Documents ; pastille pour les nouveautés).
 - Sans Firebase Storage (formule gratuite) : 3 photos par publication (réduites automatiquement), vidéo = lien (YouTube intégré dans la page), document = lien ou PDF de 350 Ko maximum.
 - Données : collections `posts`, `postLikes`, `postComments` (règles à republier dans `firestore.rules`). Cloud uniquement.
+- **Commentaires par photo** : en ouvrant une photo en grand, chaque membre peut la commenter à part (champ `photo` 0 à 2 dans `postComments`) ; un compteur apparaît sur la photo et la liste générale indique « Photo n ». Republier `firestore.rules`.

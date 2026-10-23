@@ -14,6 +14,7 @@
         '.pub-ph.single .fg{position:relative;object-fit:contain;}' +
         '.pub-grid{display:grid;gap:4px;height:clamp(220px,46vw,360px);margin-bottom:10px;border-radius:10px;overflow:hidden;}.pub-grid .pub-ph{margin:0;border-radius:0;min-height:0;}' +
         '.pub-grid.n2{grid-template-columns:1fr 1fr;}.pub-grid.n3{grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;}.pub-grid.n3 .pub-ph:first-child{grid-row:span 2;}' +
+        '.pub-cb{position:absolute;right:8px;bottom:8px;z-index:2;background:rgba(15,23,42,.72);color:#fff;border-radius:14px;padding:3px 9px;font-size:0.78rem;}' +
         '.pub-card h3{font-size:1.1rem;}.pub-card{overflow:hidden;}' +
         '.pub-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:50%;width:42px;height:42px;font-size:1.4rem;cursor:pointer;}' +
         '.pub-side{display:none;margin-top:8px;}.pub-side.open{display:block;}' +
@@ -37,6 +38,7 @@ const pubOnData = {
 function pubIsAdmin() { return !!currentUser && isAdmin(currentUser); }
 function pubRefresh() {
     if (!currentUser) return;
+    pubZoomShow();
     if (pubIsAdmin()) pubRenderAdmin(); else pubRenderMember();
     pubUpdateBadge();
 }
@@ -89,9 +91,9 @@ function pubCard(p) {
     const imgs = (p.images || []).filter(pubOkImg);
     let media = '';
     if (imgs.length === 1) {
-        media += '<div class="pub-ph single" onclick="pubZoom(\'' + E(p.id) + '\',0)"><div class="bg" style="background-image:url(' + imgs[0] + ')"></div><img class="fg" alt="" src="' + imgs[0] + '"></div>';
+        media += '<div class="pub-ph single" onclick="pubZoom(\'' + E(p.id) + '\',0)"><div class="bg" style="background-image:url(' + imgs[0] + ')"></div><img class="fg" alt="" src="' + imgs[0] + '">' + pubBadge(p.id, 0) + '</div>';
     } else if (imgs.length > 1) {
-        media += '<div class="pub-grid n' + imgs.length + '">' + imgs.map((s, i) => '<div class="pub-ph" onclick="pubZoom(\'' + E(p.id) + '\',' + i + ')"><img alt="" src="' + s + '"></div>').join('') + '</div>';
+        media += '<div class="pub-grid n' + imgs.length + '">' + imgs.map((s, i) => '<div class="pub-ph" onclick="pubZoom(\'' + E(p.id) + '\',' + i + ')"><img alt="" src="' + s + '">' + pubBadge(p.id, i) + '</div>').join('') + '</div>';
     }
     const yt = pubYoutubeId(p.videoUrl);
     if (yt) media += '<div style="position:relative;padding-top:min(56.25%,360px);max-width:640px;margin-bottom:10px;border-radius:8px;overflow:hidden;background:#000;"><iframe src="https://www.youtube-nocookie.com/embed/' + yt + '" title="Vidéo" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;inset:0;width:100%;height:100%;border:0;"></iframe></div>';
@@ -114,14 +116,24 @@ function pubCard(p) {
         '<button type="button" class="pub-cbtn" onclick="pubToggleComments(\'' + E(p.id) + '\')" style="background:none;border:none;cursor:pointer;font-size:0.95rem;padding:2px 4px;color:var(--text-muted);"><i class="fa-regular fa-comment"></i> ' + coms.length + '</button></div>';
     h += '</div>';   // fin de la colonne de la publication
     {
-        h += '<div class="pub-side' + (open ? ' open' : '') + '"><div class="pub-side-h">Commentaires (' + coms.length + ')</div>' + (coms.length ? coms.map(c =>
-            '<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:0.88rem;"><strong>' + E(c.name || '') + '</strong> <span style="color:var(--text-muted);font-size:0.75rem;">' + E(pubAgo(c.date)) + '</span>' +
-            ((c.memberId === me || (admin && canDelete(currentUser))) ? ' <button type="button" onclick="pubDeleteComment(\'' + E(c.id) + '\')" title="Supprimer" style="background:none;border:none;cursor:pointer;color:#b91c1c;font-size:0.8rem;"><i class="fa-solid fa-xmark"></i></button>' : '') +
-            '<div style="white-space:pre-wrap;word-break:break-word;">' + E(c.text || '') + '</div></div>').join('') : '<div style="font-size:0.85rem;color:var(--text-muted);padding:4px 0;">Aucun commentaire pour le moment.</div>');
+        h += '<div class="pub-side' + (open ? ' open' : '') + '"><div class="pub-side-h">Commentaires (' + coms.length + ')</div>' + (coms.length ? coms.map(c => pubComHtml(c, p.id, true)).join('') : '<div style="font-size:0.85rem;color:var(--text-muted);padding:4px 0;">Aucun commentaire pour le moment.</div>');
         if (me) h += '<form onsubmit="pubComment(event,\'' + E(p.id) + '\')" style="display:flex;gap:6px;margin-top:8px;"><input type="text" id="pubCom-' + E(p.id) + '" maxlength="300" placeholder="Écrire un commentaire…" required style="flex:1;min-width:0;"><button type="submit" class="btn-small"><i class="fa-solid fa-paper-plane"></i></button></form>';
         h += '</div>';
     }
     return h + '</article>';
+}
+// un commentaire (withTag : indique la photo concernée, cliquable)
+function pubBadge(postId, i) {
+    const n = pubComments.filter(c => c.postId === postId && c.photo === i).length;
+    return '<span class="pub-cb"><i class="fa-regular fa-comment"></i> ' + (n || '') + '</span>';
+}
+function pubComHtml(c, postId, withTag) {
+    const E = escapeHtml, me = currentUser && currentUser.memberId, admin = pubIsAdmin();
+    const has = Number.isInteger(c.photo) && c.photo >= 0;
+    return '<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:0.88rem;"><strong>' + E(c.name || '') + '</strong> <span style="color:var(--text-muted);font-size:0.75rem;">' + E(pubAgo(c.date)) + '</span>' +
+        (withTag && has ? ' <a href="javascript:void(0)" onclick="pubZoom(\'' + E(postId) + '\',' + c.photo + ')" style="font-size:0.72rem;background:#eff6ff;color:#1d4ed8;border-radius:10px;padding:1px 7px;text-decoration:none;"><i class="fa-solid fa-image"></i> Photo ' + (c.photo + 1) + '</a>' : '') +
+        ((c.memberId === me || (admin && canDelete(currentUser))) ? ' <button type="button" onclick="pubDeleteComment(\'' + E(c.id) + '\')" title="Supprimer" style="background:none;border:none;cursor:pointer;color:#b91c1c;font-size:0.8rem;"><i class="fa-solid fa-xmark"></i></button>' : '') +
+        '<div style="white-space:pre-wrap;word-break:break-word;">' + E(c.text || '') + '</div></div>';
 }
 function pubFeedHtml() {
     const list = pubSorted().filter(p => pubFilter === 'all' || pubKind(p).indexOf(pubFilter) >= 0);
@@ -160,14 +172,14 @@ async function pubLike(postId) {
         else await F().write('postLikes', [{ id: id, data: { postId: postId, memberId: me, date: new Date().toISOString() } }], []);
     } catch (e) { alert("Impossible d'enregistrer votre « j'aime » : " + errText(e)); }
 }
-async function pubComment(e, postId) {
+async function pubComment(e, postId, photo) {
     e.preventDefault();
     const me = currentUser && currentUser.memberId, m = members.find(x => x.id === me);
-    const inp = document.getElementById('pubCom-' + postId), text = (inp.value || '').trim().slice(0, 300);
+    const inp = document.getElementById(Number.isInteger(photo) ? 'pubCom-zoom' : 'pubCom-' + postId), text = (inp.value || '').trim().slice(0, 300);
     if (!me || !m || !text || !F()) return;
     const id = 'C' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
     try {
-        await F().write('postComments', [{ id: id, data: { id: id, postId: postId, memberId: me, name: m.name, text: text, date: new Date().toISOString() } }], []);
+        await F().write('postComments', [{ id: id, data: Object.assign({ id: id, postId: postId, memberId: me, name: m.name, text: text, date: new Date().toISOString() }, Number.isInteger(photo) ? { photo: photo } : {}) }], []);
         inp.value = '';
     } catch (err) { alert('Commentaire non enregistré : ' + errText(err)); }
 }
@@ -185,30 +197,48 @@ function pubOpenDoc(postId) {
         setTimeout(() => URL.revokeObjectURL(url), 120000);
     } catch (e) { alert("Le document n'a pas pu être ouvert."); }
 }
-let pubZ = { imgs: [], i: 0 };
+let pubZ = { postId: '', imgs: [], i: 0 };
 function pubZoom(postId, idx) {
     const p = pubPosts.find(x => x.id === postId); if (!p) return;
-    pubZ = { imgs: (p.images || []).filter(pubOkImg), i: idx || 0 };
+    pubZ = { postId: postId, imgs: (p.images || []).filter(pubOkImg), i: idx || 0 };
     if (!pubZ.imgs.length) return;
     let z = document.getElementById('pubZoom');
     if (!z) {
+        const s = document.createElement('style');
+        s.textContent = '#pubZoom{position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:3000;display:none;flex-direction:column;}' +
+            '#pubZoom .pz-img{position:relative;flex:1 1 55%;min-height:0;display:flex;align-items:center;justify-content:center;padding:12px;}' +
+            '#pubZoom .pz-img img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;cursor:zoom-out;}' +
+            '#pubZoom .pz-side{flex:0 0 42%;background:#fff;overflow-y:auto;padding:12px 14px;border-radius:14px 14px 0 0;}' +
+            '#pubZoom .pz-x{position:absolute;top:10px;right:12px;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:50%;width:38px;height:38px;font-size:1.2rem;cursor:pointer;z-index:2;}' +
+            '@media (min-width:900px){#pubZoom{flex-direction:row;}#pubZoom .pz-img{flex:1 1 auto;}#pubZoom .pz-side{flex:0 0 360px;border-radius:0;}}';
+        document.head.appendChild(s);
         z = document.createElement('div'); z.id = 'pubZoom';
-        z.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:3000;display:none;align-items:center;justify-content:center;padding:14px;';
-        z.onclick = e => { if (e.target === z || e.target.tagName === 'IMG') z.style.display = 'none'; };
-        z.innerHTML = '<img alt="" style="max-width:100%;max-height:100%;border-radius:8px;object-fit:contain;cursor:zoom-out;">' +
+        z.innerHTML = '<div class="pz-img" id="pzImg"><img alt=""><button type="button" class="pz-x" onclick="pubZoomClose()" title="Fermer">×</button>' +
             '<button type="button" class="pub-nav" id="pubPrev" style="left:12px;" onclick="pubZoomStep(-1)">‹</button><button type="button" class="pub-nav" id="pubNext" style="right:12px;" onclick="pubZoomStep(1)">›</button>' +
-            '<div id="pubCount" style="position:absolute;bottom:14px;left:0;right:0;text-align:center;color:#fff;font-size:0.85rem;"></div>';
+            '<div id="pubCount" style="position:absolute;bottom:10px;left:0;right:0;text-align:center;color:#fff;font-size:0.85rem;"></div></div><div class="pz-side" id="pzSide"></div>';
+        z.querySelector('img').onclick = pubZoomClose;
         document.body.appendChild(z);
-        document.addEventListener('keydown', e => { if (z.style.display === 'none') return; if (e.key === 'Escape') z.style.display = 'none'; else if (e.key === 'ArrowLeft') pubZoomStep(-1); else if (e.key === 'ArrowRight') pubZoomStep(1); });
+        document.addEventListener('keydown', e => {
+            if (z.style.display === 'none' || (e.target && e.target.tagName === 'INPUT')) return;
+            if (e.key === 'Escape') pubZoomClose(); else if (e.key === 'ArrowLeft') pubZoomStep(-1); else if (e.key === 'ArrowRight') pubZoomStep(1);
+        });
     }
     z.style.display = 'flex'; pubZoomShow();
 }
+function pubZoomClose() { const z = document.getElementById('pubZoom'); if (z) z.style.display = 'none'; }
 function pubZoomStep(d) { const n = pubZ.imgs.length; if (n < 2) return; pubZ.i = (pubZ.i + d + n) % n; pubZoomShow(); }
 function pubZoomShow() {
-    const z = document.getElementById('pubZoom'), n = pubZ.imgs.length;
-    z.querySelector('img').src = pubZ.imgs[pubZ.i];
+    const z = document.getElementById('pubZoom'); if (!z || z.style.display === 'none') return;
+    const n = pubZ.imgs.length, E = escapeHtml, me = currentUser && currentUser.memberId;
+    z.querySelector('#pzImg img').src = pubZ.imgs[pubZ.i];
     document.getElementById('pubPrev').style.display = document.getElementById('pubNext').style.display = n > 1 ? '' : 'none';
     document.getElementById('pubCount').textContent = n > 1 ? (pubZ.i + 1) + ' / ' + n : '';
+    const coms = pubComments.filter(c => c.postId === pubZ.postId && c.photo === pubZ.i).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const side = document.getElementById('pzSide'), a = document.activeElement, keep = a && a.id === 'pubCom-zoom' ? a.value : null;
+    side.innerHTML = '<div class="pub-side-h">Commentaires sur cette photo (' + coms.length + ')</div>' +
+        (coms.length ? coms.map(c => pubComHtml(c, pubZ.postId, false)).join('') : '<div style="font-size:0.85rem;color:var(--text-muted);padding:4px 0;">Aucun commentaire sur cette photo.</div>') +
+        (me ? '<form onsubmit="pubComment(event,\'' + E(pubZ.postId) + '\',' + pubZ.i + ')" style="display:flex;gap:6px;margin-top:10px;"><input type="text" id="pubCom-zoom" maxlength="300" placeholder="Commenter cette photo…" required style="flex:1;min-width:0;"><button type="submit" class="btn-small"><i class="fa-solid fa-paper-plane"></i></button></form>' : '');
+    if (keep !== null) { const inp = document.getElementById('pubCom-zoom'); if (inp) { inp.value = keep; inp.focus(); } }
 }
 function pubShowMember() { pubMarkSeen(); pubRenderMember(); }
 
