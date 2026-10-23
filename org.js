@@ -1,7 +1,7 @@
 // Identité de l'organisation : nom et logo, choisis par l'administrateur (création du compte ou tableau de bord).
 // En ligne, ils sont gardés dans la base (settings/org, lisibles par tous pour s'afficher dès la page de connexion)
 // et mis en cache dans ce navigateur pour que l'écran de connexion les affiche tout de suite.
-const ORG_DEFAULT = 'AVEC LA SAGESSE';
+const ORG_DEFAULT = 'WEBSERVICES FIN';
 let orgState = { name: '', logo: '', ratio: 1 };
 let orgFromDb = false;     // true quand la base a répondu (même vide)
 let orgDbHas = false;      // true quand la base contient déjà un nom

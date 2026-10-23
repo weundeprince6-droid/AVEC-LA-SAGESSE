@@ -1,4 +1,4 @@
-// Configuration Firebase de l'application AVEC LA SAGESSE.
+// Configuration Firebase de l'application WEBSERVICES FIN.
 //
 // Ces valeurs identifient seulement le projet : elles ne sont pas secrètes.
 // La protection des données vient des règles Firestore (fichier firestore.rules),

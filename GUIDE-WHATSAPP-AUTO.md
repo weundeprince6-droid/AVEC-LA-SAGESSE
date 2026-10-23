@@ -27,7 +27,7 @@ Garde-fous : un message ne part jamais en double, le mode manuel annule les envo
 - Un **numéro de téléphone dédié** à l'AVEC, qui n'est pas utilisé dans l'application WhatsApp ou WhatsApp Business normale (un numéro enregistré dans l'API ne peut plus servir dans l'appli).
 - Un compte **Meta Business** (business.facebook.com), avec vérification de l'entreprise si Meta la demande.
 - Une **carte bancaire** acceptée par Meta (facturation des messages) et par Google (plan Blaze).
-- L'accès au projet Firebase **AVEC LA SAGESSE**.
+- L'accès au projet Firebase **WEBSERVICES FIN**.
 
 ## Coût
 
@@ -51,7 +51,7 @@ Meta n'autorise l'envoi d'un premier message à un membre que par un **modèle a
 2. Catégorie : **Utilité** (Utility). Nom : `avec_notification` (en minuscules). Langue : **Français**.
 3. Texte du corps (une seule variable `{{1}}`, avec du texte avant et après) :
 
-   `AVEC LA SAGESSE vous informe : {{1}} Merci de votre confiance.`
+   `WEBSERVICES FIN vous informe : {{1}} Merci de votre confiance.`
 
 4. Exemple de valeur pour `{{1}}` : `Confirmation : Versement d'épargne de $50 le 19/10/2026.`
 5. Envoyez pour approbation (quelques minutes à quelques jours). Si Meta refuse, modifiez légèrement le texte fixe (ajoutez une phrase avant la variable), puis reportez le nouveau nom dans l'application (étape D, « Réglages avancés »).

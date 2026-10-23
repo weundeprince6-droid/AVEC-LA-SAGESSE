@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion AVEC LA SAGESSE - Caisse &amp; Suivi</title>
+    <title>Gestion WEBSERVICES FIN - Caisse &amp; Suivi</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -331,7 +331,7 @@
         <div class="auth-header">
             <img class="org-logo" alt="" style="display:none;max-height:72px;max-width:220px;margin:0 auto 6px;border-radius:10px;">
             <i class="fa-solid fa-user-plus org-logo-alt"></i>
-            <h2>Demande d'inscription — <span class="org-name">AVEC LA SAGESSE</span></h2>
+            <h2>Demande d'inscription — <span class="org-name">WEBSERVICES FIN</span></h2>
         </div>
         <div id="signupFormWrap">
             <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:14px;">Remplissez vos informations. Votre demande sera examinée par l'administrateur : vous serez prévenu(e) dès qu'elle est confirmée. Les champs marqués d'une * sont obligatoires.</p>
@@ -378,7 +378,7 @@
         <div class="auth-header">
             <img class="org-logo" alt="" style="display:none;max-height:72px;max-width:220px;margin:0 auto 6px;border-radius:10px;">
             <i class="fa-solid fa-users-gear org-logo-alt"></i>
-            <h2><span class="org-name">AVEC LA SAGESSE</span> - Accès Portail</h2>
+            <h2><span class="org-name">WEBSERVICES FIN</span> - Accès Portail</h2>
         </div>
 
         <div class="tabs">
@@ -412,7 +412,7 @@
             </div>
             <div class="form-group">
                 <label>Nom de votre organisation <small style="color:var(--text-muted);font-weight:400;">(administrateur : il sera affiché partout dans l'application)</small></label>
-                <input type="text" id="regOrg" maxlength="60" placeholder="Ex : AVEC LA SAGESSE">
+                <input type="text" id="regOrg" maxlength="60" placeholder="Ex : WEBSERVICES FIN">
             </div>
             <button type="submit" class="btn"><i class="fa-solid fa-user-plus"></i> S'inscrire</button>
         </form>
@@ -424,7 +424,7 @@
     <div id="dashboardSection" class="hidden">
         <header class="dashboard-header">
             <div>
-                <h2><img class="org-logo" alt="" style="display:none;height:30px;width:auto;vertical-align:middle;border-radius:6px;margin-right:6px;"><i class="fa-solid fa-piggy-bank org-logo-alt"></i> Gestion <span class="org-name">AVEC LA SAGESSE</span></h2>
+                <h2><img class="org-logo" alt="" style="display:none;height:30px;width:auto;vertical-align:middle;border-radius:6px;margin-right:6px;"><i class="fa-solid fa-piggy-bank org-logo-alt"></i> Gestion <span class="org-name">WEBSERVICES FIN</span></h2>
                 <p>Suivi de Caisse, Épargne et Crédits Membres</p>
             </div>
             <div class="header-actions">
@@ -544,7 +544,7 @@
                     <div class="card-header"><i class="fa-solid fa-building-columns"></i><h3>Identité de l'organisation</h3></div>
                     <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Le nom et le logo s'affichent sur la page de connexion, dans les espaces, dans les messages WhatsApp et dans les rapports PDF et Excel.</p>
                     <form onsubmit="orgSave(event)">
-                        <div class="form-group"><label>Nom de l'organisation</label><input type="text" id="orgNameInput" maxlength="60" required placeholder="Ex : AVEC LA SAGESSE"></div>
+                        <div class="form-group"><label>Nom de l'organisation</label><input type="text" id="orgNameInput" maxlength="60" required placeholder="Ex : WEBSERVICES FIN"></div>
                         <div class="form-group"><label>Logo (facultatif)</label>
                             <div id="orgLogoPrev" style="margin-bottom:8px;"></div>
                             <input type="file" id="orgLogoFile" accept="image/*" class="hidden" onchange="orgPickLogo(this)">
@@ -941,7 +941,7 @@
                 <div class="detail-grid">
                     <div>
                         <div class="form-group"><label>Message</label>
-                            <textarea id="waBcText" rows="6" maxlength="1000" placeholder="Bonjour {prénom}, réunion samedi à 10 h. — AVEC LA SAGESSE" oninput="renderBroadcast()"></textarea></div>
+                            <textarea id="waBcText" rows="6" maxlength="1000" placeholder="Bonjour {prénom}, réunion samedi à 10 h. — WEBSERVICES FIN" oninput="renderBroadcast()"></textarea></div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;">
                             <button type="button" class="btn-small wa wa-manual-only" onclick="waBroadcastNext()"><i class="fa-brands fa-whatsapp"></i> Envoyer au suivant</button>
                             <button type="button" class="btn-small wa wa-auto-only" style="display:none;" onclick="waBroadcastAll()"><i class="fa-solid fa-paper-plane"></i> Envoyer automatiquement à tous</button>
@@ -1126,7 +1126,7 @@
     <div id="memberSection" class="hidden">
         <header class="dashboard-header">
             <div>
-                <h2><img class="org-logo" alt="" style="display:none;height:30px;width:auto;vertical-align:middle;border-radius:6px;margin-right:6px;"><i class="fa-solid fa-piggy-bank org-logo-alt"></i> Mon Espace <span class="org-name">AVEC LA SAGESSE</span></h2>
+                <h2><img class="org-logo" alt="" style="display:none;height:30px;width:auto;vertical-align:middle;border-radius:6px;margin-right:6px;"><i class="fa-solid fa-piggy-bank org-logo-alt"></i> Mon Espace <span class="org-name">WEBSERVICES FIN</span></h2>
                 <p id="memberWelcome">Consultez votre épargne et vos crédits</p>
             </div>
             <div class="user-info">
@@ -5317,7 +5317,7 @@
             }
         };
     </script>
-    <script src="org.js?v=20261040"></script>
+    <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261061"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>

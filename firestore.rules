@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Règles de sécurité de la base AVEC LA SAGESSE.
+// Règles de sécurité de la base WEBSERVICES FIN.
 // À coller dans Firebase Console > Firestore Database > onglet « Règles » > Publier.
 //
 // Principe :

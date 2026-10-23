@@ -1,5 +1,5 @@
 /**
- * AVEC LA SAGESSE : envoi automatique des messages WhatsApp.
+ * WEBSERVICES FIN : envoi automatique des messages WhatsApp.
  *
  * L'application dépose chaque message dans la collection Firestore « whatsappQueue » (statut « pending »).
  * Cette fonction se déclenche à chaque nouveau message, l'envoie par l'API officielle WhatsApp Cloud de Meta,
@@ -29,7 +29,7 @@ const PHONE_ID = defineString('WHATSAPP_PHONE_ID', { default: '' });            
 const API_VERSION = defineString('WHATSAPP_API_VERSION', { default: 'v23.0' });
 const DAILY_LIMIT = defineInt('WHATSAPP_DAILY_LIMIT', { default: 300 });
 const RESEND_KEY = defineSecret('RESEND_API_KEY');             // clé du service d'envoi d'e-mails (Resend)
-const REPORT_FROM = defineString('REPORT_FROM', { default: 'AVEC LA SAGESSE <onboarding@resend.dev>' });
+const REPORT_FROM = defineString('REPORT_FROM', { default: 'WEBSERVICES FIN <onboarding@resend.dev>' });
 
 // Un paramètre de modèle ne peut pas contenir de retour à la ligne ni de longues suites d'espaces
 function toTemplateText(text) {
@@ -141,7 +141,7 @@ async function sendMonthlyReport() {
   const to = String(settings.to || '').trim();
   if (!EMAIL_RE.test(to)) throw new Error("Aucune adresse e-mail valide pour le rapport (onglet Équipe).");
   const [members, requests, claims, social, orgDoc] = await Promise.all([readAll('members'), readAll('requests'), readAll('claims'), db.doc('settings/social').get(), db.doc('settings/org').get()]);
-  const org = (orgDoc.exists && String(orgDoc.data().name || '').trim()) || 'AVEC LA SAGESSE';
+  const org = (orgDoc.exists && String(orgDoc.data().name || '').trim()) || 'WEBSERVICES FIN';
   const weekly = social.exists ? Number(social.data().weekly) : 1000;
   const r = await buildPdf(PDFLib, { members, requests, claims, weekly, org, now: new Date() });
   const res = await fetch('https://api.resend.com/emails', {

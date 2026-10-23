@@ -1,5 +1,5 @@
 /**
- * Rapport mensuel PDF de l'AVEC LA SAGESSE, construit côté serveur (bibliothèque pdf-lib, sans navigateur).
+ * Rapport mensuel PDF de WEBSERVICES FIN, construit côté serveur (bibliothèque pdf-lib, sans navigateur).
  * buildPdf(PDFLib, { members, requests, claims, weekly, now }) -> Uint8Array
  * `now` : Date ; le rapport couvre le mois civil précédent (activité) et la situation à la date du jour.
  */
@@ -45,7 +45,7 @@ function buildPdf(PDFLib, input) {
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
   const members = input.members || [], requests = input.requests || [], claims = input.claims || [], weekly = Number(input.weekly) > 0 ? Number(input.weekly) : 1000;
   const now = input.now || new Date();
-  const ORG = safe(String(input.org || 'AVEC LA SAGESSE').slice(0, 60));
+  const ORG = safe(String(input.org || 'WEBSERVICES FIN').slice(0, 60));
   const local = new Date(now.getTime() + 2 * 3600000);                       // heure de Lubumbashi (UTC+2)
   const iso = d => d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
   const today = iso(local);
@@ -227,7 +227,7 @@ async function embedLogo(pdf, dataUrl) {
  */
 function buildStatement(PDFLib, input) {
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
-  const m = input.member || {}, ORG = safe(String(input.org || 'AVEC LA SAGESSE').slice(0, 60));
+  const m = input.member || {}, ORG = safe(String(input.org || 'WEBSERVICES FIN').slice(0, 60));
   const now = input.now || new Date();
   const local = new Date(now.getTime() + 2 * 3600000);
   const todayIso = local.getUTCFullYear() + '-' + String(local.getUTCMonth() + 1).padStart(2, '0') + '-' + String(local.getUTCDate()).padStart(2, '0');

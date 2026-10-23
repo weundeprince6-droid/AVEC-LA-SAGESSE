@@ -1,6 +1,6 @@
 {
   "name": "avec-la-sagesse-whatsapp",
-  "description": "Envoi automatique des messages WhatsApp de l'application AVEC LA SAGESSE (Meta WhatsApp Cloud API)",
+  "description": "Envoi automatique des messages WhatsApp de l'application WEBSERVICES FIN (Meta WhatsApp Cloud API)",
   "private": true,
   "main": "index.js",
   "engines": { "node": "20" },

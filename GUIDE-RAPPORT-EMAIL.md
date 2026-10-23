@@ -17,7 +17,7 @@ Un petit programme hébergé par Firebase (dossier `functions/`) se réveille ch
 1. Allez sur **resend.com**, créez un compte avec **votre adresse d'administrateur**.
 2. **API Keys > Create API Key** : nom `avec`, permission **Sending access**. **Copiez la clé** (elle commence par `re_`) et gardez-la secrète.
 
-Sans domaine vérifié, Resend n'envoie qu'à l'adresse du compte Resend : c'est exactement ce qu'il faut ici (le rapport va à l'administrateur). Pour envoyer à une autre adresse, il faudra vérifier un domaine dans Resend, puis indiquer `REPORT_FROM=AVEC LA SAGESSE <rapport@votre-domaine>` dans `functions/.env`.
+Sans domaine vérifié, Resend n'envoie qu'à l'adresse du compte Resend : c'est exactement ce qu'il faut ici (le rapport va à l'administrateur). Pour envoyer à une autre adresse, il faudra vérifier un domaine dans Resend, puis indiquer `REPORT_FROM=WEBSERVICES FIN <rapport@votre-domaine>` dans `functions/.env`.
 
 ### B. Firebase : installer le programme
 1. Console Firebase : passez le projet au plan **Blaze** (si ce n'est pas déjà fait pour WhatsApp).
