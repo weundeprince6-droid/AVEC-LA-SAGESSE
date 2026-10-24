@@ -2023,6 +2023,7 @@
             if (stopReport) { stopReport(); stopReport = null; }
             if (stopActivity) { stopActivity(); stopActivity = null; }
             staffList = []; activityList = [];
+            setHidden('btnExportXlsx', true);   // jamais visible tant qu'on n'est pas reconnu comme administrateur principal
             if (!user) {
                 resetCloudState();
                 currentUser = null;
@@ -5359,7 +5360,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261090"></script>
-<script src="groups.js?v=20261102"></script>
+<script src="groups.js?v=20261103"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>
