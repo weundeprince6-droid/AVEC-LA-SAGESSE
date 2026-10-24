@@ -4287,7 +4287,7 @@
             if (!isRootAdmin()) { alert("Le rapport Excel est réservé à l'administrateur principal."); return; }
             try {
                 await loadScriptOnce('vendor/jszip.min.js?v=3.10.1');
-                await loadScriptOnce('report-xlsx.js?v=20261041');
+                await loadScriptOnce('report-xlsx.js?v=20261110');
             } catch (e) {
                 if (confirm("Le rapport Excel n'a pas pu être préparé (fichiers non chargés : connexion ou ancienne version en cache).\n\nTélécharger à la place le rapport simplifié (CSV) ?")) exportCSV();
                 return;
@@ -4308,6 +4308,7 @@
         function buildReportXlsx() {
             const X = window.AvecXlsx, today = todayISO(), U = X.util, nowFR = formatISOtoFR(today);
             const wb = new X(window.JSZip);
+            const xp = reportProtectPwd(); if (xp && xp !== true) wb.protectPwd = xp;
             const who = currentUser ? String(currentUser.username) : '';
             wb.props = { title: 'Rapport ' + orgName() + ' ' + nowFR, creator: who || orgName() };
             const sub = (extra) => 'Situation au ' + nowFR + (extra ? ' · ' + extra : '') + (who ? ' · par ' + who : '');
@@ -4513,8 +4514,23 @@
         // ---------- Rapport PDF : page de rapport mise en forme, enregistrée en PDF par la fenêtre d'impression ----------
         async function preparePdfLib() {
             await loadScriptOnce('vendor/pdf-lib.min.js?v=1171');
-            await loadScriptOnce('functions/report.js?v=20261102');
+            await loadScriptOnce('functions/pdf-protect.js?v=20261110');
+            await loadScriptOnce('functions/report.js?v=20261110');
             if (!window.PDFLib || !window.AvecPdf) throw new Error('bibliothèque PDF non chargée');
+        }
+        // Mot de passe de protection des fichiers de rapport (ouverture et impression seulement).
+        // L'administrateur principal le choisit une fois par session ; il n'est jamais écrit dans le code ni enregistré en ligne.
+        // Pour tous les autres comptes, un mot de passe aléatoire est utilisé : personne ne peut modifier le fichier.
+        function reportProtectPwd() {
+            if (!isRootAdmin()) return true;
+            let p = '';
+            try { p = sessionStorage.getItem('avec_protect_pwd') || ''; } catch (e) {}
+            if (!p) {
+                p = (prompt("Mot de passe de PROTECTION des rapports (administrateur principal).\nLes fichiers s'ouvriront et s'imprimeront librement, mais ne pourront être modifiés qu'avec ce mot de passe.\nRetenez-le bien :") || '').trim();
+                if (!p) return true;
+                try { sessionStorage.setItem('avec_protect_pwd', p); } catch (e) {}
+            }
+            return p;
         }
         function savePdfFile(bytes, fileName) {
             const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
@@ -4527,7 +4543,7 @@
             if (!requireAdmin()) return;
             try {
                 await preparePdfLib();
-                const r = await AvecPdf.buildPdf(PDFLib, { members: members, requests: requests, claims: claims, groups: (typeof grpGroups !== 'undefined' ? grpGroups : []), weekly: (typeof socialWeekly !== 'undefined' ? socialWeekly : 1000), org: orgName(), logo: orgLogo(), current: true, now: new Date() });
+                const r = await AvecPdf.buildPdf(PDFLib, { protect: reportProtectPwd(), members: members, requests: requests, claims: claims, groups: (typeof grpGroups !== 'undefined' ? grpGroups : []), weekly: (typeof socialWeekly !== 'undefined' ? socialWeekly : 1000), org: orgName(), logo: orgLogo(), current: true, now: new Date() });
                 savePdfFile(r.bytes, 'rapport-' + todayISO() + '.pdf');
                 logActivity('Rapport PDF téléchargé');
             } catch (err) {
@@ -4543,7 +4559,7 @@
             if (currentUser && currentUser.role === 'member' && currentUser.memberId !== m.id) return;
             try {
                 await preparePdfLib();
-                const r = await AvecPdf.buildStatement(PDFLib, { member: m, org: orgName(), logo: orgLogo(), now: new Date() });
+                const r = await AvecPdf.buildStatement(PDFLib, { protect: reportProtectPwd(), member: m, org: orgName(), logo: orgLogo(), now: new Date() });
                 savePdfFile(r.bytes, r.fileName);
             } catch (err) {
                 console.error(err);
@@ -5393,7 +5409,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261090"></script>
-<script src="groups.js?v=20261104"></script>
+<script src="groups.js?v=20261110"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>

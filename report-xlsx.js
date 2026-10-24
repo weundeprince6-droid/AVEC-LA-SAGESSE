@@ -145,6 +145,7 @@
             '<sheetViews><sheetView workbookViewId="0"' + (o.grid === false ? ' showGridLines="0"' : '') + (o.first ? ' tabSelected="1"' : '') + (o.zoom ? ' zoomScale="' + o.zoom + '"' : '') + '>' + pane + '</sheetView></sheetViews>' +
             '<sheetFormatPr defaultRowHeight="16"/>' + (cols ? '<cols>' + cols + '</cols>' : '') +
             '<sheetData>' + data + '</sheetData>' +
+            (this.book.protectPwd ? '<sheetProtection sheet="1" objects="1" scenarios="1" sort="0" autoFilter="0" password="' + xlsHash(this.book.protectPwd) + '"/>' : '') +
             (this.filter ? '<autoFilter ref="' + this.filter + '"/>' : '') +
             (this.merges.length ? '<mergeCells count="' + this.merges.length + '">' + this.merges.map(function (m) { return '<mergeCell ref="' + m + '"/>'; }).join('') + '</mergeCells>' : '') +
             '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>' +
@@ -187,6 +188,13 @@
     function anchorXml(c, r, dc, dr) { return '<xdr:col>' + c + '</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>' + r + '</xdr:row><xdr:rowOff>0</xdr:rowOff>'; }
 
     // ---------- Classeur ----------
+    // Empreinte « ancienne » d'un mot de passe de feuille/classeur (format Excel standard)
+    function xlsHash(pw) {
+        var h = 0, i;
+        for (i = pw.length - 1; i >= 0; i--) { h = ((h >> 14) & 1) | ((h << 1) & 0x7fff); h ^= pw.charCodeAt(i); }
+        h = ((h >> 14) & 1) | ((h << 1) & 0x7fff); h ^= pw.length; h ^= 0xCE4B;
+        return h.toString(16).toUpperCase();
+    }
     function Book(JSZip) { this.JSZip = JSZip; this.sheets = []; this.styles = new Styles(); this.props = {}; }
     Book.prototype.sheet = function (name, opts) {
         var clean = String(name).replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 31);
@@ -234,7 +242,7 @@
         z.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' + types + '</Types>');
         z.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="' + NS_R + '/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>');
         z.file('docProps/core.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>' + esc(this.props.title || 'Rapport') + '</dc:title><dc:creator>' + esc(this.props.creator || (typeof orgName==='function'?orgName():'WEBSERVICES FIN')) + '</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">' + new Date().toISOString() + '</dcterms:created></cp:coreProperties>');
-        z.file('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="' + NS_MAIN + '" xmlns:r="' + NS_R + '"><bookViews><workbookView activeTab="0"/></bookViews><sheets>' + wbSheets + '</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>');
+        z.file('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="' + NS_MAIN + '" xmlns:r="' + NS_R + '">' + (this.protectPwd ? '<workbookProtection lockStructure="1" workbookPassword="' + xlsHash(this.protectPwd) + '"/>' : '') + '<bookViews><workbookView activeTab="0"/></bookViews><sheets>' + wbSheets + '</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>');
         z.file('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + wbRels + '</Relationships>');
         z.file('xl/styles.xml', this.styles.xml());
         return z;

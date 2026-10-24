@@ -85,3 +85,10 @@ Chaque membre peut ouvrir une boutique (onglet « Boutique » de son espace), pu
 - **Rapports de groupe (PDF)** : bouton « Rapport PDF du groupe » pour le chef (son groupe) et « PDF » par groupe pour l'équipe : synthèse, membres, crédits en retard, échéances à 30 jours, propositions du chef.
 - **Excel réservé à l'administrateur principal** : le bouton « Excel » du bandeau n'apparaît que pour le compte dont l'e-mail est écrit dans `firestore.rules` (sans fiche d'équipe) ; il contient aussi une feuille « Groupes ». Les autres comptes de l'équipe n'ont que le PDF.
 - **Onglets regroupés** : « Membres & groupes », « Demandes & réclamations » et « Galerie & exposition » (barre de petits boutons en haut de chaque onglet pour passer de l'un à l'autre, avec leurs pastilles). Même regroupement « Demandes & réclamations » dans l'espace membre.  Ordre : Tableau de bord, Membres & groupes, Opérations & cas sociaux, Équipe, Boutique, Demandes & réclamations, Annonces & journal, Galerie & exposition. Aussi « Opérations & cas sociaux » et « Annonces & journal » (le journal reste réservé à l'accès total).
+
+## Protection des fichiers de rapport
+
+- **PDF** (rapport, relevé de membre, rapport de groupe) : chiffrés (norme PDF, RC4 128 bits, `functions/pdf-protect.js`). Ils s'ouvrent **sans mot de passe** et s'**impriment**, mais modification, annotation, assemblage et copie du contenu sont refusés sans le mot de passe propriétaire.
+- **Excel** (administrateur principal uniquement) : feuilles et structure du classeur protégées par mot de passe ; le filtrage reste possible.
+- Le mot de passe est saisi par l'administrateur principal une fois par session (jamais écrit dans le code ni en ligne). Les autres comptes (membres, chefs de groupe, équipe) reçoivent des fichiers protégés par un mot de passe aléatoire : personne ne peut les modifier.
+- Limite : c'est une protection de « bonne foi » ; des outils spécialisés peuvent contourner ces restrictions. Pour une preuve infalsifiable, comparer avec la référence imprimée sur le document.

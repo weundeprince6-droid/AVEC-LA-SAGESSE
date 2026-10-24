@@ -317,7 +317,7 @@ async function grpExportPdf(gid) {
     const list = admin ? members.filter(m => m.groupId === gid) : grpMembers;
     try {
         await preparePdfLib();
-        const r = await AvecPdf.buildGroupReport(PDFLib, { group: grp, members: list, ops: grpOps.filter(o => o.groupId === gid), org: orgName(), logo: orgLogo(), now: new Date() });
+        const r = await AvecPdf.buildGroupReport(PDFLib, { protect: reportProtectPwd(), group: grp, members: list, ops: grpOps.filter(o => o.groupId === gid), org: orgName(), logo: orgLogo(), now: new Date() });
         savePdfFile(r.bytes, r.fileName);
         if (admin) logActivity('Rapport PDF du groupe « ' + grp.name + ' » téléchargé');
     } catch (err) { console.error(err); alert('Le rapport du groupe n\'a pas pu être créé : ' + errText(err) + '\n(Connexion internet ? Actualisez la page avec Ctrl+F5.)'); }

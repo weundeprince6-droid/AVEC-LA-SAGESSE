@@ -217,7 +217,7 @@ function buildPdf(PDFLib, input) {
       p.drawText(safe(ORG + ' · Rapport mensuel · ' + monthLabel), { x: M, y: 16, size: 7.5, font: F, color: col(C.grey) });
       const t = 'Page ' + (i + 1) + ' / ' + pages.length; p.drawText(t, { x: W - M - F.widthOfTextAtSize(t, 7.5), y: 16, size: 7.5, font: F, color: col(C.grey) });
     });
-    return { bytes: await pdf.save(), monthLabel, monthKey };
+    return { bytes: await saveDoc(PDFLib, pdf, input), monthLabel, monthKey };
   })();
 }
 
@@ -310,7 +310,7 @@ function buildStatement(PDFLib, input) {
       p.drawText(safe(ORG + ' · Relevé de compte · ' + ref), { x: M, y: 16, size: 7.5, font: F, color: col(C.grey) });
       const t = 'Page ' + (i + 1) + ' / ' + pages.length; p.drawText(t, { x: W - M - F.widthOfTextAtSize(t, 7.5), y: 16, size: 7.5, font: F, color: col(C.grey) });
     });
-    return { bytes: await pdf.save(), fileName: 'releve-' + safe(m.id || 'membre') + '-' + todayIso + '.pdf', ref };
+    return { bytes: await saveDoc(PDFLib, pdf, input), fileName: 'releve-' + safe(m.id || 'membre') + '-' + todayIso + '.pdf', ref };
   })();
 }
 
@@ -399,8 +399,14 @@ function buildGroupReport(PDFLib, input) {
       p.drawText(safe(ORG + ' · Groupe ' + (g.name || '') + ' · ' + frDate(today)), { x: M, y: 16, size: 7.5, font: F, color: col(C.grey) });
       const t = 'Page ' + (i + 1) + ' / ' + pages.length; p.drawText(t, { x: W - M - F.widthOfTextAtSize(t, 7.5), y: 16, size: 7.5, font: F, color: col(C.grey) });
     });
-    return { bytes: await pdf.save(), fileName: 'rapport-groupe-' + safe(g.id || 'groupe') + '-' + today + '.pdf' };
+    return { bytes: await saveDoc(PDFLib, pdf, input), fileName: 'rapport-groupe-' + safe(g.id || 'groupe') + '-' + today + '.pdf' };
   })();
+}
+
+function saveDoc(PDFLib, pdf, input) {
+    var P = (typeof window !== 'undefined' ? window.AvecProtect : null) || (typeof require === 'function' && input && input.protect ? require('./pdf-protect') : null);
+    if (input && input.protect && P) { P.apply(PDFLib, pdf, input.protect === true ? '' : String(input.protect)); return pdf.save({ useObjectStreams: false }); }
+    return pdf.save();
 }
 exports.buildPdf = buildPdf; exports.buildStatement = buildStatement; exports.buildGroupReport = buildGroupReport;
 })(typeof module !== 'undefined' && module.exports ? module.exports : (window.AvecPdf = {}));
