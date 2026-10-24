@@ -105,3 +105,7 @@ Dans « Mon groupe », le bouton **Ouvrir mon espace de gestion** donne au chef 
 Non accessibles au chef : Équipe, Boutique, Annonces & journal, Exposition, Excel, identité de l'organisation, groupes.
 Les nouveaux membres créés par un chef reçoivent un numéro `MBR-xxxxxx` tiré au hasard (il ne voit pas les autres groupes, donc pas de numérotation continue).
 Nécessite de republier `firestore.rules`.
+
+## Relevés de compte : trace dans le journal et copie à l'identique
+
+Quand un membre télécharge son relevé, une ligne « Relevé de compte téléchargé… · réf. REL-… » apparaît dans le **Journal d'activité** de l'administrateur, avec le bouton **Rouvrir ce relevé** : il retélécharge exactement le même fichier (mêmes références, même date, mêmes chiffres du jour). Une copie est conservée dans la collection `statements` (réservée à l'administrateur). Nécessite de republier `firestore.rules`. Pour un relevé avec les chiffres d'aujourd'hui, l'administrateur utilise le relevé du membre comme avant.

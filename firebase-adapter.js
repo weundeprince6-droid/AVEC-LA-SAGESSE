@@ -171,6 +171,9 @@ window.FB_READY = (async () => {
         async addActivity(entry) {
             await setDoc(doc(db, 'activity', entry.id), entry);
         },
+        // Copie d'un relevé de compte téléchargé (PDF en base64) : l'administrateur peut le rouvrir à l'identique
+        async saveStatement(doc0) { await setDoc(doc(db, 'statements', doc0.id), doc0); },
+        async getStatement(id) { const s = await getDoc(doc(db, 'statements', id)); return s.exists() ? s.data() : null; },
         listenActivity(cb, onError) {
             const q = query(collection(db, 'activity'), orderBy('date', 'desc'), limit(300));
             return onSnapshot(q, snap => cb(snap.docs.map(d => Object.assign({}, d.data(), { id: d.id }))), err => onError(err));

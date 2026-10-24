@@ -229,12 +229,26 @@ service cloud.firestore {
     // Lisible par l'administrateur seulement ; une ligne ne peut jamais être modifiée.
     match /activity/{entryId} {
       allow read: if isAdmin();
-      allow create: if isStaff()
-        && request.resource.data.keys().hasOnly(['id', 'date', 'by', 'poste', 'text', 'memberId'])
+      allow create: if ((isStaff() && request.resource.data.by == request.auth.token.email)
+        // un membre qui télécharge son relevé de compte y laisse une ligne (jamais autre chose)
+        || (hasProfile() && request.resource.data.by == myMemberId() && request.resource.data.poste == 'Membre'
+            && request.resource.data.memberId == myMemberId() && request.resource.data.text.matches('^Relevé de compte.*')))
+        && request.resource.data.keys().hasOnly(['id', 'date', 'by', 'poste', 'text', 'memberId', 'ref', 'stId'])
         && request.resource.data.id == entryId
-        && request.resource.data.by == request.auth.token.email
         && request.resource.data.text is string
         && request.resource.data.text.size() <= 300;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // Copies des relevés de compte téléchargés : l'administrateur peut rouvrir exactement le même fichier.
+    match /statements/{stId} {
+      allow read: if isAdmin();
+      allow create: if (isStaff() || (hasProfile() && request.resource.data.memberId == myMemberId()))
+        && request.resource.data.keys().hasOnly(['id', 'memberId', 'name', 'ref', 'date', 'by', 'fileName', 'data'])
+        && request.resource.data.id == stId
+        && request.resource.data.data is string && request.resource.data.data.size() <= 700000
+        && request.resource.data.ref is string && request.resource.data.ref.size() <= 80;
       allow update: if false;
       allow delete: if isAdmin();
     }
