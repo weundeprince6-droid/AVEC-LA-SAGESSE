@@ -41,6 +41,8 @@ function grpOnMemberRender(m) {
 function renderGrpInfo() {
     const box = document.getElementById('grpInfoBar'); if (!box) return;
     const g = grpMine || grpMemberGroup;
+    const tag = g ? '<i class="fa-solid fa-people-group"></i> Groupe ' + escapeHtml(g.name) + (grpMine ? ' · Chef' : '') : '';
+    ['hdrGrp', 'hdrGrpAdm'].forEach(id => { const el = document.getElementById(id); if (!el) return; el.innerHTML = tag; if (g) el.classList.remove('hidden'); else el.classList.add('hidden'); });
     if (!g) { box.style.display = 'none'; return; }
     box.style.display = '';
     const lead = !!grpMine;
