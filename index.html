@@ -430,6 +430,7 @@
             </div>
             <div class="header-actions">
                 <button class="btn-export" onclick="exportPDF()" title="Télécharger le rapport en PDF"><i class="fa-solid fa-file-pdf"></i> Rapport PDF</button>
+                <button class="btn-export hidden" id="btnExportXlsx" onclick="exportReport()" title="Rapport Excel : réservé à l'administrateur principal"><i class="fa-solid fa-file-excel"></i> Excel</button>
                 <div class="user-info">
                     <select id="lockSelAdmin" class="lock-select" onchange="setAutoLock(this.value)" title="Verrouillage automatique : vous êtes déconnecté après ce temps sans utiliser l'application">
                         <option value="0">🔒 Aucun</option>
@@ -2051,17 +2052,21 @@
                     // sans fiche, c'est l'administrateur principal (adresse écrite dans les règles).
                     let level = 'total';
                     let label = '';
+                    let isRoot = true;   // administrateur principal : aucune fiche d'équipe (son e-mail est écrit dans les règles)
                     try {
                         const st = await F().getStaff(user.email);
                         if (st) {
+                            isRoot = false;
                             level = st.level === 'total' ? 'total' : 'poste';
                             label = st.poste || (level === 'total' ? 'Accès total' : 'Poste');
                         }
                     } catch (e0) {
+                        isRoot = false;
                         level = 'poste'; // par prudence l'écran ne montre pas les suppressions ; la base décide de toute façon
                     }
                     touchActivity();
-                    currentUser = { username: user.email, role: 'admin', level: level, poste: label, uid: user.uid };
+                    currentUser = { username: user.email, role: 'admin', level: level, poste: label, uid: user.uid, root: isRoot && level === 'total' };
+                    setHidden('btnExportXlsx', !currentUser.root);
                     setHidden('authSection', true);
                     setHidden('memberSection', true);
                     setHidden('dashboardSection', false);
@@ -2244,6 +2249,7 @@
                 document.getElementById('currentUserDisplay').textContent = user.username;
                 showTab('dashboard');
                 setHidden('orgSection', !canDelete(user));
+                setHidden('btnExportXlsx', false);
                 orgRenderForm(); orgAfterAdminLogin();
                 updateDashboard();
             } else {
@@ -4242,8 +4248,10 @@
             }
             return _loadedScripts[src];
         }
+        function isRootAdmin() { return !!currentUser && isAdmin(currentUser) && (!CLOUD || currentUser.root === true); }
         async function exportReport() {
             if (!requireAdmin()) return;
+            if (!isRootAdmin()) { alert("Le rapport Excel est réservé à l'administrateur principal."); return; }
             try {
                 await loadScriptOnce('vendor/jszip.min.js?v=3.10.1');
                 await loadScriptOnce('report-xlsx.js?v=20261041');
@@ -4402,6 +4410,15 @@
                 rows: allCollectes().map(x => { const got = collecteCollected(x.c.id), rem = num(x.c.remitted); return [x.c.date || '', x.c.title || '', x.b.name, got, rem, round2(got - rem)]; }),
                 totals: { label: 'Total', cols: [3, 4, 5] }, empty: 'Aucune cotisation occasionnelle.', notes: RC.social });
 
+            // Sous-groupes
+            if (typeof grpGroups !== 'undefined' && grpGroups.length) {
+                const gdata = grpGroups.map(g => ({ g: g, list: members.filter(m => m.groupId === g.id) }));
+                wb.table('Groupes', { title: 'Sous-groupes', subtitle: sub(grpGroups.length + ' groupe(s)'), tab: '0D9488', landscape: true,
+                    cols: [{ h: 'Groupe', w: 28 }, { h: 'Chef de groupe', w: 28 }, { h: 'Membres', w: 10, k: 'center' }, { h: 'Épargne ($)', w: 15, k: 'usd' }, { h: 'Épargne (FC)', w: 17, k: 'fc' }, { h: 'Crédit en cours ($)', w: 17, k: 'usd' }, { h: 'Crédit en cours (FC)', w: 19, k: 'fc' }, { h: 'Statut', w: 12, k: 'status' }],
+                    rows: gdata.map(x => [x.g.name, x.g.leaderName || x.g.id, x.list.length, round2(x.list.reduce((t, m) => t + sav(m, 'USD'), 0)), round2(x.list.reduce((t, m) => t + sav(m, 'FC'), 0)), round2(x.list.reduce((t, m) => t + memberOutstanding(m, 'USD'), 0)), round2(x.list.reduce((t, m) => t + memberOutstanding(m, 'FC'), 0)), x.g.status === 'suspendu' ? 'Suspendu' : 'Actif']),
+                    totals: { label: 'Total', cols: [2, 3, 4, 5, 6] }, empty: 'Aucun groupe.' });
+            }
+
             // 6. Annonces
             wb.table('Annonces', { title: 'Annonces', subtitle: sub(announcements.length + ' annonce(s)'), tab: '0891B2', rowHeight: 48,
                 cols: [{ h: 'Date', w: 12, k: 'date' }, { h: 'Titre', w: 32, k: 'wrap' }, { h: 'Message', w: 80, k: 'wrap' }, { h: 'Importante', w: 12, k: 'center' }, { h: 'Publiée par', w: 30 }],
@@ -4463,7 +4480,7 @@
         // ---------- Rapport PDF : page de rapport mise en forme, enregistrée en PDF par la fenêtre d'impression ----------
         async function preparePdfLib() {
             await loadScriptOnce('vendor/pdf-lib.min.js?v=1171');
-            await loadScriptOnce('functions/report.js?v=20261100');
+            await loadScriptOnce('functions/report.js?v=20261102');
             if (!window.PDFLib || !window.AvecPdf) throw new Error('bibliothèque PDF non chargée');
         }
         function savePdfFile(bytes, fileName) {
@@ -5342,7 +5359,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261090"></script>
-<script src="groups.js?v=20261101"></script>
+<script src="groups.js?v=20261102"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>

@@ -102,6 +102,7 @@ function grpRenderAdmin() {
         h += '<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;">' +
             '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><div style="flex:1;min-width:200px;"><strong>' + E(g.name) + '</strong> ' + (g.status === 'suspendu' ? '<span class="badge badge-due">Suspendu</span>' : '') + '<br><small style="color:var(--text-muted);">Chef : ' + E(g.leaderName || '') + ' (' + E(g.id) + ')</small></div>' +
             '<button type="button" class="btn-small" onclick="grpToggle(\'' + E(g.id) + '\')"><i class="fa-solid fa-' + (open ? 'chevron-up' : 'chevron-down') + '"></i> Membres</button>' +
+            '<button type="button" class="btn-small" onclick="grpExportPdf(\'' + E(g.id) + '\')" title="Rapport PDF du groupe"><i class="fa-solid fa-file-pdf"></i> PDF</button>' +
             '<button type="button" class="btn-small" onclick="grpSuspend(\'' + E(g.id) + '\')" title="' + (g.status === 'suspendu' ? 'Réactiver' : 'Suspendre') + '"><i class="fa-solid fa-' + (g.status === 'suspendu' ? 'play' : 'pause') + '"></i></button>' +
             (canDelete(currentUser) ? '<button type="button" class="btn-small danger" onclick="grpDissolve(\'' + E(g.id) + '\')" title="Dissoudre le groupe"><i class="fa-solid fa-trash"></i></button>' : '') + '</div>' +
             '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:0.88rem;"><span><strong>' + s.n + '</strong> membre(s)</span><span>Épargne : <strong>' + grpMoney(s.sUSD, 'USD') + '</strong> · <strong>' + grpMoney(s.sFC, 'FC') + '</strong></span><span>Crédits en cours : <strong>' + grpMoney(s.cUSD, 'USD') + '</strong> · <strong>' + grpMoney(s.cFC, 'FC') + '</strong></span>' + (s.late ? '<span style="color:#b91c1c;"><strong>' + s.late + '</strong> en retard</span>' : '') + '</div>';
@@ -227,6 +228,7 @@ function grpRenderMember() {
         '<p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;">Envoyez ce lien à la personne : elle remplit sa demande d\'inscription ; l\'équipe la vérifie, l\'accepte et la place dans votre groupe.</p>' +
         '<input type="text" readonly value="' + E(grpInviteLink()) + '" onclick="this.select()" style="margin-bottom:8px;">' +
         '<button type="button" class="btn-small wa" onclick="grpInviteWa()"><i class="fa-brands fa-whatsapp"></i> Envoyer par WhatsApp</button> <button type="button" class="btn-small" onclick="grpCopyLink()"><i class="fa-solid fa-copy"></i> Copier le lien</button></section>';
+    h = h.replace('<h3>' + E(grpMine.name) + '</h3></div>', '<h3>' + E(grpMine.name) + '</h3><button type="button" class="btn-small" style="margin-left:auto;" onclick="grpExportPdf(\'' + E(grpMine.id) + '\')"><i class="fa-solid fa-file-pdf"></i> Rapport PDF du groupe</button></div>');
     h += '<section class="card"><div class="card-header"><i class="fa-solid fa-users"></i><h3>Mes membres</h3></div><div style="overflow-x:auto;"><table><thead><tr><th>Membre</th><th>Épargne</th><th>Crédit en cours</th><th>Statut</th><th></th></tr></thead><tbody>' +
         (grpMembers.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).map(m => {
             const late = (m.credits || []).some(c => creditRemaining(c) > 0 && c.dueDate && c.dueDate < todayISO());
@@ -306,4 +308,18 @@ function grpSignupInit() {
         if (!grp || grp.status === 'suspendu') { grpSignupId = ''; return; }
         if (b) { b.style.display = ''; b.innerHTML = '<i class="fa-solid fa-people-group"></i> Vous vous inscrivez dans le groupe <strong>' + escapeHtml(grp.name) + '</strong> (chef : ' + escapeHtml(grp.leaderName || '') + ').'; }
     }).catch(() => { grpSignupId = ''; });
+}
+
+// Rapport PDF d'un groupe : l'équipe (tous les groupes) ou le chef (son groupe)
+async function grpExportPdf(gid) {
+    const admin = grpIsAdmin();
+    const grp = admin ? grpGroups.find(x => x.id === gid) : (grpMine && grpMine.id === gid ? grpMine : null);
+    if (!grp) return;
+    const list = admin ? members.filter(m => m.groupId === gid) : grpMembers;
+    try {
+        await preparePdfLib();
+        const r = await AvecPdf.buildGroupReport(PDFLib, { group: grp, members: list, ops: grpOps.filter(o => o.groupId === gid), org: orgName(), logo: orgLogo(), now: new Date() });
+        savePdfFile(r.bytes, r.fileName);
+        if (admin) logActivity('Rapport PDF du groupe « ' + grp.name + ' » téléchargé');
+    } catch (err) { console.error(err); alert('Le rapport du groupe n\'a pas pu être créé : ' + errText(err) + '\n(Connexion internet ? Actualisez la page avec Ctrl+F5.)'); }
 }

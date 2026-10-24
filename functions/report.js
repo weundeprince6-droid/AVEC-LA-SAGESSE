@@ -313,5 +313,94 @@ function buildStatement(PDFLib, input) {
     return { bytes: await pdf.save(), fileName: 'releve-' + safe(m.id || 'membre') + '-' + todayIso + '.pdf', ref };
   })();
 }
-exports.buildPdf = buildPdf; exports.buildStatement = buildStatement;
+
+/**
+ * Rapport PDF d'un sous-groupe : buildGroupReport(PDFLib, { group, members, ops, org, logo, now }) -> { bytes, fileName }
+ * `members` = fiches des membres du groupe ; `ops` = propositions du chef (facultatif).
+ */
+function buildGroupReport(PDFLib, input) {
+  const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  const g = input.group || {}, members = input.members || [], ops = input.ops || [], ORG = safe(String(input.org || 'AVEC LA SAGESSE').slice(0, 60));
+  const now = input.now || new Date(), local = new Date(now.getTime() + 2 * 3600000);
+  const iso = d => d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
+  const today = iso(local), in30 = iso(new Date(local.getTime() + 30 * 86400000)), hh = String(local.getUTCHours()).padStart(2, '0') + ':' + String(local.getUTCMinutes()).padStart(2, '0');
+  const sum = (list, f) => round2(list.reduce((t, x) => t + (Number(f(x)) || 0), 0));
+  const all = []; members.forEach(m => (m.credits || []).forEach(c => all.push({ m, c })));
+  const st = c => creditRemaining(c) === 0 ? 'Remboursé' : (c.dueDate && c.dueDate < today ? 'En retard' : 'En cours');
+  return (async () => {
+    const pdf = await PDFDocument.create();
+    pdf.setTitle('Rapport du groupe ' + safe(g.name) + ' - ' + frDate(today)); pdf.setAuthor(ORG); pdf.setCreator(ORG); pdf.setProducer(ORG);
+    const F = await pdf.embedFont(StandardFonts.Helvetica), B = await pdf.embedFont(StandardFonts.HelveticaBold), I = await pdf.embedFont(StandardFonts.HelveticaOblique);
+    const col = c => rgb(c[0], c[1], c[2]), W = A4[0], H = A4[1], M = 34, pages = [];
+    let page, y;
+    const wid = (t, s, f) => (f || F).widthOfTextAtSize(safe(t), s);
+    const fit = (t, s, mw, f) => { t = safe(t); if (wid(t, s, f) <= mw) return t; while (t.length > 1 && wid(t + '...', s, f) > mw) t = t.slice(0, -1); return t + '...'; };
+    const text = (t, x, yy, s, o) => { o = o || {}; const f = o.bold ? B : (o.italic ? I : F); const v = safe(t); let xx = x; if (o.align === 'right') xx = x - wid(v, s, f); else if (o.align === 'center') xx = x - wid(v, s, f) / 2; page.drawText(v, { x: xx, y: yy, size: s, font: f, color: col(o.color || C.ink) }); };
+    const rect = (x, yy, w, h, c, o) => page.drawRectangle(Object.assign({ x, y: yy, width: w, height: h, color: col(c) }, o || {}));
+    const lg = await embedLogo(pdf, input.logo);
+    const newPage = first => {
+      page = pdf.addPage(A4); pages.push(page); y = H - M;
+      if (first) {
+        rect(M, y - 62, W - 2 * M, 62, C.navy); let lx = M + 16;
+        if (lg) { const lh = 46, lw = Math.min(120, lh * lg.width / lg.height); page.drawImage(lg, { x: M + 8, y: y - 54, width: lw, height: lh }); lx = M + 8 + lw + 10; }
+        text(g.name || 'Groupe', lx, y - 28, 22, { bold: true, color: C.white });
+        text(ORG + ' · Rapport du groupe · chef : ' + (g.leaderName || g.id || ''), lx, y - 48, 11, { color: [0.85, 0.9, 1] });
+        text('Situation au ' + frDate(today) + ' à ' + hh, W - M - 16, y - 28, 10.5, { align: 'right', color: C.white });
+        text('Document PDF non modifiable', W - M - 16, y - 46, 9, { align: 'right', color: [0.85, 0.9, 1] });
+        y -= 78;
+      } else { rect(M, y - 26, W - 2 * M, 26, C.navy); text(g.name || 'Groupe', M + 12, y - 18, 12, { bold: true, color: C.white }); y -= 40; }
+    };
+    const section = t => { if (y < M + 90) newPage(false); text(t, M, y - 10, 12, { bold: true, color: C.navy }); page.drawLine({ start: { x: M, y: y - 15 }, end: { x: W - M, y: y - 15 }, thickness: 1, color: col(C.blue) }); y -= 26; };
+    function table(cols, rows, empty, total) {
+      const tw = W - 2 * M, sw = cols.reduce((t, c) => t + c.w, 0), ws = cols.map(c => c.w / sw * tw), rh = 17;
+      const head = () => { rect(M, y - rh - 3, tw, rh + 3, C.blue); let x = M; cols.forEach((c, i) => { text(fit(c.h, 8.5, ws[i] - 8, B), x + ws[i] / 2, y - 13, 8.5, { bold: true, color: C.white, align: 'center' }); x += ws[i]; }); y -= rh + 3; };
+      if (!rows.length) { text(empty, M, y - 12, 10, { italic: true, color: C.grey }); y -= 26; return; }
+      if (y - rh * 3 < M + 14) newPage(false);
+      head();
+      rows.concat(total ? [total] : []).forEach((r, ri) => {
+        const isTot = total && ri === rows.length;
+        if (y - rh < M + 14) { newPage(false); head(); }
+        rect(M, y - rh, tw, rh, isTot ? [0.878, 0.906, 1] : (ri % 2 ? C.band : C.white));
+        let x = M;
+        r.forEach((v, i) => { const c = cols[i], s = fit(v, 8.5, ws[i] - 8, isTot ? B : F), o = { bold: isTot, color: isTot ? C.navy : C.ink };
+          const tn = c.st && !isTot ? tone(v) : null; if (tn) rect(x + 1, y - rh + 1, ws[i] - 2, rh - 2, tn);
+          if (c.a === 'r') text(s, x + ws[i] - 4, y - 12, 8.5, Object.assign({ align: 'right' }, o)); else if (c.a === 'c' || c.st) text(s, x + ws[i] / 2, y - 12, 8.5, Object.assign({ align: 'center' }, o)); else text(s, x + 4, y - 12, 8.5, o); x += ws[i]; });
+        page.drawLine({ start: { x: M, y: y - rh }, end: { x: W - M, y: y - rh }, thickness: 0.4, color: col(C.line) });
+        y -= rh;
+      });
+      y -= 14;
+    }
+    const tone = t => { const x = String(t).toLowerCase(); if (/retard|refus/.test(x)) return [0.996, 0.886, 0.886]; if (/à valider/.test(x)) return [1, 0.95, 0.78]; if (/rembours|valid|à jour/.test(x)) return [0.82, 0.98, 0.9]; if (/cours|valider/.test(x)) return [1, 0.95, 0.78]; return null; };
+    newPage(true);
+    const kw = (W - 2 * M - 5 * 8) / 6, late = all.filter(x => st(x.c) === 'En retard');
+    [['MEMBRES', String(members.length), C.blue], ['ÉPARGNE ($)', fmt(sum(members, m => sav(m, 'USD')), 'USD'), C.green], ['ÉPARGNE (FC)', fmt(sum(members, m => sav(m, 'FC')), 'FC'), C.green],
+      ['CRÉDITS EN COURS ($)', fmt(sum(members, m => outstanding(m, 'USD')), 'USD'), C.amber], ['CRÉDITS EN COURS (FC)', fmt(sum(members, m => outstanding(m, 'FC')), 'FC'), C.amber], ['CRÉDITS EN RETARD', String(late.length), C.red]].forEach((k, i) => {
+      const x = M + i * (kw + 8); rect(x, y - 50, kw, 50, C.band); rect(x, y - 3, kw, 3, k[2]);
+      text(k[0], x + kw / 2, y - 16, 7, { bold: true, color: C.grey, align: 'center' }); text(fit(k[1], 13, kw - 8, B), x + kw / 2, y - 37, 13, { bold: true, color: k[2], align: 'center' }); });
+    y -= 70;
+    section('Membres du groupe (' + members.length + ')');
+    table([{ h: 'ID', w: 1.2, a: 'c' }, { h: 'Nom', w: 3.2 }, { h: 'Téléphone', w: 2 }, { h: 'Épargne ($)', w: 1.8, a: 'r' }, { h: 'Épargne (FC)', w: 2, a: 'r' }, { h: 'Crédit ($)', w: 1.8, a: 'r' }, { h: 'Crédit (FC)', w: 2, a: 'r' }, { h: 'Crédit', w: 1.5, st: true }],
+      members.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).map(m => { const cr = m.credits || [], s = cr.some(c => creditRemaining(c) > 0 && c.dueDate && c.dueDate < today) ? 'En retard' : (cr.some(c => creditRemaining(c) > 0) ? 'En cours' : (cr.length ? 'Remboursé' : '—'));
+        return [m.id, m.name, m.phone || '', fmt(sav(m, 'USD'), 'USD'), fmt(sav(m, 'FC'), 'FC'), fmt(outstanding(m, 'USD'), 'USD'), fmt(outstanding(m, 'FC'), 'FC'), s]; }),
+      'Aucun membre dans ce groupe.',
+      ['Total', '', '', fmt(sum(members, m => sav(m, 'USD')), 'USD'), fmt(sum(members, m => sav(m, 'FC')), 'FC'), fmt(sum(members, m => outstanding(m, 'USD')), 'USD'), fmt(sum(members, m => outstanding(m, 'FC')), 'FC'), '']);
+    section('Crédits en retard (' + late.length + ')');
+    table([{ h: 'Membre', w: 3 }, { h: 'Accordé le', w: 1.4, a: 'c' }, { h: 'Échéance', w: 1.4, a: 'c' }, { h: 'Montant', w: 1.8, a: 'r' }, { h: 'Remboursé', w: 1.8, a: 'r' }, { h: 'Reste', w: 1.8, a: 'r' }, { h: 'Retard', w: 1.2, a: 'r' }],
+      late.sort((a, b) => String(a.c.dueDate).localeCompare(String(b.c.dueDate))).map(x => { const d = devOf(x.c), days = Math.round((Date.parse(today) - Date.parse(x.c.dueDate)) / 86400000); return [x.m.name, frDate(x.c.date), frDate(x.c.dueDate), fmt(x.c.amount, d), fmt(x.c.repaid || 0, d), fmt(creditRemaining(x.c), d), days + ' j']; }), 'Aucun crédit en retard.');
+    const soon = all.filter(x => creditRemaining(x.c) > 0 && x.c.dueDate >= today && x.c.dueDate <= in30);
+    section('Échéances dans les 30 prochains jours (' + soon.length + ')');
+    table([{ h: 'Membre', w: 3 }, { h: 'Échéance', w: 1.4, a: 'c' }, { h: 'Reste à rembourser', w: 2, a: 'r' }, { h: 'Téléphone', w: 2 }],
+      soon.sort((a, b) => String(a.c.dueDate).localeCompare(String(b.c.dueDate))).map(x => [x.m.name, frDate(x.c.dueDate), fmt(creditRemaining(x.c), devOf(x.c)), x.m.phone || '']), 'Aucune échéance proche.');
+    const recent = ops.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 25);
+    section('Opérations proposées par le chef de groupe (' + ops.length + ')');
+    table([{ h: 'Date', w: 1.3, a: 'c' }, { h: 'Membre', w: 3 }, { h: 'Opération', w: 2.4 }, { h: 'Montant', w: 1.8, a: 'r' }, { h: 'Statut', w: 1.5, st: true }],
+      recent.map(o => [frDate(String(o.date).slice(0, 10)), o.memberName || '', o.type === 'remboursement' ? 'Remboursement' : "Versement d'épargne", fmt(o.amount, devOf(o)), o.status === 'à valider' ? 'À valider' : (o.status === 'validée' ? 'Validée' : 'Refusée')]), 'Aucune proposition.');
+    pages.forEach((p, i) => {
+      p.drawText(safe(ORG + ' · Groupe ' + (g.name || '') + ' · ' + frDate(today)), { x: M, y: 16, size: 7.5, font: F, color: col(C.grey) });
+      const t = 'Page ' + (i + 1) + ' / ' + pages.length; p.drawText(t, { x: W - M - F.widthOfTextAtSize(t, 7.5), y: 16, size: 7.5, font: F, color: col(C.grey) });
+    });
+    return { bytes: await pdf.save(), fileName: 'rapport-groupe-' + safe(g.id || 'groupe') + '-' + today + '.pdf' };
+  })();
+}
+exports.buildPdf = buildPdf; exports.buildStatement = buildStatement; exports.buildGroupReport = buildGroupReport;
 })(typeof module !== 'undefined' && module.exports ? module.exports : (window.AvecPdf = {}));
