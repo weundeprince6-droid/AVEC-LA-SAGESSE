@@ -46,6 +46,7 @@ function renderGrpInfo() {
     const lead = !!grpMine;
     box.innerHTML = '<i class="fa-solid fa-people-group"></i> Groupe <strong>' + escapeHtml(g.name) + '</strong> · ' + (lead ? '<strong>vous en êtes le chef</strong>' : 'chef : ' + escapeHtml(g.leaderName || ''));
     setHidden('mtabGroupe', !lead);
+    setHidden('swMember', !lead);
 }
 
 // ---------- calculs ----------

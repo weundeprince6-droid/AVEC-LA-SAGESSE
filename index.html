@@ -441,7 +441,7 @@
                         <option value="60">🔒 1 h</option>
                     </select>
                     <span><i class="fa-solid fa-circle-user"></i> <strong id="currentUserDisplay">Utilisateur</strong></span>
-                    <button class="btn-small hidden" id="btnLeaderBack" onclick="grpLeaveManage()" title="Revenir à mon espace de membre"><i class="fa-solid fa-user"></i> Mon espace membre</button>
+                    <span class="hidden" id="btnLeaderBack" style="display:inline-flex;gap:6px;"><button type="button" class="btn-small" style="background:#334155;color:#fff;" onclick="grpLeaveManage()" title="Revenir à mon espace de membre"><i class="fa-solid fa-user"></i> Espace membre</button><button type="button" class="btn-small" style="background:#1e3a8a;color:#fff;cursor:default;" title="Vous êtes dans l\'espace gestionnaire"><i class="fa-solid fa-table-columns"></i> Espace gestionnaire</button></span>
                     <button class="btn-logout" onclick="logout()" title="Se déconnecter"><i class="fa-solid fa-power-off"></i></button>
                 </div>
             </div>
@@ -1136,6 +1136,7 @@
                 <p id="grpInfoBar" style="display:none;margin-top:4px;font-size:0.85rem;"></p>
             </div>
             <div class="user-info">
+                <span class="hidden" id="swMember" style="display:inline-flex;gap:6px;"><button type="button" class="btn-export" style="background:#fff;color:#1e3a8a;cursor:default;" title="Vous êtes dans votre espace de membre"><i class="fa-solid fa-user"></i> Espace membre</button><button type="button" class="btn-export" onclick="grpEnterManage()" title="Ouvrir l\'espace gestionnaire de mon groupe"><i class="fa-solid fa-table-columns"></i> Espace gestionnaire</button></span>
                 <button class="btn-export" onclick="exportStatementPDF()" title="Télécharger mon rapport (relevé de compte) en PDF"><i class="fa-solid fa-file-pdf"></i> Mon rapport PDF</button>
                 <select id="lockSelMember" class="lock-select" onchange="setAutoLock(this.value)" title="Verrouillage automatique : vous êtes déconnecté après ce temps sans utiliser l'application">
                         <option value="0">🔒 Aucun</option>
@@ -5437,7 +5438,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261111"></script>
-<script src="groups.js?v=20261114"></script>
+<script src="groups.js?v=20261115"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>
