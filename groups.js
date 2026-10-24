@@ -26,7 +26,7 @@ const grpOnLeader = {
 function grpIsAdmin() { return !!currentUser && isAdmin(currentUser) && !currentUser.leader; }
 function grpRefresh() {
     if (!currentUser) return;
-    if (grpIsAdmin()) { grpRenderAdmin(); grpAdminBadge(); } else if (currentUser.leader) { renderGrpInfo(); } else { renderGrpInfo(); grpRenderMember(); }
+    if (grpIsAdmin()) { grpRenderAdmin(); grpAdminBadge(); } else if (currentUser.leader) { renderGrpInfo(); if (typeof currentTab !== 'undefined' && currentTab === 'groupes') grpRenderMember(); } else { renderGrpInfo(); grpRenderMember(); }
 }
 // Un membre non chef regarde le groupe auquel il appartient (nom du groupe et du chef)
 function grpOnMemberRender(m) {
@@ -219,14 +219,15 @@ function grpInviteLink() {
     try { return location.origin + location.pathname + '?inscription&g=' + encodeURIComponent(currentUser.memberId); } catch (e) { return ''; }
 }
 function grpRenderMember() {
-    const box = document.getElementById('grpLeaderBox');
-    if (!box || document.getElementById('mp-groupe').classList.contains('hidden')) return;
+    const lm = !!(currentUser && currentUser.leader);
+    const box = document.getElementById(lm ? 'grpAdminBox' : 'grpLeaderBox');
+    if (!box || (!lm && document.getElementById('mp-groupe').classList.contains('hidden'))) return;
     if (!grpMine) { box.innerHTML = '<div class="card" style="color:var(--text-muted);">Vous n\'êtes pas chef de groupe.</div>'; return; }
     const E = escapeHtml, s = grpStats(grpMembers), suspended = grpMine.status === 'suspendu';
     let h = '<section class="card"><div class="card-header"><i class="fa-solid fa-people-group"></i><h3>' + E(grpMine.name) + '</h3></div>' +
         (suspended ? '<div class="alert alert-error" style="margin-bottom:10px;">Ce groupe est suspendu par l\'équipe : vous ne pouvez pas enregistrer d\'opérations pour le moment.</div>' : '') +
         '<div style="display:flex;gap:18px;flex-wrap:wrap;font-size:0.92rem;"><span><strong>' + s.n + '</strong> membre(s)</span><span>Épargne : <strong>' + grpMoney(s.sUSD, 'USD') + '</strong> · <strong>' + grpMoney(s.sFC, 'FC') + '</strong></span><span>Crédits en cours : <strong>' + grpMoney(s.cUSD, 'USD') + '</strong> · <strong>' + grpMoney(s.cFC, 'FC') + '</strong></span>' + (s.late ? '<span style="color:#b91c1c;"><strong>' + s.late + '</strong> crédit(s) en retard</span>' : '') + '</div></section>';
-    h = '<section class="card" style="background:#eff6ff;border-color:#bfdbfe;"><p style="margin-bottom:10px;font-size:0.92rem;">Vous avez accès aux <strong>mêmes onglets que l\'équipe</strong> (tableau de bord, membres, opérations, demandes, réclamations…), limités aux membres de votre groupe.</p>' + (suspended ? '' : '<button type="button" class="btn" style="width:auto;" onclick="grpEnterManage()"><i class="fa-solid fa-table-columns"></i> Ouvrir mon espace de gestion</button>') + '</section>' + h;
+    if (!lm) h = '<section class="card" style="background:#eff6ff;border-color:#bfdbfe;"><p style="margin-bottom:10px;font-size:0.92rem;">Vous avez accès aux <strong>mêmes onglets que l\'équipe</strong> (tableau de bord, membres, opérations, demandes, réclamations…), limités aux membres de votre groupe.</p>' + (suspended ? '' : '<button type="button" class="btn" style="width:auto;" onclick="grpEnterManage()"><i class="fa-solid fa-table-columns"></i> Ouvrir mon espace de gestion</button>') + '</section>' + h;
     h += '<section class="card"><div class="card-header"><i class="fa-solid fa-user-plus"></i><h3>Faire entrer de nouveaux membres</h3></div>' +
         '<p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;">Envoyez ce lien à la personne : elle remplit sa demande d\'inscription ; l\'équipe la vérifie, l\'accepte et la place dans votre groupe.</p>' +
         '<input type="text" readonly value="' + E(grpInviteLink()) + '" onclick="this.select()" style="margin-bottom:8px;">' +

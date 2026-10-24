@@ -3835,7 +3835,7 @@
         }
         function buildTabBars(name) {
             Object.keys(TAB_GROUPS).forEach(k => {
-                const items = TAB_GROUPS[k].filter(x => !(currentUser && currentUser.leader && (x[0] === 'groupes' || x[0] === 'pub' || x[0] === 'journal')) && (!x[3] || (x[3] === 'cloud' ? CLOUD : (CLOUD && !!currentUser && currentUser.level === 'total'))));
+                const items = TAB_GROUPS[k].filter(x => !(currentUser && currentUser.leader && (x[0] === 'pub' || x[0] === 'journal')) && (!x[3] || (x[3] === 'cloud' ? CLOUD : (CLOUD && !!currentUser && currentUser.level === 'total'))));
                 TAB_GROUPS[k].forEach(x => {
                     const p = document.getElementById('panel-' + x[0]); if (!p) return;
                     let bar = p.querySelector(':scope > .grpnav');
@@ -3864,7 +3864,7 @@
             // Équipe et Journal : réservés à l'accès total (en ligne)
             if ((name === 'equipe' || name === 'journal') && (!CLOUD || !currentUser || currentUser.level !== 'total')) name = 'dashboard';
             if ((name === 'boutique' || name === 'pub' || name === 'groupes') && !CLOUD) name = 'dashboard';
-            if (currentUser && currentUser.leader && ['boutique', 'pub', 'groupes', 'annonces', 'equipe', 'journal'].indexOf(name) >= 0) name = 'dashboard';
+            if (currentUser && currentUser.leader && ['boutique', 'pub', 'annonces', 'equipe', 'journal'].indexOf(name) >= 0) name = 'dashboard';
             currentTab = name;
             if (name === 'galerie') { try { renderGallery(); } catch (e) {} }
             if (name === 'boutique' && typeof bqRenderAdmin === 'function') bqRenderAdmin();
@@ -3875,7 +3875,7 @@
             });
             buildTabBars(name);
             if (name === 'pub' && typeof pubRenderAdmin === 'function') pubRenderAdmin();
-            if (name === 'groupes' && typeof grpRenderAdmin === 'function') grpRenderAdmin();
+            if (name === 'groupes' && typeof grpRenderAdmin === 'function') { if (currentUser && currentUser.leader) grpRenderMember(); else grpRenderAdmin(); }
             if (document.querySelectorAll) {
                 document.querySelectorAll('.dtab').forEach(b => {
                     if (typeof b.getAttribute !== 'function') return;
@@ -5437,7 +5437,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261111"></script>
-<script src="groups.js?v=20261113"></script>
+<script src="groups.js?v=20261114"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>
