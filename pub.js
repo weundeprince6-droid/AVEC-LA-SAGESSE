@@ -132,7 +132,7 @@ function pubComHtml(c, postId, withTag) {
     const has = Number.isInteger(c.photo) && c.photo >= 0;
     return '<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:0.88rem;"><strong>' + E(c.name || '') + '</strong> <span style="color:var(--text-muted);font-size:0.75rem;">' + E(pubAgo(c.date)) + '</span>' +
         (withTag && has ? ' <a href="javascript:void(0)" onclick="pubZoom(\'' + E(postId) + '\',' + c.photo + ')" style="font-size:0.72rem;background:#eff6ff;color:#1d4ed8;border-radius:10px;padding:1px 7px;text-decoration:none;"><i class="fa-solid fa-image"></i> Photo ' + (c.photo + 1) + '</a>' : '') +
-        ((c.memberId === me || (admin && canDelete(currentUser))) ? ' <button type="button" onclick="pubDeleteComment(\'' + E(c.id) + '\')" title="Supprimer" style="background:none;border:none;cursor:pointer;color:#b91c1c;font-size:0.8rem;"><i class="fa-solid fa-xmark"></i></button>' : '') +
+        ((c.memberId === me || (admin && canDelete(currentUser))) ? ' <button type="button" onclick="pubDeleteComment(\'' + E(c.id) + '\')" title="Supprimer ce commentaire" style="background:none;border:none;cursor:pointer;color:#b91c1c;font-size:0.8rem;"><i class="fa-solid fa-trash-can"></i></button>' : '') +
         '<div style="white-space:pre-wrap;word-break:break-word;">' + E(c.text || '') + '</div></div>';
 }
 function pubFeedHtml() {
