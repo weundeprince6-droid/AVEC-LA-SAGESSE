@@ -66,9 +66,8 @@ function grpMsg(id, text, ok) {
 
 // =================== Espace de l'équipe ===================
 function grpAdminBadge() {
-    const n = grpOps.filter(o => o.status === 'à valider').length;
-    const bd = document.getElementById('grpAdminBadge');
-    if (bd) { bd.textContent = n; setHidden('grpAdminBadge', !(n > 0)); }
+    tabCnt.grp = grpOps.filter(o => o.status === 'à valider').length;
+    if (typeof syncMainBadges === 'function') syncMainBadges();
 }
 function grpRenderAdmin() {
     const box = document.getElementById('grpAdminBox');

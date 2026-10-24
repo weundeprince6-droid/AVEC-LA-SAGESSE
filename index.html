@@ -447,16 +447,13 @@
         <!-- ONGLETS PAR CATÉGORIE -->
         <nav class="dtabs" id="dashTabs">
             <button class="dtab active" data-tab="dashboard" onclick="showTab('dashboard')"><i class="fa-solid fa-chart-pie"></i> Tableau de bord</button>
-            <button class="dtab" data-tab="membres" onclick="showTab('membres')"><i class="fa-solid fa-users"></i> Membres <span class="tab-badge hidden" id="tabBadgeMembres">0</span></button>
+            <button class="dtab" data-tab="membres" onclick="showTab('membres')"><i class="fa-solid fa-users"></i> Membres &amp; groupes <span class="tab-badge hidden" id="tabBadgeMembres">0</span></button>
             <button class="dtab" data-tab="operations" onclick="showTab('operations')"><i class="fa-solid fa-money-bill-transfer"></i> Opérations</button>
             <button class="dtab" data-tab="social" onclick="showTab('social')"><i class="fa-solid fa-hand-holding-heart"></i> Cas sociaux</button>
             <button class="dtab" data-tab="annonces" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
-            <button class="dtab" data-tab="galerie" onclick="showTab('galerie')"><i class="fa-solid fa-images"></i> Galerie</button>
-            <button class="dtab" data-tab="demandes" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes <span class="tab-badge hidden" id="tabBadgeReq">0</span></button>
-            <button class="dtab" data-tab="reclamations" onclick="showTab('reclamations')"><i class="fa-solid fa-bell"></i> Réclamations <span class="tab-badge hidden" id="tabBadgeClaims">0</span></button>
+            <button class="dtab" data-tab="galerie" onclick="showTab('galerie')"><i class="fa-solid fa-images"></i> Galerie &amp; exposition</button>
+            <button class="dtab" data-tab="demandes" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes &amp; réclamations <span class="tab-badge hidden" id="tabBadgeReq">0</span></button>
             <button class="dtab hidden" id="tabBtnBoutique" data-tab="boutique" onclick="showTab('boutique')"><i class="fa-solid fa-store"></i> Boutique <span class="tab-badge hidden" id="bqAdminBadge">0</span></button>
-            <button class="dtab hidden" id="tabBtnExpo" data-tab="pub" onclick="showTab('pub')"><i class="fa-solid fa-images"></i> Exposition</button>
-            <button class="dtab hidden" id="tabBtnGroupes" data-tab="groupes" onclick="showTab('groupes')"><i class="fa-solid fa-people-group"></i> Groupes <span class="tab-badge hidden" id="grpAdminBadge">0</span></button>
             <button class="dtab hidden" id="tabBtnEquipe" data-tab="equipe" onclick="showTab('equipe')"><i class="fa-solid fa-user-shield"></i> Équipe</button>
             <button class="dtab hidden" id="tabBtnJournal" data-tab="journal" onclick="showTab('journal')"><i class="fa-solid fa-clock-rotate-left"></i> Journal</button>
         </nav>
@@ -1153,8 +1150,7 @@
         <nav class="dtabs" id="memberTabs">
             <button class="dtab mtab active" data-mtab="accueil" onclick="showMemberTab('accueil')"><i class="fa-solid fa-house"></i> Accueil</button>
             <button class="dtab mtab" data-mtab="credits" onclick="showMemberTab('credits')"><i class="fa-solid fa-hand-holding-dollar"></i> Mes crédits</button>
-            <button class="dtab mtab" data-mtab="demandes" onclick="showMemberTab('demandes')"><i class="fa-solid fa-paper-plane"></i> Demandes</button>
-            <button class="dtab mtab" data-mtab="reclamations" onclick="showMemberTab('reclamations')"><i class="fa-solid fa-circle-exclamation"></i> Réclamations</button>
+            <button class="dtab mtab" data-mtab="demandes" onclick="showMemberTab('demandes')"><i class="fa-solid fa-paper-plane"></i> Demandes &amp; réclamations</button>
             <button class="dtab mtab" data-mtab="boutique" onclick="showMemberTab('boutique')"><i class="fa-solid fa-store"></i> Boutique <span class="tab-badge hidden" id="bqMemberBadge">0</span></button>
             <button class="dtab mtab" data-mtab="expo" onclick="showMemberTab('expo')"><i class="fa-solid fa-images"></i> Exposition <span class="tab-badge hidden" id="pubMemberBadge">0</span></button>
             <button class="dtab mtab hidden" id="mtabGroupe" data-mtab="groupe" onclick="showMemberTab('groupe')"><i class="fa-solid fa-people-group"></i> Mon groupe</button>
@@ -2076,8 +2072,6 @@
                     setHidden('reportSection', level !== 'total');
                     setHidden('activitySection', level !== 'total');
                     setHidden('tabBtnBoutique', false);
-                    setHidden('tabBtnExpo', false);
-                    setHidden('tabBtnGroupes', false);
                     setHidden('tabBtnEquipe', level !== 'total');
                     setHidden('tabBtnJournal', level !== 'total');
                     showTab('dashboard');
@@ -2802,7 +2796,7 @@
             const list = (registrations || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
             const waiting = list.filter(r => r.status === 'pending'), done = list.filter(r => r.status !== 'pending');
             setBadge('subBadgeInsc', waiting.length);
-            setBadge('tabBadgeMembres', waiting.length);
+            tabCnt.insc = waiting.length; syncMainBadges();
             const card = (r, hist) => {
                 const id = escapeHtml(r.id);
                 const ph = r.photo && String(r.photo).indexOf('data:image/jpeg;base64,') === 0
@@ -3801,6 +3795,44 @@
             if (b && b.classList) { if (which === 'inscriptions') b.classList.add('active'); else b.classList.remove('active'); }
             if (which === 'inscriptions') { try { renderRegistrations(); } catch (e) {} }
         }
+        // ---------- Onglets regroupés : « Membres & groupes », « Demandes & réclamations », « Galerie & exposition » ----------
+        const TAB_GROUPS = {
+            membres: [['membres', 'Membres', 'fa-users'], ['groupes', 'Groupes', 'fa-people-group', true]],
+            demandes: [['demandes', 'Demandes', 'fa-inbox'], ['reclamations', 'Réclamations', 'fa-bell']],
+            galerie: [['galerie', 'Galerie des membres', 'fa-images'], ['pub', 'Exposition', 'fa-images', true]]
+        };
+        const tabCnt = { insc: 0, req: 0, claims: 0, grp: 0 };
+        function tabMain(name) { for (const k in TAB_GROUPS) if (TAB_GROUPS[k].some(x => x[0] === name)) return k; return name; }
+        function pillCount(id) { return id === 'reclamations' ? tabCnt.claims : id === 'groupes' ? tabCnt.grp : id === 'demandes' ? tabCnt.req : 0; }
+        function buildPills(active, onclickFn, items) {
+            return items.map(x => { const n = pillCount(x[0]); return '<button type="button" class="subtab' + (x[0] === active ? ' active' : '') + '" onclick="' + onclickFn + '(\'' + x[0] + '\')"><i class="fa-solid ' + x[2] + '"></i> ' + x[1] + (n > 0 ? ' <span class="tab-badge">' + n + '</span>' : '') + '</button>'; }).join('');
+        }
+        function buildTabBars(name) {
+            Object.keys(TAB_GROUPS).forEach(k => {
+                const items = TAB_GROUPS[k].filter(x => !x[3] || CLOUD);
+                TAB_GROUPS[k].forEach(x => {
+                    const p = document.getElementById('panel-' + x[0]); if (!p) return;
+                    let bar = p.querySelector(':scope > .grpnav');
+                    if (!bar) { bar = document.createElement('div'); bar.className = 'subtabs grpnav'; bar.style.cssText = 'flex-wrap:wrap;margin-bottom:12px;'; p.insertBefore(bar, p.firstChild); }
+                    bar.style.display = items.length > 1 ? '' : 'none';
+                    bar.innerHTML = buildPills(x[0], 'showTab', items);
+                });
+            });
+        }
+        function buildMemberBars(tab) {
+            const items = [['demandes', 'Demandes', 'fa-paper-plane'], ['reclamations', 'Réclamations', 'fa-circle-exclamation']];
+            items.forEach(x => {
+                const p = document.getElementById('mp-' + x[0]); if (!p) return;
+                let bar = p.querySelector(':scope > .grpnav');
+                if (!bar) { bar = document.createElement('div'); bar.className = 'subtabs grpnav'; bar.style.cssText = 'flex-wrap:wrap;margin-bottom:12px;'; p.insertBefore(bar, p.firstChild); }
+                bar.innerHTML = buildPills(x[0], 'showMemberTab', items.map(y => [y[0], y[1], y[2]]));
+            });
+        }
+        function syncMainBadges() {
+            setBadge('tabBadgeMembres', tabCnt.insc + tabCnt.grp);
+            setBadge('tabBadgeReq', tabCnt.req + tabCnt.claims);
+            if (typeof currentTab !== 'undefined' && currentTab) buildTabBars(currentTab);
+        }
         function showTab(name) {
             if (name === 'inscriptions') { name = 'membres'; showMemberSub('inscriptions'); }
             // Équipe et Journal : réservés à l'accès total (en ligne)
@@ -3814,12 +3846,13 @@
             ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'boutique', 'pub', 'groupes', 'equipe', 'journal'].forEach(t => {
                 setHidden('panel-' + t, t !== name);
             });
+            buildTabBars(name);
             if (name === 'pub' && typeof pubRenderAdmin === 'function') pubRenderAdmin();
             if (name === 'groupes' && typeof grpRenderAdmin === 'function') grpRenderAdmin();
             if (document.querySelectorAll) {
                 document.querySelectorAll('.dtab').forEach(b => {
                     if (typeof b.getAttribute !== 'function') return;
-                    if (b.getAttribute('data-tab') === name || (name === 'membre' && b.getAttribute('data-tab') === 'membres')) b.classList.add('active'); else b.classList.remove('active');
+                    if (b.getAttribute('data-tab') === name || b.getAttribute('data-tab') === tabMain(name) || (name === 'membre' && b.getAttribute('data-tab') === 'membres')) b.classList.add('active'); else b.classList.remove('active');
                 });
             }
         }
@@ -4749,6 +4782,7 @@
             const must = !!(user && user.mustChange);
             const tab = must ? 'compte' : currentMTab;
             ['accueil', 'credits', 'demandes', 'reclamations', 'boutique', 'expo', 'groupe'].forEach(t => setHidden('mp-' + t, must || t !== tab));
+            buildMemberBars(tab);
             if (tab === 'groupe' && !must && typeof grpShowMember === 'function') grpShowMember();
             if (tab === 'expo' && !must && typeof pubShowMember === 'function') pubShowMember();
             if (tab === 'boutique' && !must && typeof bqRenderMember === 'function') bqRenderMember();
@@ -4758,7 +4792,7 @@
             if (document.querySelectorAll) {
                 document.querySelectorAll('.mtab').forEach(b => {
                     if (typeof b.getAttribute !== 'function') return;
-                    if (b.getAttribute('data-mtab') === tab) b.classList.add('active'); else b.classList.remove('active');
+                    if (b.getAttribute('data-mtab') === (tab === 'reclamations' ? 'demandes' : tab)) b.classList.add('active'); else b.classList.remove('active');
                 });
             }
             syncHeaderHeight();
@@ -5036,7 +5070,7 @@
             setHtmlKeepFields('requestsAdminList', html ||
                 '<p style="color:var(--text-muted);font-size:0.88rem;">Aucune demande pour le moment.</p>');
             document.getElementById('statPendingReq').textContent = requests.filter(r => r.status === 'en attente').length;
-            setBadge('tabBadgeReq', requests.filter(r => r.status === 'en attente' || cashToHand(r)).length);
+            tabCnt.req = requests.filter(r => r.status === 'en attente' || cashToHand(r)).length; syncMainBadges();
             renderAdminHome();
         }
 
@@ -5243,7 +5277,7 @@
             setHtmlKeepFields('claimsAdminList', html ||
                 '<p style="color:var(--text-muted);font-size:0.88rem;">Aucune réclamation pour le moment.</p>');
             document.getElementById('statOpenClaims').textContent = claims.filter(c => c.status === 'ouverte').length;
-            setBadge('tabBadgeClaims', claims.filter(c => c.status === 'ouverte').length);
+            tabCnt.claims = claims.filter(c => c.status === 'ouverte').length; syncMainBadges();
             renderAdminHome();
         }
 
@@ -5360,7 +5394,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261090"></script>
-<script src="groups.js?v=20261103"></script>
+<script src="groups.js?v=20261104"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>
