@@ -333,6 +333,7 @@
             <i class="fa-solid fa-user-plus org-logo-alt"></i>
             <h2>Demande d'inscription — <span class="org-name">WEBSERVICES FIN</span></h2>
         </div>
+        <div id="grpSignupBanner" class="alert alert-success" style="display:none;margin-bottom:12px;"></div>
         <div id="signupFormWrap">
             <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:14px;">Remplissez vos informations. Votre demande sera examinée par l'administrateur : vous serez prévenu(e) dès qu'elle est confirmée. Les champs marqués d'une * sont obligatoires.</p>
             <form onsubmit="handleSignup(event)" autocomplete="off">
@@ -454,6 +455,7 @@
             <button class="dtab" data-tab="reclamations" onclick="showTab('reclamations')"><i class="fa-solid fa-bell"></i> Réclamations <span class="tab-badge hidden" id="tabBadgeClaims">0</span></button>
             <button class="dtab hidden" id="tabBtnBoutique" data-tab="boutique" onclick="showTab('boutique')"><i class="fa-solid fa-store"></i> Boutique <span class="tab-badge hidden" id="bqAdminBadge">0</span></button>
             <button class="dtab hidden" id="tabBtnExpo" data-tab="pub" onclick="showTab('pub')"><i class="fa-solid fa-images"></i> Exposition</button>
+            <button class="dtab hidden" id="tabBtnGroupes" data-tab="groupes" onclick="showTab('groupes')"><i class="fa-solid fa-people-group"></i> Groupes <span class="tab-badge hidden" id="grpAdminBadge">0</span></button>
             <button class="dtab hidden" id="tabBtnEquipe" data-tab="equipe" onclick="showTab('equipe')"><i class="fa-solid fa-user-shield"></i> Équipe</button>
             <button class="dtab hidden" id="tabBtnJournal" data-tab="journal" onclick="showTab('journal')"><i class="fa-solid fa-clock-rotate-left"></i> Journal</button>
         </nav>
@@ -1044,6 +1046,10 @@
                 </section>
         </div>
 
+        <div class="dpanel hidden" id="panel-groupes">
+            <div id="grpAdminBox"></div>
+        </div>
+
         <div class="dpanel hidden" id="panel-pub">
             <section class="card">
                 <div class="card-header"><i class="fa-solid fa-images"></i><h3>Exposition : publier pour les membres</h3></div>
@@ -1128,6 +1134,7 @@
             <div>
                 <h2><img class="org-logo" alt="" style="display:none;height:30px;width:auto;vertical-align:middle;border-radius:6px;margin-right:6px;"><i class="fa-solid fa-piggy-bank org-logo-alt"></i> Mon Espace <span class="org-name">WEBSERVICES FIN</span></h2>
                 <p id="memberWelcome">Consultez votre épargne et vos crédits</p>
+                <p id="grpInfoBar" style="display:none;margin-top:4px;font-size:0.85rem;"></p>
             </div>
             <div class="user-info">
                 <button class="btn-export" onclick="exportStatementPDF()" title="Télécharger mon rapport (relevé de compte) en PDF"><i class="fa-solid fa-file-pdf"></i> Mon rapport PDF</button>
@@ -1149,6 +1156,7 @@
             <button class="dtab mtab" data-mtab="reclamations" onclick="showMemberTab('reclamations')"><i class="fa-solid fa-circle-exclamation"></i> Réclamations</button>
             <button class="dtab mtab" data-mtab="boutique" onclick="showMemberTab('boutique')"><i class="fa-solid fa-store"></i> Boutique <span class="tab-badge hidden" id="bqMemberBadge">0</span></button>
             <button class="dtab mtab" data-mtab="expo" onclick="showMemberTab('expo')"><i class="fa-solid fa-images"></i> Exposition <span class="tab-badge hidden" id="pubMemberBadge">0</span></button>
+            <button class="dtab mtab hidden" id="mtabGroupe" data-mtab="groupe" onclick="showMemberTab('groupe')"><i class="fa-solid fa-people-group"></i> Mon groupe</button>
             <button class="dtab mtab" data-mtab="compte" onclick="showMemberTab('compte')"><i class="fa-solid fa-user"></i> Mon compte</button>
         </nav>
 
@@ -1359,6 +1367,10 @@
                     </section>
                 </div>
             </div>
+        </div>
+
+        <div class="mpanel hidden" id="mp-groupe">
+            <div id="grpLeaderBox"></div>
         </div>
 
         <div class="mpanel hidden" id="mp-expo">
@@ -1891,11 +1903,14 @@
             if (F().listenBoutique) stopBq = F().listenBoutique(isAdmin(currentUser), currentUser.memberId, bqOnData, err => { /* sans gravité */ });
             let stopPub = () => {};
             if (F().listenPubs) stopPub = F().listenPubs(isAdmin(currentUser), pubOnData, err => { /* sans gravité */ });
-            stopListening = () => { stopData(); stopAnn(); stopSet(); stopProf(); stopReg(); stopWa(); stopWaQ(); stopBq(); stopPub(); };
+            let stopGrp = () => {};
+            if (isAdmin(currentUser)) { if (F().listenGroupsAdmin) stopGrp = F().listenGroupsAdmin(grpOnAdmin, err => { /* sans gravité */ }); }
+            else if (F().listenGroupsLeader) stopGrp = F().listenGroupsLeader(currentUser.memberId, grpOnLeader, err => { /* sans gravité */ });
+            stopListening = () => { stopData(); stopAnn(); stopSet(); stopProf(); stopReg(); stopWa(); stopWaQ(); stopBq(); stopPub(); stopGrp(); };
         }
 
         function resetCloudState() {
-            members = []; claims = []; requests = []; announcements = []; registrations = []; if (typeof bqReset === 'function') bqReset(); if (typeof pubReset === 'function') pubReset(); waQueue = []; waSettings = Object.assign({}, WA_DEFAULTS); memberProfiles = {}; socialWeekly = SOCIAL_DEFAULT;
+            members = []; claims = []; requests = []; announcements = []; registrations = []; if (typeof bqReset === 'function') bqReset(); if (typeof pubReset === 'function') pubReset(); if (typeof grpReset === 'function') grpReset(); waQueue = []; waSettings = Object.assign({}, WA_DEFAULTS); memberProfiles = {}; socialWeekly = SOCIAL_DEFAULT;
             cloudLoaded.members = cloudLoaded.claims = cloudLoaded.requests = false;
             lastSynced.members = {}; lastSynced.claims = {}; lastSynced.requests = {};
             importChecked = false;
@@ -2056,6 +2071,7 @@
                     setHidden('activitySection', level !== 'total');
                     setHidden('tabBtnBoutique', false);
                     setHidden('tabBtnExpo', false);
+                    setHidden('tabBtnGroupes', false);
                     setHidden('tabBtnEquipe', level !== 'total');
                     setHidden('tabBtnJournal', level !== 'total');
                     showTab('dashboard');
@@ -2745,6 +2761,7 @@
                 address: val('su_address').slice(0, 120), birth: birth, profession: val('su_profession').slice(0, 80), email: email.slice(0, 80),
                 kinName: val('su_kinName').slice(0, 80), kinPhone: val('su_kinPhone').slice(0, 25), note: val('su_note').slice(0, 300) };
             if (signupPhotoData) entry.photo = signupPhotoData;
+            if (typeof grpSignupId !== 'undefined' && grpSignupId) entry.groupId = grpSignupId;
             try {
                 if (CLOUD) {
                     try { await window.FB_READY; } catch (err) {}
@@ -2786,7 +2803,7 @@
                     : avatarHtml({ id: r.id, name: r.name }, 64);
                 const when = r.date ? formatISOtoFR(String(r.date).slice(0, 10)) : '';
                 const rows = [['Téléphone', r.phone], ['Adresse', r.address], ['Naissance', r.birth ? formatISOtoFR(r.birth) : ''], ['Profession', r.profession], ['E-mail', r.email],
-                    ['À prévenir', [r.kinName, r.kinPhone].filter(Boolean).join(' · ')], ['Autres infos', r.note]].filter(x => x[1]).map(x => kv(x[0], escapeHtml(x[1]))).join('');
+                    ['À prévenir', [r.kinName, r.kinPhone].filter(Boolean).join(' · ')], ['Autres infos', r.note], ['Groupe demandé', r.groupId ? (typeof grpName === 'function' && grpName(r.groupId) ? grpName(r.groupId) + ' (' + r.groupId + ')' : r.groupId) : '']].filter(x => x[1]).map(x => kv(x[0], escapeHtml(x[1]))).join('');
                 let actions = '';
                 if (!hist) actions = '<div style="margin-top:8px;"><button class="btn-small wa" onclick="acceptRegistration(\'' + id + '\')"><i class="fa-solid fa-check"></i> Accepter l\'inscription</button>' +
                     '<button class="btn-small danger" onclick="refuseRegistration(\'' + id + '\')"><i class="fa-solid fa-xmark"></i> Refuser</button></div>';
@@ -2815,6 +2832,7 @@
             const password = defaultPasswordFor(newId);
             if (!confirm('Accepter ' + r.name + ' ?\nIdentifiant : ' + newId + '\nMot de passe par défaut : ' + password + '\n(il devra le changer à sa première connexion)')) return;
             const member = { id: newId, name: r.name, phone: r.phone, epargne: 0, credits: [], history: [], socialSince: todayISO() };
+            if (r.groupId && typeof grpGroups !== 'undefined' && grpGroups.some(g => g.id === r.groupId && g.status !== 'suspendu')) member.groupId = r.groupId;
             let access;
             try { access = await provisionAccess(member.id, password, null); }
             catch (err) { box.className = 'alert alert-error'; box.textContent = "Création de l'accès impossible : " + authErrorMessage(err); return; }
@@ -3159,6 +3177,7 @@
             const mine = (m.collectes || []).slice().reverse();
             const social = detailCard('fa-hand-holding-heart', 'Cas sociaux',
                 kv('Cotisation hebdomadaire', fmt(socialWeekly, 'FC') + ' / semaine') +
+                (m.groupId ? kv('Groupe', escapeHtml((typeof grpName === 'function' && grpName(m.groupId)) || m.groupId)) : '') +
                 kv('Semaines payées / dues', socialPaidWeeks(m) + ' / ' + socialDueWeeks(m)) +
                 kv('Total cotisé (hebdomadaire)', fmt(socialPaidTotal(m), 'FC')) +
                 kv('Situation', arrearsText(m)) +
@@ -3779,16 +3798,17 @@
             if (name === 'inscriptions') { name = 'membres'; showMemberSub('inscriptions'); }
             // Équipe et Journal : réservés à l'accès total (en ligne)
             if ((name === 'equipe' || name === 'journal') && (!CLOUD || !currentUser || currentUser.level !== 'total')) name = 'dashboard';
-            if ((name === 'boutique' || name === 'pub') && !CLOUD) name = 'dashboard';
+            if ((name === 'boutique' || name === 'pub' || name === 'groupes') && !CLOUD) name = 'dashboard';
             currentTab = name;
             if (name === 'galerie') { try { renderGallery(); } catch (e) {} }
             if (name === 'boutique' && typeof bqRenderAdmin === 'function') bqRenderAdmin();
             syncHeaderHeight();
             labelTables();
-            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'boutique', 'pub', 'equipe', 'journal'].forEach(t => {
+            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'boutique', 'pub', 'groupes', 'equipe', 'journal'].forEach(t => {
                 setHidden('panel-' + t, t !== name);
             });
             if (name === 'pub' && typeof pubRenderAdmin === 'function') pubRenderAdmin();
+            if (name === 'groupes' && typeof grpRenderAdmin === 'function') grpRenderAdmin();
             if (document.querySelectorAll) {
                 document.querySelectorAll('.dtab').forEach(b => {
                     if (typeof b.getAttribute !== 'function') return;
@@ -4443,7 +4463,7 @@
         // ---------- Rapport PDF : page de rapport mise en forme, enregistrée en PDF par la fenêtre d'impression ----------
         async function preparePdfLib() {
             await loadScriptOnce('vendor/pdf-lib.min.js?v=1171');
-            await loadScriptOnce('functions/report.js?v=20261050');
+            await loadScriptOnce('functions/report.js?v=20261100');
             if (!window.PDFLib || !window.AvecPdf) throw new Error('bibliothèque PDF non chargée');
         }
         function savePdfFile(bytes, fileName) {
@@ -4457,7 +4477,7 @@
             if (!requireAdmin()) return;
             try {
                 await preparePdfLib();
-                const r = await AvecPdf.buildPdf(PDFLib, { members: members, requests: requests, claims: claims, weekly: (typeof socialWeekly !== 'undefined' ? socialWeekly : 1000), org: orgName(), logo: orgLogo(), current: true, now: new Date() });
+                const r = await AvecPdf.buildPdf(PDFLib, { members: members, requests: requests, claims: claims, groups: (typeof grpGroups !== 'undefined' ? grpGroups : []), weekly: (typeof socialWeekly !== 'undefined' ? socialWeekly : 1000), org: orgName(), logo: orgLogo(), current: true, now: new Date() });
                 savePdfFile(r.bytes, 'rapport-' + todayISO() + '.pdf');
                 logActivity('Rapport PDF téléchargé');
             } catch (err) {
@@ -4710,7 +4730,8 @@
             const user = currentUser;
             const must = !!(user && user.mustChange);
             const tab = must ? 'compte' : currentMTab;
-            ['accueil', 'credits', 'demandes', 'reclamations', 'boutique', 'expo'].forEach(t => setHidden('mp-' + t, must || t !== tab));
+            ['accueil', 'credits', 'demandes', 'reclamations', 'boutique', 'expo', 'groupe'].forEach(t => setHidden('mp-' + t, must || t !== tab));
+            if (tab === 'groupe' && !must && typeof grpShowMember === 'function') grpShowMember();
             if (tab === 'expo' && !must && typeof pubShowMember === 'function') pubShowMember();
             if (tab === 'boutique' && !must && typeof bqRenderMember === 'function') bqRenderMember();
             setHidden('mp-compte', tab !== 'compte');
@@ -4741,6 +4762,7 @@
             const today = todayISO();
 
             document.getElementById('memberUserDisplay').textContent = m.name + ' (' + m.id + ')';
+            if (typeof grpOnMemberRender === 'function') grpOnMemberRender(m);
             document.getElementById('memberWelcome').textContent = 'Bonjour ' + m.name + ', voici votre situation.';
             const rw = document.getElementById('ruleWeekly'); if (rw) rw.textContent = fmt(socialWeekly, 'FC');
             setHidden('memberPwdNotice', !must);
@@ -5292,6 +5314,7 @@
         // ---------- Démarrage ----------
         window.onload = function () {
             if (SIGNUP_MODE) {   // lien d'inscription : on n'affiche que le formulaire public
+                if (typeof grpSignupInit === 'function') grpSignupInit();
                 setHidden('authSection', true);
                 setHidden('signupSection', false);
                 document.getElementById('su_avatar').innerHTML = avatarHtml({ id: 'X', name: '?' }, 72);
@@ -5319,6 +5342,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261090"></script>
+<script src="groups.js?v=20261101"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>

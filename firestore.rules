@@ -165,7 +165,8 @@ service cloud.firestore {
     // Inscriptions : n'importe qui (sans connexion) peut DÉPOSER une demande, avec des champs limités ;
     // seule l'équipe peut les lire, les accepter ou les refuser. L'administrateur seul peut les supprimer.
     match /registrations/{rid} {
-      allow create: if request.resource.data.keys().hasOnly(['id', 'date', 'status', 'name', 'phone', 'address', 'birth', 'profession', 'email', 'kinName', 'kinPhone', 'note', 'photo'])
+      allow create: if request.resource.data.keys().hasOnly(['id', 'date', 'status', 'name', 'phone', 'address', 'birth', 'profession', 'email', 'kinName', 'kinPhone', 'note', 'photo', 'groupId'])
+        && (!('groupId' in request.resource.data) || (request.resource.data.groupId is string && request.resource.data.groupId.size() <= 20 && exists(/databases/$(database)/documents/groups/$(request.resource.data.groupId))))
         && request.resource.data.keys().hasAll(['id', 'date', 'status', 'name', 'phone'])
         && request.resource.data.id == rid
         && rid.size() <= 40
@@ -234,7 +235,8 @@ service cloud.firestore {
 
     // Fiche du membre : épargne, crédits, historique.
     match /members/{memberId} {
-      allow read: if isStaff() || (hasProfile() && myMemberId() == memberId);
+      allow read: if isStaff() || (hasProfile() && myMemberId() == memberId)
+        || (hasProfile() && resource.data.get('groupId', '') == myMemberId() && exists(/databases/$(database)/documents/groups/$(myMemberId())));   // le chef de groupe lit les fiches de son groupe
       allow create: if isStaff();
       allow update: if isAdmin() || (isStaff() && nothingRemoved());
       allow delete: if isAdmin();
@@ -359,6 +361,45 @@ service cloud.firestore {
     }
 
     // Commandes : créées par l'acheteur ; le vendeur accepte ou refuse ; l'équipe conclut (c'est elle qui déplace l'argent).
+    // Sous-groupes : un groupe = un chef de groupe (un membre) ; l'identifiant du groupe est celui de son chef.
+    // L'équipe crée, modifie et dissout les groupes ; le nom du groupe se lit à l'unité (page d'inscription du groupe).
+    match /groups/{groupId} {
+      allow get: if true;
+      allow list: if isStaff();
+      allow create, update: if isStaff()
+        && request.resource.data.keys().hasOnly(['id', 'name', 'leaderId', 'leaderName', 'status', 'date', 'by'])
+        && request.resource.data.id == groupId
+        && request.resource.data.leaderId == groupId
+        && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 60
+        && request.resource.data.leaderName is string && request.resource.data.leaderName.size() <= 80
+        && request.resource.data.status in ['actif', 'suspendu']
+        && request.resource.data.date is string && request.resource.data.by is string
+        && exists(/databases/$(database)/documents/members/$(groupId));
+      allow delete: if isAdmin();
+    }
+    // Opérations proposées par un chef de groupe pour un membre de son groupe : l'argent ne bouge qu'à la validation par l'équipe
+    match /groupOps/{opId} {
+      allow read: if isStaff() || (hasProfile() && resource.data.groupId == myMemberId());
+      allow create: if hasProfile()
+        && request.resource.data.keys().hasOnly(['id', 'groupId', 'memberId', 'memberName', 'leaderName', 'type', 'amount', 'devise', 'creditId', 'note', 'status', 'date'])
+        && request.resource.data.id == opId
+        && request.resource.data.groupId == myMemberId()
+        && exists(/databases/$(database)/documents/groups/$(myMemberId()))
+        && get(/databases/$(database)/documents/members/$(request.resource.data.memberId)).data.get('groupId', '') == myMemberId()
+        && request.resource.data.type in ['epargne', 'remboursement']
+        && request.resource.data.amount is number && request.resource.data.amount > 0 && request.resource.data.amount <= 100000000
+        && request.resource.data.devise in ['USD', 'FC']
+        && request.resource.data.creditId is string && request.resource.data.creditId.size() <= 60
+        && request.resource.data.note is string && request.resource.data.note.size() <= 200
+        && request.resource.data.memberName is string && request.resource.data.memberName.size() <= 80
+        && request.resource.data.leaderName is string && request.resource.data.leaderName.size() <= 80
+        && request.resource.data.status == 'à valider';
+      allow update: if isStaff()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decidedBy', 'decidedAt', 'decisionNote'])
+        && request.resource.data.status in ['validée', 'refusée'];
+      allow delete: if isAdmin() || (hasProfile() && resource.data.groupId == myMemberId() && resource.data.status == 'à valider');
+    }
+
     // Exposition : publications de l'équipe (photos, liens vidéo / documents), « j'aime » et commentaires des membres
     match /posts/{postId} {
       allow read: if isStaff() || (hasProfile() && resource.data.status == 'publié');

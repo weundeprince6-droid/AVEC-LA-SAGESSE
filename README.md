@@ -76,3 +76,9 @@ Chaque membre peut ouvrir une boutique (onglet « Boutique » de son espace), pu
 - Sans Firebase Storage (formule gratuite) : 3 photos par publication (réduites automatiquement), vidéo = lien (YouTube intégré dans la page), document = lien ou PDF de 350 Ko maximum.
 - Données : collections `posts`, `postLikes`, `postComments` (règles à republier dans `firestore.rules`). Cloud uniquement.
 - **Commentaires par photo** : en ouvrant une photo en grand, chaque membre peut la commenter à part (champ `photo` 0 à 2 dans `postComments`) ; un compteur apparaît sur la photo et la liste générale indique « Photo n ». Republier `firestore.rules`.
+
+## Phase 2 : sous-groupes et chefs de groupe
+- **Onglet « Groupes »** (équipe) : on crée un groupe en choisissant un membre comme chef (l'identifiant du groupe est celui du chef), on affecte ou retire des membres, on suspend ou dissout un groupe (dissolution : accès total). Totaux par groupe (membres, épargne, crédits, retards) et section « Sous-groupes » dans le rapport PDF.
+- **Chef de groupe** : un onglet « Mon groupe » apparaît dans son espace. Il voit les fiches de son groupe, **propose** des versements ou remboursements (rien ne bouge sans validation de l'équipe : bouton Valider / Refuser, enregistré dans le journal) et partage un **lien d'inscription propre** (`?inscription&g=<identifiant du chef>`) ; la demande arrive à l'équipe, qui l'accepte : le nouveau membre entre dans le groupe.
+- Les membres restent dans la caisse commune de l'organisation. Le membre d'un groupe voit le nom du groupe et de son chef sous son titre.
+- Données : collections `groups` et `groupOps`, champ `groupId` sur la fiche membre et sur la demande d'inscription. **Republier `firestore.rules`.** Cloud uniquement.

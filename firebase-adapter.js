@@ -318,6 +318,29 @@ window.FB_READY = (async () => {
             return () => stops.forEach(s => s());
         },
 
+        // ----- Sous-groupes : groupes, fiches du groupe du chef, opérations proposées -----
+        listenGroupsAdmin(h, onError) {
+            const stops = [];
+            stops.push(onSnapshot(collection(db, 'groups'), snap => h.groups(snap.docs.map(withId)), err => onError(err)));
+            stops.push(onSnapshot(collection(db, 'groupOps'), snap => h.ops(snap.docs.map(withId)), err => onError(err)));
+            return () => stops.forEach(s => s());
+        },
+        // Chef de groupe : son groupe (document groups/<son id>, absent s'il n'est pas chef), les fiches de son groupe et ses propositions
+        listenGroupsLeader(memberId, h, onError) {
+            const stops = [];
+            stops.push(onSnapshot(doc(db, 'groups', memberId), s => h.group(s.exists() ? withId(s) : null), err => onError(err)));
+            stops.push(onSnapshot(query(collection(db, 'members'), where('groupId', '==', memberId)), snap => h.gmembers(snap.docs.map(withId)), err => { h.gmembers([]); }));
+            stops.push(onSnapshot(query(collection(db, 'groupOps'), where('groupId', '==', memberId)), snap => h.ops(snap.docs.map(withId)), err => { h.ops([]); }));
+            return () => stops.forEach(s => s());
+        },
+        listenGroupDoc(groupId, cb, onError) {
+            return onSnapshot(doc(db, 'groups', groupId), s => cb(s.exists() ? withId(s) : null), err => onError(err));
+        },
+        async getGroup(groupId) {
+            const s = await getDoc(doc(db, 'groups', groupId));
+            return s.exists() ? withId(s) : null;
+        },
+
         // ----- Exposition : publications, « j'aime » et commentaires -----
         listenPubs(admin, h, onError) {
             const stops = [];

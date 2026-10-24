@@ -201,6 +201,17 @@ function buildPdf(PDFLib, input) {
     table([{ h: 'Date', w: 1.3, a: 'c' }, { h: 'Membre', w: 3 }, { h: 'Objet', w: 3 }, { h: 'Message', w: 6 }],
       claims.filter(c => c.status !== 'traitée').map(c => [frDate(c.date), nm(c.memberId), c.subject || '', c.message || '']), { empty: 'Aucune réclamation ouverte.', title: 'Points à traiter' });
 
+    // ---------- Sous-groupes ----------
+    const groups = input.groups || [];
+    if (groups.length) {
+      ensure(160, 'Sous-groupes'); if (y < H - M - 60) { newPage(); banner('Sous-groupes', monthLabel); }
+      section('Sous-groupes (' + groups.length + ')');
+      const gl = groups.map(g => ({ g, list: members.filter(m => m.groupId === g.id) }));
+      table([{ h: 'Groupe', w: 3 }, { h: 'Chef de groupe', w: 3 }, { h: 'Membres', w: 1.2, a: 'r' }, { h: 'Épargne ($)', w: 1.8, a: 'r' }, { h: 'Épargne (FC)', w: 2, a: 'r' }, { h: 'Crédit ($)', w: 1.8, a: 'r' }, { h: 'Crédit (FC)', w: 2, a: 'r' }],
+        gl.map(x => [x.g.name, x.g.leaderName || x.g.id, x.list.length, fmt(sum(x.list, m => sav(m, 'USD')), 'USD'), fmt(sum(x.list, m => sav(m, 'FC')), 'FC'), fmt(sum(x.list, m => outstanding(m, 'USD')), 'USD'), fmt(sum(x.list, m => outstanding(m, 'FC')), 'FC')]),
+        { title: 'Sous-groupes' });
+    }
+
     // pied de page sur chaque page
     pages.forEach((p, i) => {
       p.drawText(safe(ORG + ' · Rapport mensuel · ' + monthLabel), { x: M, y: 16, size: 7.5, font: F, color: col(C.grey) });
