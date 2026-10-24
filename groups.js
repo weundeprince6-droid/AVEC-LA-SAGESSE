@@ -23,10 +23,10 @@ const grpOnLeader = {
     gclaims: l => { grpClaims = l; grpRefresh(); },
     ops: l => { grpOps = l; grpRefresh(); }
 };
-function grpIsAdmin() { return !!currentUser && isAdmin(currentUser); }
+function grpIsAdmin() { return !!currentUser && isAdmin(currentUser) && !currentUser.leader; }
 function grpRefresh() {
     if (!currentUser) return;
-    if (grpIsAdmin()) { grpRenderAdmin(); grpAdminBadge(); } else { renderGrpInfo(); grpRenderMember(); }
+    if (grpIsAdmin()) { grpRenderAdmin(); grpAdminBadge(); } else if (currentUser.leader) { renderGrpInfo(); } else { renderGrpInfo(); grpRenderMember(); }
 }
 // Un membre non chef regarde le groupe auquel il appartient (nom du groupe et du chef)
 function grpOnMemberRender(m) {
@@ -226,6 +226,7 @@ function grpRenderMember() {
     let h = '<section class="card"><div class="card-header"><i class="fa-solid fa-people-group"></i><h3>' + E(grpMine.name) + '</h3></div>' +
         (suspended ? '<div class="alert alert-error" style="margin-bottom:10px;">Ce groupe est suspendu par l\'équipe : vous ne pouvez pas enregistrer d\'opérations pour le moment.</div>' : '') +
         '<div style="display:flex;gap:18px;flex-wrap:wrap;font-size:0.92rem;"><span><strong>' + s.n + '</strong> membre(s)</span><span>Épargne : <strong>' + grpMoney(s.sUSD, 'USD') + '</strong> · <strong>' + grpMoney(s.sFC, 'FC') + '</strong></span><span>Crédits en cours : <strong>' + grpMoney(s.cUSD, 'USD') + '</strong> · <strong>' + grpMoney(s.cFC, 'FC') + '</strong></span>' + (s.late ? '<span style="color:#b91c1c;"><strong>' + s.late + '</strong> crédit(s) en retard</span>' : '') + '</div></section>';
+    h = '<section class="card" style="background:#eff6ff;border-color:#bfdbfe;"><p style="margin-bottom:10px;font-size:0.92rem;">Vous avez accès aux <strong>mêmes onglets que l\'équipe</strong> (tableau de bord, membres, opérations, demandes, réclamations…), limités aux membres de votre groupe.</p>' + (suspended ? '' : '<button type="button" class="btn" style="width:auto;" onclick="grpEnterManage()"><i class="fa-solid fa-table-columns"></i> Ouvrir mon espace de gestion</button>') + '</section>' + h;
     h += '<section class="card"><div class="card-header"><i class="fa-solid fa-user-plus"></i><h3>Faire entrer de nouveaux membres</h3></div>' +
         '<p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;">Envoyez ce lien à la personne : elle remplit sa demande d\'inscription ; l\'équipe la vérifie, l\'accepte et la place dans votre groupe.</p>' +
         '<input type="text" readonly value="' + E(grpInviteLink()) + '" onclick="this.select()" style="margin-bottom:8px;">' +
@@ -393,4 +394,44 @@ async function grpExportPdf(gid) {
         savePdfFile(r.bytes, r.fileName);
         if (admin) logActivity('Rapport PDF du groupe « ' + grp.name + ' » téléchargé');
     } catch (err) { console.error(err); alert('Le rapport du groupe n\'a pas pu être créé : ' + errText(err) + '\n(Connexion internet ? Actualisez la page avec Ctrl+F5.)'); }
+}
+
+// =================== Espace de gestion du chef de groupe ===================
+// Le chef retrouve les onglets de l'équipe (tableau de bord, membres, opérations, demandes, réclamations, galerie des membres),
+// mais ils ne contiennent QUE les membres de son groupe. La base de données applique la même limite.
+let grpLeaderBackup = null;
+function grpSetLeaderUi(on) {
+    document.body.classList.toggle('leader-mode', !!on);
+    setHidden('btnLeaderBack', !on);
+}
+function grpEnterManage() {
+    if (!grpMine || !CLOUD || !F() || !F().listenLeaderData || !currentUser || currentUser.role !== 'member') return;
+    if (grpMine.status === 'suspendu') { alert('Votre groupe est suspendu par l\'équipe.'); return; }
+    const me = currentUser, gid = grpMine.id;
+    grpLeaderBackup = me;
+    if (stopListening) { stopListening(); stopListening = null; }
+    resetCloudState();
+    currentUser = { username: me.memberId, role: 'admin', level: 'chef', poste: 'Chef de groupe', leader: true, groupId: gid, memberId: me.memberId, uid: me.uid, root: false };
+    try { ['adminProfileBox', 'admPwdResultBox', 'weeklyInput'].forEach(id => { const el = document.getElementById(id), sec = el && el.closest('section'); if (sec) sec.classList.add('lm-hide'); }); } catch (e) {}
+    grpSetLeaderUi(true);
+    setHidden('memberSection', true);
+    setHidden('dashboardSection', false);
+    document.getElementById('currentUserDisplay').textContent = (me.username || me.memberId) + ' · Chef de groupe';
+    setHidden('btnExportXlsx', true);
+    showTab('dashboard');
+    updateDashboard();
+    setSync('connecting');
+    startListening();
+}
+function grpLeaveManage() {
+    if (!grpLeaderBackup) return;
+    if (stopListening) { stopListening(); stopListening = null; }
+    resetCloudState();
+    currentUser = grpLeaderBackup; grpLeaderBackup = null;
+    grpSetLeaderUi(false);
+    setHidden('dashboardSection', true);
+    setHidden('memberSection', false);
+    setSync('connecting');
+    startListening();
+    renderMemberPortal();
 }

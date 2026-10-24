@@ -73,12 +73,19 @@ service cloud.firestore {
       return leaderActive() && data.get('groupId', '') == myMemberId() && data.get('groupId', '') != '';
     }
 
+    // Le chef peut agir sur la fiche (ou le futur compte) d'un membre de son groupe, ou d'un identifiant encore libre
+    function leaderMayManage(memberId) {
+      return leaderActive() && (
+        !exists(/databases/$(database)/documents/members/$(memberId))
+        || get(/databases/$(database)/documents/members/$(memberId)).data.get('groupId', '') == myMemberId());
+    }
+
     // Numéro de version du compte d'un membre (permet de réinitialiser son mot de passe).
     // Lecture d'un seul document autorisée avant connexion ; pas de liste.
     match /loginIndex/{memberId} {
       allow get: if true;
       allow list: if false;
-      allow create, update, delete: if isStaff();
+      allow create, update, delete: if isStaff() || leaderMayManage(memberId);
     }
 
     // Équipe : qui a un poste ou l'accès total. Géré par les administrateurs.
@@ -155,8 +162,8 @@ service cloud.firestore {
       return v is string && v.size() <= n;
     }
     match /memberProfiles/{profileId} {
-      allow read: if isStaff() || (hasProfile() && myMemberId() == profileId);
-      allow create, update: if ((hasProfile() && myMemberId() == profileId) || isAdmin())
+      allow read: if isStaff() || (hasProfile() && myMemberId() == profileId) || leaderMayManage(profileId);
+      allow create, update: if ((hasProfile() && myMemberId() == profileId) || isAdmin() || leaderMayManage(profileId))
         && request.resource.data.keys().hasOnly(['memberId', 'address', 'birth', 'profession', 'email', 'kinName', 'kinPhone', 'note', 'photo', 'updatedAt'])
         && request.resource.data.memberId == profileId
         && okText(request.resource.data.get('address', ''), 120)
@@ -194,8 +201,8 @@ service cloud.firestore {
         && (!('photo' in request.resource.data) || (request.resource.data.photo is string
             && request.resource.data.photo.size() <= 60000
             && request.resource.data.photo.matches('^data:image/jpeg;base64,.*')));
-      allow read: if isStaff();
-      allow update: if isStaff()
+      allow read: if isStaff() || (leaderActive() && resource.data.get('groupId', '') == myMemberId());
+      allow update: if (isStaff() || (leaderActive() && resource.data.get('groupId', '') == myMemberId()))
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'memberId', 'decidedBy', 'decidedAt'])
         && request.resource.data.status in ['accepted', 'refused'];
       allow delete: if isAdmin();
@@ -234,9 +241,11 @@ service cloud.firestore {
 
     // Lien entre un compte de connexion et un membre.
     match /profiles/{uid} {
-      allow read: if isStaff() || (signedIn() && request.auth.uid == uid);
-      allow create, delete: if isStaff();
-      allow update: if isStaff() || (
+      allow read: if isStaff() || (signedIn() && request.auth.uid == uid)
+        || (leaderActive() && exists(/databases/$(database)/documents/members/$(resource.data.memberId)) && leaderMayManage(resource.data.memberId));
+      allow create: if isStaff() || (leaderActive() && leaderMayManage(request.resource.data.memberId) && request.resource.data.keys().hasOnly(['memberId', 'mustChange']));
+      allow delete: if isStaff() || (leaderActive() && leaderMayManage(resource.data.memberId));
+      allow update: if isStaff() || (leaderActive() && leaderMayManage(resource.data.memberId) && request.resource.data.memberId == resource.data.memberId) || (
         signedIn() && request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChange'])
         && request.resource.data.mustChange == false
@@ -247,7 +256,7 @@ service cloud.firestore {
     match /members/{memberId} {
       allow read: if isStaff() || (hasProfile() && myMemberId() == memberId)
         || (hasProfile() && resource.data.get('groupId', '') == myMemberId() && exists(/databases/$(database)/documents/groups/$(myMemberId())));   // le chef de groupe lit les fiches de son groupe
-      allow create: if isStaff();
+      allow create: if isStaff() || (leaderActive() && request.resource.data.get('groupId', '') == myMemberId());
       allow update: if isAdmin() || (isStaff() && nothingRemoved())
         || (leaderOwns(resource.data) && request.resource.data.get('groupId', '') == resource.data.get('groupId', '') && nothingRemoved());
       allow delete: if isAdmin();

@@ -98,3 +98,10 @@ Chaque membre peut ouvrir une boutique (onglet « Boutique » de son espace), pu
 Le chef de groupe n'a plus à faire valider ses opérations : sur les membres de **son** groupe uniquement, il enregistre directement versements d'épargne, retraits, octrois de crédit et remboursements, accepte ou refuse leurs demandes de crédit/retrait et répond à leurs réclamations (comme un poste de l'équipe : il corrige et saisit, mais ne supprime rien). Les opérations sont signées dans l'historique de la fiche (« Par le chef de groupe … »). Un groupe suspendu ne peut plus rien enregistrer.
 - Nécessite de **republier `firestore.rules`**. Les demandes/réclamations créées à partir de maintenant portent l'identifiant du groupe (`groupId`) ; celles d'avant restent traitées par l'équipe.
 - L'inscription de nouvelles personnes reste validée par l'équipe.
+
+## Espace de gestion du chef de groupe
+
+Dans « Mon groupe », le bouton **Ouvrir mon espace de gestion** donne au chef les onglets de l'équipe : Tableau de bord, Membres (avec inscriptions de son groupe, ajout de membres, accès), Opérations & cas sociaux, Demandes & réclamations, Galerie des membres, rapport PDF. Tout est limité aux membres de son groupe (la base de données applique la même limite). Comme un poste, il ne supprime rien. Le bouton « Mon espace membre » le ramène à son espace personnel.
+Non accessibles au chef : Équipe, Boutique, Annonces & journal, Exposition, Excel, identité de l'organisation, groupes.
+Les nouveaux membres créés par un chef reçoivent un numéro `MBR-xxxxxx` tiré au hasard (il ne voit pas les autres groupes, donc pas de numérotation continue).
+Nécessite de republier `firestore.rules`.

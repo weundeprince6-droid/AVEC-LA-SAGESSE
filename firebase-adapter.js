@@ -371,6 +371,23 @@ window.FB_READY = (async () => {
                 onSnapshot(collection(db, n), snap => h[n](snap.docs.map(withId)), err => h.error(err)));
             return () => stops.forEach(s => s());
         },
+        // Un chef de groupe suit uniquement les fiches, demandes et réclamations des membres de son groupe
+        listenLeaderData(gid, h) {
+            const stops = [
+                onSnapshot(query(collection(db, 'members'), where('groupId', '==', gid)), snap => h.members(snap.docs.map(withId)), err => h.error(err)),
+                onSnapshot(query(collection(db, 'claims'), where('groupId', '==', gid)), snap => h.claims(snap.docs.map(withId)), err => h.error(err)),
+                onSnapshot(query(collection(db, 'requests'), where('groupId', '==', gid)), snap => h.requests(snap.docs.map(withId)), err => h.error(err))
+            ];
+            return () => stops.forEach(s => s());
+        },
+        listenRegistrationsGroup(gid, cb, onError) {
+            return onSnapshot(query(collection(db, 'registrations'), where('groupId', '==', gid)), snap => cb(snap.docs.map(d => Object.assign({}, d.data(), { id: d.id }))), err => onError(err));
+        },
+        // Profils (photo, adresse…) des membres d'un groupe : un document par membre
+        listenProfilesOf(ids, cb, onError) {
+            const map = {}, stops = ids.map(id => onSnapshot(doc(db, 'memberProfiles', id), s => { if (s.exists()) map[id] = s.data(); else delete map[id]; cb(Object.assign({}, map)); }, err => onError(err)));
+            return () => stops.forEach(s => s());
+        },
         // Un membre ne suit que ses propres données
         listenMember(memberId, h) {
             const s1 = onSnapshot(doc(db, 'members', memberId),

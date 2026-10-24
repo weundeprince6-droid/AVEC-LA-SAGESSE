@@ -196,6 +196,7 @@
         .kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; width: 100%; padding: 4px 0; border-bottom: 1px dashed var(--border); font-size: 0.9rem; }
         .kv span:first-child { color: var(--text-muted); }
         .kv span:last-child { text-align: right; font-weight: 600; word-break: break-word; }
+        body.leader-mode .lm-hide, body.leader-mode .dtab[data-tab="equipe"], body.leader-mode .dtab[data-tab="boutique"], body.leader-mode .dtab[data-tab="annonces"] { display: none !important; }
         .dtabs { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; overflow-x: hidden; max-width: 100%; position: sticky; top: var(--hdr-h, 0px); z-index: 40; background: var(--bg-main); padding-top: 4px; }
         .dtab { flex: 0 1 auto; max-width: 100%; padding: 10px 12px; border: none; background: none; font-weight: 600; font-size: 0.92rem; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; white-space: normal; text-align: center; line-height: 1.2; }
         .dtab.active { color: var(--primary); border-bottom-color: var(--primary); }
@@ -440,6 +441,7 @@
                         <option value="60">🔒 1 h</option>
                     </select>
                     <span><i class="fa-solid fa-circle-user"></i> <strong id="currentUserDisplay">Utilisateur</strong></span>
+                    <button class="btn-small hidden" id="btnLeaderBack" onclick="grpLeaveManage()" title="Revenir à mon espace de membre"><i class="fa-solid fa-user"></i> Mon espace membre</button>
                     <button class="btn-logout" onclick="logout()" title="Se déconnecter"><i class="fa-solid fa-power-off"></i></button>
                 </div>
             </div>
@@ -1502,7 +1504,7 @@
     </div>
 
     <script src="firebase-config.js"></script>
-    <script type="module" src="firebase-adapter.js?v=20261112"></script>
+    <script type="module" src="firebase-adapter.js?v=20261113"></script>
     <script>
         // ---------- Utilitaires ----------
 
@@ -1714,7 +1716,7 @@
 
         // Journal d'activité (en ligne) : qui a fait quoi, visible par l'administrateur
         function logActivity(text, memberId) {
-            if (!CLOUD || !F() || !currentUser || !isAdmin(currentUser)) return;
+            if (!CLOUD || !F() || !currentUser || !isAdmin(currentUser) || currentUser.leader) return;
             const entry = {
                 id: 'A-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8),
                 date: new Date().toISOString(),
@@ -1757,6 +1759,13 @@
             } catch (e) { /* sans importance */ }
         }
         function nextMemberId() {
+            // Chef de groupe : il ne voit que ses membres, donc un numéro choisi au hasard évite tout doublon avec les autres groupes
+            if (currentUser && currentUser.leader) {
+                for (let i = 0; i < 50; i++) {
+                    const id = 'MBR-' + (100000 + Math.floor(Math.random() * 900000));
+                    if (!members.some(m => m.id === id)) return id;
+                }
+            }
             let max = 0;
             members.forEach(m => {
                 const n = parseInt(String(m.id).replace(/\D/g, ''), 10);
@@ -1856,7 +1865,7 @@
             setSync('online');
             if (!currentUser) return;
             if (isAdmin(currentUser)) {
-                if (name === 'members') { normalizeMembers(); maybeImportLocal(); if (typeof bqBackfill === 'function') bqBackfill(); }
+                if (name === 'members') { normalizeMembers(); leaderWatchProfiles(); maybeImportLocal(); if (typeof bqBackfill === 'function') bqBackfill(); }
                 updateDashboard();
             } else {
                 renderMemberPortal();
@@ -1881,31 +1890,45 @@
                 requests: a => { requests = a; syncSnapshot('requests'); },
                 error: onSyncError
             };
-            const stopData = isAdmin(currentUser) ? F().listenAdmin(h) : F().listenMember(currentUser.memberId, h);
+            const leader = !!currentUser.leader;
+            const stopData = leader ? F().listenLeaderData(currentUser.groupId, h) : (isAdmin(currentUser) ? F().listenAdmin(h) : F().listenMember(currentUser.memberId, h));
             const stopAnn = F().listenAnnouncements(list => { announcements = list; renderAnnouncements(); }, err => { /* sans gravité */ });
             const stopSet = F().listenSettings(d => applyWeekly(d && d.weekly), err => { /* sans gravité */ });
             const onProfiles = map => { memberProfiles = map || {}; if (!currentUser) return; if (isAdmin(currentUser)) updateDashboard(); else renderMemberPortal(); };
-            const stopProf = isAdmin(currentUser)
+            const stopProf = leader ? (() => { leaderProfIds = ''; return () => { if (leaderProfStop) { leaderProfStop(); leaderProfStop = null; } }; })() : isAdmin(currentUser)
                 ? F().listenMemberProfiles(onProfiles, err => { /* sans gravité */ })
                 : F().listenMyProfile(currentUser.memberId, onProfiles, err => { /* sans gravité */ });
             let stopReg = () => {};
-            if (isAdmin(currentUser) && F().listenRegistrations) stopReg = F().listenRegistrations(list => { registrations = list || []; renderRegistrations(); }, err => { /* sans gravité */ });
+            if (leader && F().listenRegistrationsGroup) stopReg = F().listenRegistrationsGroup(currentUser.groupId, list => { registrations = list || []; renderRegistrations(); }, err => { /* sans gravité */ });
+            else if (isAdmin(currentUser) && F().listenRegistrations) stopReg = F().listenRegistrations(list => { registrations = list || []; renderRegistrations(); }, err => { /* sans gravité */ });
             let stopWa = () => {}, stopWaQ = () => {};
-            if (isAdmin(currentUser) && F().listenWaSettings) {
+            if (isAdmin(currentUser) && !leader && F().listenWaSettings) {
                 stopWa = F().listenWaSettings(d => { waSettings = Object.assign({}, WA_DEFAULTS, d || {}); renderWaSettings(); applyWaMode(); }, err => { /* sans gravité */ });
                 stopWaQ = F().listenWaQueue(list => { waQueue = list || []; renderWaQueue(); }, err => { /* sans gravité */ });
             }
             let stopBq = () => {};
-            if (F().listenBoutique) stopBq = F().listenBoutique(isAdmin(currentUser), currentUser.memberId, bqOnData, err => { /* sans gravité */ });
+            if (F().listenBoutique) stopBq = F().listenBoutique(isAdmin(currentUser) && !leader, currentUser.memberId, bqOnData, err => { /* sans gravité */ });
             let stopPub = () => {};
-            if (F().listenPubs) stopPub = F().listenPubs(isAdmin(currentUser), pubOnData, err => { /* sans gravité */ });
+            if (F().listenPubs) stopPub = F().listenPubs(isAdmin(currentUser) && !leader, pubOnData, err => { /* sans gravité */ });
             let stopGrp = () => {};
-            if (isAdmin(currentUser)) { if (F().listenGroupsAdmin) stopGrp = F().listenGroupsAdmin(grpOnAdmin, err => { /* sans gravité */ }); }
+            if (isAdmin(currentUser) && !leader) { if (F().listenGroupsAdmin) stopGrp = F().listenGroupsAdmin(grpOnAdmin, err => { /* sans gravité */ }); }
             else if (F().listenGroupsLeader) stopGrp = F().listenGroupsLeader(currentUser.memberId, grpOnLeader, err => { /* sans gravité */ });
             stopListening = () => { stopData(); stopAnn(); stopSet(); stopProf(); stopReg(); stopWa(); stopWaQ(); stopBq(); stopPub(); stopGrp(); };
         }
 
+        // Chef de groupe en espace de gestion : suit les profils (photos…) des membres de son groupe
+        let leaderProfIds = '', leaderProfStop = null;
+        function leaderWatchProfiles() {
+            if (!currentUser || !currentUser.leader || !F() || !F().listenProfilesOf) return;
+            const ids = members.map(m => m.id).sort().join(',');
+            if (ids === leaderProfIds) return;
+            leaderProfIds = ids;
+            if (leaderProfStop) { leaderProfStop(); leaderProfStop = null; }
+            if (!ids) { memberProfiles = {}; return; }
+            leaderProfStop = F().listenProfilesOf(ids.split(','), map => { memberProfiles = map || {}; if (currentUser && currentUser.leader) updateDashboard(); }, err => { /* sans gravité */ });
+        }
         function resetCloudState() {
+            if (leaderProfStop) { leaderProfStop(); leaderProfStop = null; } leaderProfIds = '';
             members = []; claims = []; requests = []; announcements = []; registrations = []; if (typeof bqReset === 'function') bqReset(); if (typeof pubReset === 'function') pubReset(); if (typeof grpReset === 'function') grpReset(); waQueue = []; waSettings = Object.assign({}, WA_DEFAULTS); memberProfiles = {}; socialWeekly = SOCIAL_DEFAULT;
             cloudLoaded.members = cloudLoaded.claims = cloudLoaded.requests = false;
             lastSynced.members = {}; lastSynced.claims = {}; lastSynced.requests = {};
@@ -2254,6 +2277,7 @@
 
         function logout() {
             try { currentMTab = 'accueil'; } catch (e) {}
+            try { grpLeaderBackup = null; grpSetLeaderUi(false); } catch (e) {}
             try { localStorage.removeItem('avec_session'); } catch (e) {}
             if (CLOUD) {
                 if (stopListening) { stopListening(); stopListening = null; }
@@ -2305,6 +2329,7 @@
             if (epargne > 0) logOp(member, 'epargne', epargne, 'Épargne initiale');
             if (epargneFC > 0) { member.epargneFC = epargneFC; logOp(member, 'epargne', epargneFC, 'Épargne initiale', 'FC'); }
             member.socialSince = todayISO(); // début de la cotisation hebdomadaire « cas sociaux »
+            if (currentUser.leader) member.groupId = currentUser.groupId;
 
             let access;
             try {
@@ -2831,7 +2856,8 @@
             const password = defaultPasswordFor(newId);
             if (!confirm('Accepter ' + r.name + ' ?\nIdentifiant : ' + newId + '\nMot de passe par défaut : ' + password + '\n(il devra le changer à sa première connexion)')) return;
             const member = { id: newId, name: r.name, phone: r.phone, epargne: 0, credits: [], history: [], socialSince: todayISO() };
-            if (r.groupId && typeof grpGroups !== 'undefined' && grpGroups.some(g => g.id === r.groupId && g.status !== 'suspendu')) member.groupId = r.groupId;
+            if (currentUser.leader) member.groupId = currentUser.groupId;
+            else if (r.groupId && typeof grpGroups !== 'undefined' && grpGroups.some(g => g.id === r.groupId && g.status !== 'suspendu')) member.groupId = r.groupId;
             let access;
             try { access = await provisionAccess(member.id, password, null); }
             catch (err) { box.className = 'alert alert-error'; box.textContent = "Création de l'accès impossible : " + authErrorMessage(err); return; }
@@ -3809,7 +3835,7 @@
         }
         function buildTabBars(name) {
             Object.keys(TAB_GROUPS).forEach(k => {
-                const items = TAB_GROUPS[k].filter(x => !x[3] || (x[3] === 'cloud' ? CLOUD : (CLOUD && !!currentUser && currentUser.level === 'total')));
+                const items = TAB_GROUPS[k].filter(x => !(currentUser && currentUser.leader && (x[0] === 'groupes' || x[0] === 'pub' || x[0] === 'journal')) && (!x[3] || (x[3] === 'cloud' ? CLOUD : (CLOUD && !!currentUser && currentUser.level === 'total'))));
                 TAB_GROUPS[k].forEach(x => {
                     const p = document.getElementById('panel-' + x[0]); if (!p) return;
                     let bar = p.querySelector(':scope > .grpnav');
@@ -3838,6 +3864,7 @@
             // Équipe et Journal : réservés à l'accès total (en ligne)
             if ((name === 'equipe' || name === 'journal') && (!CLOUD || !currentUser || currentUser.level !== 'total')) name = 'dashboard';
             if ((name === 'boutique' || name === 'pub' || name === 'groupes') && !CLOUD) name = 'dashboard';
+            if (currentUser && currentUser.leader && ['boutique', 'pub', 'groupes', 'annonces', 'equipe', 'journal'].indexOf(name) >= 0) name = 'dashboard';
             currentTab = name;
             if (name === 'galerie') { try { renderGallery(); } catch (e) {} }
             if (name === 'boutique' && typeof bqRenderAdmin === 'function') bqRenderAdmin();
@@ -5410,7 +5437,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261111"></script>
-<script src="groups.js?v=20261112"></script>
+<script src="groups.js?v=20261113"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>
