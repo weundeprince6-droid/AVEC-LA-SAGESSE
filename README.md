@@ -92,3 +92,9 @@ Chaque membre peut ouvrir une boutique (onglet « Boutique » de son espace), pu
 - **Excel** (administrateur principal uniquement) : feuilles et structure du classeur protégées par mot de passe ; le filtrage reste possible.
 - Le mot de passe est saisi par l'administrateur principal une fois par session (jamais écrit dans le code ni en ligne). Les autres comptes (membres, chefs de groupe, équipe) reçoivent des fichiers protégés par un mot de passe aléatoire : personne ne peut les modifier.
 - Limite : c'est une protection de « bonne foi » ; des outils spécialisés peuvent contourner ces restrictions. Pour une preuve infalsifiable, comparer avec la référence imprimée sur le document.
+
+## Chef de groupe : mêmes droits qu'un « poste » sur ses membres
+
+Le chef de groupe n'a plus à faire valider ses opérations : sur les membres de **son** groupe uniquement, il enregistre directement versements d'épargne, retraits, octrois de crédit et remboursements, accepte ou refuse leurs demandes de crédit/retrait et répond à leurs réclamations (comme un poste de l'équipe : il corrige et saisit, mais ne supprime rien). Les opérations sont signées dans l'historique de la fiche (« Par le chef de groupe … »). Un groupe suspendu ne peut plus rien enregistrer.
+- Nécessite de **republier `firestore.rules`**. Les demandes/réclamations créées à partir de maintenant portent l'identifiant du groupe (`groupId`) ; celles d'avant restent traitées par l'équipe.
+- L'inscription de nouvelles personnes reste validée par l'équipe.

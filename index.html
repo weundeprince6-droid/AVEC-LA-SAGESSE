@@ -1502,7 +1502,7 @@
     </div>
 
     <script src="firebase-config.js"></script>
-    <script type="module" src="firebase-adapter.js?v=20261060"></script>
+    <script type="module" src="firebase-adapter.js?v=20261112"></script>
     <script>
         // ---------- Utilitaires ----------
 
@@ -4988,7 +4988,7 @@
                     ') dépasse le maximum possible actuellement (' + fmt(max, dev) + ').';
                 return;
             }
-            requests.push({
+            requests.push(Object.assign({
                 id: 'RQ-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
                 memberId: m.id,
                 type: type,
@@ -4999,7 +4999,7 @@
                 status: 'en attente',
                 decision: '',
                 decisionDate: ''
-            });
+            }, m.groupId ? { groupId: m.groupId } : {}));
             store.set('avec_requests', requests);
             e.target.reset();
             box.className = 'alert alert-success';
@@ -5229,7 +5229,7 @@
                 box.textContent = "Vous avez déjà 5 réclamations en attente. Merci d'attendre la réponse de l'administrateur.";
                 return;
             }
-            claims.push({
+            claims.push(Object.assign({
                 id: 'RC-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
                 memberId: user.memberId,
                 date: todayISO(),
@@ -5238,7 +5238,7 @@
                 status: 'ouverte',
                 response: '',
                 responseDate: ''
-            });
+            }, (members.find(x => x.id === user.memberId) || {}).groupId ? { groupId: members.find(x => x.id === user.memberId).groupId } : {}));
             store.set('avec_claims', claims);
             e.target.reset();
             box.className = 'alert alert-success';
@@ -5410,7 +5410,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261111"></script>
-<script src="groups.js?v=20261110"></script>
+<script src="groups.js?v=20261112"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>

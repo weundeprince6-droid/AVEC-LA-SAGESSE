@@ -63,6 +63,16 @@ service cloud.firestore {
       return get(profilePath()).data.memberId;
     }
 
+    // Chef de groupe actif : mêmes droits qu'un « poste » (saisir et corriger, jamais supprimer) sur les fiches,
+    // demandes et réclamations des membres de SON groupe uniquement.
+    function leaderActive() {
+      return hasProfile() && exists(/databases/$(database)/documents/groups/$(myMemberId()))
+        && get(/databases/$(database)/documents/groups/$(myMemberId())).data.status == 'actif';
+    }
+    function leaderOwns(data) {
+      return leaderActive() && data.get('groupId', '') == myMemberId() && data.get('groupId', '') != '';
+    }
+
     // Numéro de version du compte d'un membre (permet de réinitialiser son mot de passe).
     // Lecture d'un seul document autorisée avant connexion ; pas de liste.
     match /loginIndex/{memberId} {
@@ -238,16 +248,18 @@ service cloud.firestore {
       allow read: if isStaff() || (hasProfile() && myMemberId() == memberId)
         || (hasProfile() && resource.data.get('groupId', '') == myMemberId() && exists(/databases/$(database)/documents/groups/$(myMemberId())));   // le chef de groupe lit les fiches de son groupe
       allow create: if isStaff();
-      allow update: if isAdmin() || (isStaff() && nothingRemoved());
+      allow update: if isAdmin() || (isStaff() && nothingRemoved())
+        || (leaderOwns(resource.data) && request.resource.data.get('groupId', '') == resource.data.get('groupId', '') && nothingRemoved());
       allow delete: if isAdmin();
     }
 
     // Réclamations.
     match /claims/{claimId} {
-      allow read: if isStaff() || (hasProfile() && resource.data.memberId == myMemberId());
+      allow read: if isStaff() || (hasProfile() && resource.data.memberId == myMemberId()) || leaderOwns(resource.data);
       allow create: if isStaff() || (
         hasProfile()
-        && request.resource.data.keys().hasOnly(['id', 'memberId', 'date', 'subject', 'message', 'status', 'response', 'responseDate'])
+        && request.resource.data.keys().hasOnly(['id', 'memberId', 'date', 'subject', 'message', 'status', 'response', 'responseDate', 'groupId'])
+        && request.resource.data.get('groupId', '') == get(/databases/$(database)/documents/members/$(myMemberId())).data.get('groupId', '')
         && request.resource.data.id == claimId
         && request.resource.data.memberId == myMemberId()
         && request.resource.data.subject in ['Épargne', 'Crédit', 'Remboursement', 'Autre']
@@ -257,16 +269,18 @@ service cloud.firestore {
         && request.resource.data.status == 'ouverte'
         && request.resource.data.response == ''
       );
-      allow update: if isStaff();
+      allow update: if isStaff() || (leaderOwns(resource.data) && request.resource.data.get('groupId', '') == resource.data.get('groupId', '')
+        && request.resource.data.memberId == resource.data.memberId);
       allow delete: if isAdmin();
     }
 
     // Demandes de crédit / retrait.
     match /requests/{requestId} {
-      allow read: if isStaff() || (hasProfile() && resource.data.memberId == myMemberId());
+      allow read: if isStaff() || (hasProfile() && resource.data.memberId == myMemberId()) || leaderOwns(resource.data);
       allow create: if isStaff() || (
         hasProfile()
-        && request.resource.data.keys().hasOnly(['id', 'memberId', 'type', 'amount', 'devise', 'note', 'date', 'status', 'decision', 'decisionDate'])
+        && request.resource.data.keys().hasOnly(['id', 'memberId', 'type', 'amount', 'devise', 'note', 'date', 'status', 'decision', 'decisionDate', 'groupId'])
+        && request.resource.data.get('groupId', '') == get(/databases/$(database)/documents/members/$(myMemberId())).data.get('groupId', '')
         && request.resource.data.id == requestId
         && request.resource.data.memberId == myMemberId()
         && request.resource.data.type in ['credit', 'retrait']
@@ -279,7 +293,8 @@ service cloud.firestore {
         && request.resource.data.status == 'en attente'
         && request.resource.data.decision == ''
       );
-      allow update: if isStaff();
+      allow update: if isStaff() || (leaderOwns(resource.data) && request.resource.data.get('groupId', '') == resource.data.get('groupId', '')
+        && request.resource.data.memberId == resource.data.memberId);
       allow delete: if isAdmin();
     }
 

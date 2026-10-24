@@ -10,14 +10,17 @@ let grpGroups = [];        // administrateur : tous les groupes
 let grpOps = [];           // administrateur : toutes les propositions ; chef : celles de son groupe
 let grpMine = null;        // chef : son groupe (null si ce membre n'est pas chef)
 let grpMembers = [];       // chef : fiches des membres de son groupe
+let grpReqs = [], grpClaims = []; // chef : demandes et réclamations de ses membres
 let grpMemberGroup = null; // membre : le groupe auquel il appartient (nom, chef)
 let grpWatchedId = '', grpStopDoc = null, grpOpenId = '', grpDraft = {};
 
-function grpReset() { grpGroups = []; grpOps = []; grpMine = null; grpMembers = []; grpMemberGroup = null; grpWatchedId = ''; if (grpStopDoc) { grpStopDoc(); grpStopDoc = null; } grpOpenId = ''; }
+function grpReset() { grpGroups = []; grpOps = []; grpMine = null; grpMembers = []; grpReqs = []; grpClaims = []; grpMemberGroup = null; grpWatchedId = ''; if (grpStopDoc) { grpStopDoc(); grpStopDoc = null; } grpOpenId = ''; }
 const grpOnAdmin = { groups: l => { grpGroups = l; grpRefresh(); }, ops: l => { grpOps = l; grpRefresh(); } };
 const grpOnLeader = {
     group: g => { grpMine = g; grpRefresh(); },
     gmembers: l => { grpMembers = l; grpRefresh(); },
+    greqs: l => { grpReqs = l; grpRefresh(); },
+    gclaims: l => { grpClaims = l; grpRefresh(); },
     ops: l => { grpOps = l; grpRefresh(); }
 };
 function grpIsAdmin() { return !!currentUser && isAdmin(currentUser); }
@@ -221,7 +224,7 @@ function grpRenderMember() {
     if (!grpMine) { box.innerHTML = '<div class="card" style="color:var(--text-muted);">Vous n\'êtes pas chef de groupe.</div>'; return; }
     const E = escapeHtml, s = grpStats(grpMembers), suspended = grpMine.status === 'suspendu';
     let h = '<section class="card"><div class="card-header"><i class="fa-solid fa-people-group"></i><h3>' + E(grpMine.name) + '</h3></div>' +
-        (suspended ? '<div class="alert alert-error" style="margin-bottom:10px;">Ce groupe est suspendu par l\'équipe : vous ne pouvez pas proposer d\'opérations pour le moment.</div>' : '') +
+        (suspended ? '<div class="alert alert-error" style="margin-bottom:10px;">Ce groupe est suspendu par l\'équipe : vous ne pouvez pas enregistrer d\'opérations pour le moment.</div>' : '') +
         '<div style="display:flex;gap:18px;flex-wrap:wrap;font-size:0.92rem;"><span><strong>' + s.n + '</strong> membre(s)</span><span>Épargne : <strong>' + grpMoney(s.sUSD, 'USD') + '</strong> · <strong>' + grpMoney(s.sFC, 'FC') + '</strong></span><span>Crédits en cours : <strong>' + grpMoney(s.cUSD, 'USD') + '</strong> · <strong>' + grpMoney(s.cFC, 'FC') + '</strong></span>' + (s.late ? '<span style="color:#b91c1c;"><strong>' + s.late + '</strong> crédit(s) en retard</span>' : '') + '</div></section>';
     h += '<section class="card"><div class="card-header"><i class="fa-solid fa-user-plus"></i><h3>Faire entrer de nouveaux membres</h3></div>' +
         '<p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;">Envoyez ce lien à la personne : elle remplit sa demande d\'inscription ; l\'équipe la vérifie, l\'accepte et la place dans votre groupe.</p>' +
@@ -233,12 +236,13 @@ function grpRenderMember() {
             const late = (m.credits || []).some(c => creditRemaining(c) > 0 && c.dueDate && c.dueDate < todayISO());
             const cr = memberOutstanding(m, 'USD') + memberOutstanding(m, 'FC') > 0;
             return '<tr><td>' + E(m.name) + ' <small>(' + E(m.id) + ')</small>' + (m.id === grpMine.id ? ' <span class="badge badge-ok">Chef</span>' : '') + '</td><td>' + grpMoney(sav(m, 'USD'), 'USD') + '<br>' + grpMoney(sav(m, 'FC'), 'FC') + '</td><td>' + grpMoney(memberOutstanding(m, 'USD'), 'USD') + '<br>' + grpMoney(memberOutstanding(m, 'FC'), 'FC') + '</td><td>' + (late ? '<span class="badge badge-late">En retard</span>' : cr ? '<span class="badge badge-due">En cours</span>' : '<span class="badge badge-ok">À jour</span>') +
-                '</td><td>' + (suspended ? '' : '<button type="button" class="btn-small" onclick="grpPropose(\'' + E(m.id) + '\')"><i class="fa-solid fa-hand-holding-dollar"></i> Proposer</button>') + '</td></tr>' +
+                '</td><td>' + (suspended ? '' : '<button type="button" class="btn-small" onclick="grpPropose(\'' + E(m.id) + '\')"><i class="fa-solid fa-hand-holding-dollar"></i> Opérer</button>') + '</td></tr>' +
                 (grpDraft.memberId === m.id ? '<tr><td colspan="5" style="background:#f4f7fb;">' + grpFormHtml(m) + '</td></tr>' : '');
         }).join('') || '<tr><td colspan="5" style="color:var(--text-muted);">Aucun membre dans votre groupe pour le moment.</td></tr>') + '</tbody></table></div>' +
         '<div id="grpPropMsg" class="alert" style="margin-top:10px;display:none;"></div></section>';
     const mine = grpOps.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 40);
-    h += '<section class="card"><div class="card-header"><i class="fa-solid fa-clipboard-list"></i><h3>Mes propositions</h3></div>' + (mine.length ? '<div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Membre</th><th>Opération</th><th>Montant</th><th>Statut</th><th></th></tr></thead><tbody>' + mine.map(o =>
+    h += grpReqClaimHtml(suspended);
+    if (mine.length) h += '<section class="card"><div class="card-header"><i class="fa-solid fa-clipboard-list"></i><h3>Anciennes propositions</h3></div>' + (mine.length ? '<div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Membre</th><th>Opération</th><th>Montant</th><th>Statut</th><th></th></tr></thead><tbody>' + mine.map(o =>
         '<tr><td>' + E(formatISOtoFR(String(o.date).slice(0, 10))) + '</td><td>' + E(o.memberName || '') + '</td><td>' + grpOpLabel(o) + '</td><td>' + grpMoney(o.amount, o.devise) + '</td><td>' + (GRP_ST[o.status] || '') + (o.decisionNote ? '<br><small style="color:var(--text-muted);">' + E(o.decisionNote) + '</small>' : '') + '</td><td>' +
         (o.status === 'à valider' ? '<button type="button" class="btn-small danger" onclick="grpCancel(\'' + E(o.id) + '\')" title="Annuler"><i class="fa-solid fa-xmark"></i></button>' : '') + '</td></tr>').join('') + '</tbody></table></div>' : '<p style="color:var(--text-muted);font-size:0.9rem;">Aucune proposition pour le moment. Vos propositions sont vérifiées et validées par l\'équipe avant d\'être enregistrées.</p>') + '</section>';
     const a = document.activeElement, keep = a && a.id && a.id.indexOf('grp') === 0 ? [a.id, a.value] : null;
@@ -249,15 +253,39 @@ function grpFormHtml(m) {
     const E = escapeHtml, d = grpDraft;
     const credits = (m.credits || []).filter(c => creditRemaining(c) > 0);
     return '<form onsubmit="grpSubmit(event)" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:end;">' +
-        '<div class="form-group" style="margin:0;"><label>Opération</label><select id="grpType" onchange="grpDraftChange()"><option value="epargne"' + (d.type !== 'remboursement' ? ' selected' : '') + '>Versement d\'épargne</option><option value="remboursement"' + (d.type === 'remboursement' ? ' selected' : '') + '>Remboursement de crédit</option></select></div>' +
+        '<div class="form-group" style="margin:0;"><label>Opération</label><select id="grpType" onchange="grpDraftChange()"><option value="epargne"' + (!d.type || d.type === 'epargne' ? ' selected' : '') + '>Versement d\'épargne</option><option value="retrait"' + (d.type === 'retrait' ? ' selected' : '') + '>Retrait d\'épargne</option><option value="credit"' + (d.type === 'credit' ? ' selected' : '') + '>Octroi de crédit</option><option value="remboursement"' + (d.type === 'remboursement' ? ' selected' : '') + '>Remboursement de crédit</option></select></div>' +
         (d.type === 'remboursement' ? '<div class="form-group" style="margin:0;"><label>Crédit</label><select id="grpCredit" required>' + (credits.length ? credits.map(c => '<option value="' + E(c.id) + '">' + grpMoney(c.amount, devOf(c)) + ' du ' + E(c.date || '') + ' — reste ' + grpMoney(creditRemaining(c), devOf(c)) + '</option>').join('') : '<option value="">Aucun crédit en cours</option>') + '</select></div>'
             : '<div class="form-group" style="margin:0;"><label>Devise</label><select id="grpDevise"><option value="USD">Dollars ($)</option><option value="FC">Francs (FC)</option></select></div>') +
         '<div class="form-group" style="margin:0;"><label>Montant</label><input type="number" id="grpAmount" min="0.01" step="0.01" required></div>' +
         '<div class="form-group" style="margin:0;"><label>Précision</label><input type="text" id="grpNote" maxlength="200" placeholder="Facultatif"></div>' +
-        '<div style="display:flex;gap:6px;"><button type="submit" class="btn-small"><i class="fa-solid fa-paper-plane"></i> Envoyer à l\'équipe</button><button type="button" class="btn-small" onclick="grpPropose(\'\')">Annuler</button></div></form>';
+        '<div style="display:flex;gap:6px;"><button type="submit" class="btn-small"><i class="fa-solid fa-check"></i> Enregistrer</button><button type="button" class="btn-small" onclick="grpPropose(\'\')">Annuler</button></div></form>';
 }
 function grpPropose(mid) { grpDraft = mid ? { memberId: mid, type: 'epargne' } : {}; grpRenderMember(); }
 function grpDraftChange() { const t = document.getElementById('grpType').value; grpDraft.type = t; grpRenderMember(); }
+// Le chef de groupe a, sur les membres de SON groupe, les mêmes droits qu'un poste de l'équipe : l'opération est enregistrée tout de suite.
+function grpWho() { return 'chef de groupe ' + String((grpMine && grpMine.leaderName) || (currentUser && currentUser.username) || ''); }
+// Applique une opération sur une copie de la fiche ; renvoie { m } ou { err }
+function grpApplyOp(m0, type, amount, dev, creditId, note) {
+    const m = JSON.parse(JSON.stringify(m0)), tag = 'Par le ' + grpWho() + (note ? ' · ' + note : '');
+    if (type === 'epargne') {
+        setSav(m, dev, round2(sav(m, dev) + amount)); logOp(m, 'epargne', amount, tag, dev);
+    } else if (type === 'retrait') {
+        const max = availableWithdrawal(m, dev);
+        if (amount > max) return { err: 'Retrait refusé : le maximum possible est ' + grpMoney(max, dev) + ' (l\'épargne restante doit couvrir les crédits en cours).' };
+        setSav(m, dev, round2(sav(m, dev) - amount)); logOp(m, 'retrait', amount, tag, dev);
+    } else if (type === 'credit') {
+        if (hasActiveCredit(m)) return { err: m.name + ' a déjà un crédit en cours : il doit être remboursé en entier avant un nouveau crédit.' };
+        const max = availableCeiling(m, dev);
+        if (amount > max) return { err: 'Le crédit demandé dépasse le plafond disponible de ' + m.name + ' (' + grpMoney(max, dev) + ').' };
+        grantCredit(m, amount, dev);
+    } else {
+        const cr = (m.credits || []).find(c => c.id === creditId);
+        if (!cr) return { err: 'Choisissez le crédit à rembourser.' };
+        if (amount > creditRemaining(cr)) return { err: 'Le montant dépasse le reste à rembourser (' + grpMoney(creditRemaining(cr), devOf(cr)) + ').' };
+        cr.repaid = round2((Number(cr.repaid) || 0) + amount); logOp(m, 'remboursement', amount, 'Crédit du ' + (cr.date || '') + ' · ' + tag, devOf(cr));
+    }
+    return { m: m };
+}
 async function grpSubmit(e) {
     e.preventDefault();
     if (!grpMine || !F() || grpMine.status === 'suspendu') return;
@@ -268,18 +296,62 @@ async function grpSubmit(e) {
     if (type === 'remboursement') {
         creditId = (document.getElementById('grpCredit') || {}).value || '';
         const cr = (m.credits || []).find(c => c.id === creditId);
-        if (!cr) { grpMsg('grpPropMsg', 'Choisissez le crédit à rembourser.', false); return; }
-        if (amount > creditRemaining(cr)) { grpMsg('grpPropMsg', 'Le montant dépasse le reste à rembourser (' + grpMoney(creditRemaining(cr), devOf(cr)) + ').', false); return; }
-        dev = devOf(cr);
+        dev = cr ? devOf(cr) : 'USD';
     } else dev = document.getElementById('grpDevise').value === 'FC' ? 'FC' : 'USD';
-    const id = 'GO' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase();
-    const data = { id: id, groupId: grpMine.id, memberId: m.id, memberName: String(m.name).slice(0, 80), leaderName: String(grpMine.leaderName || '').slice(0, 80), type: type, amount: amount, devise: dev, creditId: creditId,
-        note: (document.getElementById('grpNote').value || '').trim().slice(0, 200), status: 'à valider', date: new Date().toISOString() };
+    const note = (document.getElementById('grpNote').value || '').trim().slice(0, 200);
+    const label = { epargne: 'Versement d\'épargne', retrait: 'Retrait d\'épargne', credit: 'Crédit', remboursement: 'Remboursement' }[type];
+    const r = grpApplyOp(m, type, amount, dev, creditId, note);
+    if (r.err) { grpMsg('grpPropMsg', r.err, false); return; }
+    if (!confirm('Enregistrer : ' + label + ' de ' + grpMoney(amount, dev) + ' pour ' + m.name + ' ?' + (type === 'credit' ? '\nIntérêt de 10 % prélevé : ' + grpMoney(round2(amount * 0.10), dev) : '') + '\nVérifiez l\'argent avant de valider.')) return;
     try {
-        await F().write('groupOps', [{ id: id, data: data }], []);
+        await F().write('members', [{ id: m.id, data: r.m }], []);
         grpDraft = {}; grpRenderMember();
-        grpMsg('grpPropMsg', 'Proposition envoyée à l\'équipe. Elle sera enregistrée quand l\'équipe l\'aura validée.', true);
-    } catch (err) { grpMsg('grpPropMsg', 'Envoi impossible : ' + errText(err), false); }
+        grpMsg('grpPropMsg', 'Opération enregistrée : ' + label + ' de ' + grpMoney(amount, dev) + ' pour ' + m.name + '.', true);
+    } catch (err) { grpMsg('grpPropMsg', 'Enregistrement impossible : ' + errText(err), false); }
+}
+// Demandes de crédit / retrait et réclamations des membres du groupe
+function grpReqClaimHtml(suspended) {
+    const E = escapeHtml, nameOf = id => { const m = grpMembers.find(x => x.id === id); return m ? m.name : id; };
+    const pend = grpReqs.filter(r => r.status === 'en attente').sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const open = grpClaims.filter(c => c.status === 'ouverte').sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    let h = '<section class="card"><div class="card-header"><i class="fa-solid fa-inbox"></i><h3>Demandes de mes membres (' + pend.length + ')</h3></div>';
+    h += pend.length ? pend.map(r => '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;"><strong>' + E(nameOf(r.memberId)) + '</strong> · ' + (r.type === 'credit' ? 'Crédit' : 'Retrait') + ' de <strong>' + grpMoney(r.amount, devOf(r)) + '</strong> · ' + E(formatISOtoFR(String(r.date || '').slice(0, 10))) +
+        (r.note ? '<br><small>' + E(r.note) + '</small>' : '') + (suspended ? '' : '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><input type="text" id="grpReqNote-' + E(r.id) + '" maxlength="300" placeholder="Réponse (facultatif)" style="flex:1;min-width:140px;"><button type="button" class="btn-small" onclick="grpReqDecide(\'' + E(r.id) + '\', true)"><i class="fa-solid fa-check"></i> Accepter</button><button type="button" class="btn-small danger" onclick="grpReqDecide(\'' + E(r.id) + '\', false)"><i class="fa-solid fa-xmark"></i> Refuser</button></div>') + '</div>').join('')
+        : '<p style="color:var(--text-muted);font-size:0.9rem;">Aucune demande en attente.</p>';
+    h += '</section><section class="card"><div class="card-header"><i class="fa-solid fa-comment-dots"></i><h3>Réclamations de mes membres (' + open.length + ')</h3></div>';
+    h += open.length ? open.map(c => '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;"><strong>' + E(nameOf(c.memberId)) + '</strong> · ' + E(c.subject || '') + ' · ' + E(formatISOtoFR(String(c.date || '').slice(0, 10))) + '<br>' + E(c.message || '') +
+        (suspended ? '' : '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><input type="text" id="grpClaimReply-' + E(c.id) + '" maxlength="500" placeholder="Votre réponse" style="flex:1;min-width:140px;"><button type="button" class="btn-small" onclick="grpClaimAnswer(\'' + E(c.id) + '\')"><i class="fa-solid fa-reply"></i> Répondre</button></div>') + '</div>').join('')
+        : '<p style="color:var(--text-muted);font-size:0.9rem;">Aucune réclamation ouverte.</p>';
+    return h + '</section>';
+}
+async function grpReqDecide(id, ok) {
+    if (!grpMine || !F() || grpMine.status === 'suspendu') return;
+    const r0 = grpReqs.find(x => x.id === id); if (!r0 || r0.status !== 'en attente') return;
+    const m0 = grpMembers.find(x => x.id === r0.memberId); if (!m0) { alert('Membre introuvable.'); return; }
+    const f = document.getElementById('grpReqNote-' + id), note = f ? f.value.trim().slice(0, 300) : '';
+    const r = JSON.parse(JSON.stringify(r0)), dev = devOf(r0);
+    let mNew = null;
+    if (ok) {
+        const res = grpApplyOp(m0, r0.type === 'credit' ? 'credit' : 'retrait', round2(Number(r0.amount)), dev, '', 'Demande approuvée');
+        if (res.err) { alert('Impossible d\'accepter : ' + res.err); return; }
+        if (!confirm((r0.type === 'credit' ? 'Accorder un crédit' : 'Retirer') + ' de ' + grpMoney(r0.amount, dev) + ' pour ' + m0.name + ' ?')) return;
+        mNew = res.m; r.status = 'approuvée'; r.decision = note || (r0.type === 'credit' ? 'Crédit accordé. À rembourser dans les 3 mois.' : 'Retrait accepté.');
+    } else {
+        if (!confirm('Refuser cette demande ?')) return;
+        r.status = 'refusée'; r.decision = note || 'Demande refusée.';
+    }
+    r.decisionDate = todayISO();
+    try {
+        if (mNew) await F().write('members', [{ id: mNew.id, data: mNew }], []);
+        await F().write('requests', [{ id: r.id, data: r }], []);
+    } catch (err) { alert('Décision non enregistrée : ' + errText(err) + '\n(Actualisez la page avant de recommencer : l\'opération a peut-être déjà été appliquée.)'); }
+}
+async function grpClaimAnswer(id) {
+    if (!grpMine || !F() || grpMine.status === 'suspendu') return;
+    const c0 = grpClaims.find(x => x.id === id); if (!c0) return;
+    const f = document.getElementById('grpClaimReply-' + id), text = f ? f.value.trim().slice(0, 500) : '';
+    const c = JSON.parse(JSON.stringify(c0)); c.status = 'traitée'; c.response = text || 'Votre réclamation a été examinée.'; c.responseDate = todayISO();
+    try { await F().write('claims', [{ id: c.id, data: c }], []); } catch (err) { alert('Réponse non enregistrée : ' + errText(err)); }
 }
 async function grpCancel(id) {
     if (!confirm('Annuler cette proposition ?')) return;

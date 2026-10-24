@@ -331,6 +331,8 @@ window.FB_READY = (async () => {
             stops.push(onSnapshot(doc(db, 'groups', memberId), s => h.group(s.exists() ? withId(s) : null), err => onError(err)));
             stops.push(onSnapshot(query(collection(db, 'members'), where('groupId', '==', memberId)), snap => h.gmembers(snap.docs.map(withId)), err => { h.gmembers([]); }));
             stops.push(onSnapshot(query(collection(db, 'groupOps'), where('groupId', '==', memberId)), snap => h.ops(snap.docs.map(withId)), err => { h.ops([]); }));
+            stops.push(onSnapshot(query(collection(db, 'requests'), where('groupId', '==', memberId)), snap => h.greqs(snap.docs.map(withId)), err => { h.greqs([]); }));
+            stops.push(onSnapshot(query(collection(db, 'claims'), where('groupId', '==', memberId)), snap => h.gclaims(snap.docs.map(withId)), err => { h.gclaims([]); }));
             return () => stops.forEach(s => s());
         },
         listenGroupDoc(groupId, cb, onError) {
