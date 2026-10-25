@@ -1051,7 +1051,8 @@
         </div>
 
         <div class="dpanel hidden" id="panel-pub">
-            <section class="card">
+            <div id="pubAdminFeed"></div>
+            <section class="card" id="pubNewCard" style="margin-top:16px;">
                 <div class="card-header"><i class="fa-solid fa-images"></i><h3>Exposition : publier pour les membres</h3></div>
                 <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Photos, vidéos et documents sur la pub et les œuvres de l'organisation. Les membres peuvent les voir, les aimer et les commenter.</p>
                 <form onsubmit="pubSave(event)">
@@ -1073,7 +1074,7 @@
                 </form>
                 <div id="pubMsg" class="alert" style="margin-top:10px;display:none;"></div>
             </section>
-            <div id="pubAdminFeed"></div>
+            
         </div>
 
         <div class="dpanel hidden" id="panel-boutique">
@@ -5464,7 +5465,7 @@
         };
     </script>
     <script src="org.js?v=20261070"></script>
-<script src="pub.js?v=20261111"></script>
+<script src="pub.js?v=20261118"></script>
 <script src="groups.js?v=20261116"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
