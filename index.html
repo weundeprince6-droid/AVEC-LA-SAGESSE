@@ -451,7 +451,8 @@
         <!-- ONGLETS PAR CATÉGORIE -->
         <nav class="dtabs" id="dashTabs">
             <button class="dtab active" data-tab="dashboard" onclick="showTab('dashboard')"><i class="fa-solid fa-chart-pie"></i> Tableau de bord</button>
-            <button class="dtab" data-tab="membres" onclick="showTab('membres')"><i class="fa-solid fa-users"></i> Membres &amp; groupes <span class="tab-badge hidden" id="tabBadgeMembres">0</span></button>
+            <button class="dtab" data-tab="membres" onclick="showTab('membres')"><i class="fa-solid fa-users"></i> Membres <span class="tab-badge hidden" id="tabBadgeMembres">0</span></button>
+            <button class="dtab hidden" id="tabBtnGroupes" data-tab="groupes" onclick="showTab('groupes')"><i class="fa-solid fa-people-group"></i> Groupes <span class="tab-badge hidden" id="tabBadgeGrp">0</span></button>
             <button class="dtab" data-tab="operations" onclick="showTab('operations')"><i class="fa-solid fa-money-bill-transfer"></i> Opérations &amp; cas sociaux</button>
             <button class="dtab hidden" id="tabBtnEquipe" data-tab="equipe" onclick="showTab('equipe')"><i class="fa-solid fa-user-shield"></i> Équipe</button>
             <button class="dtab hidden" id="tabBtnBoutique" data-tab="boutique" onclick="showTab('boutique')"><i class="fa-solid fa-store"></i> Boutique <span class="tab-badge hidden" id="bqAdminBadge">0</span></button>
@@ -2099,6 +2100,7 @@
                     setHidden('reportSection', level !== 'total');
                     setHidden('activitySection', level !== 'total');
                     setHidden('tabBtnBoutique', false);
+                    setHidden('tabBtnGroupes', !CLOUD);
                     setHidden('tabBtnEquipe', level !== 'total');
                     showTab('dashboard');
                     setHidden('orgSection', level !== 'total');
@@ -3828,7 +3830,7 @@
         const TAB_GROUPS = {
             operations: [['operations', 'Opérations', 'fa-money-bill-transfer'], ['social', 'Cas sociaux', 'fa-hand-holding-heart']],
             annonces: [['annonces', 'Annonces', 'fa-bullhorn'], ['journal', 'Journal d\'activité', 'fa-clock-rotate-left', 'total']],
-            membres: [['membres', 'Membres', 'fa-users'], ['groupes', 'Groupes', 'fa-people-group', 'cloud']],
+            membres: [['membres', 'Membres', 'fa-users']],
             demandes: [['demandes', 'Demandes', 'fa-inbox'], ['reclamations', 'Réclamations', 'fa-bell']],
             galerie: [['galerie', 'Galerie des membres', 'fa-images'], ['pub', 'Exposition', 'fa-images', 'cloud']]
         };
@@ -3860,7 +3862,8 @@
             });
         }
         function syncMainBadges() {
-            setBadge('tabBadgeMembres', tabCnt.insc + tabCnt.grp);
+            setBadge('tabBadgeMembres', tabCnt.insc);
+            setBadge('tabBadgeGrp', tabCnt.grp);
             setBadge('tabBadgeReq', tabCnt.req + tabCnt.claims);
             if (typeof currentTab !== 'undefined' && currentTab) buildTabBars(currentTab);
         }
@@ -5466,7 +5469,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261118"></script>
-<script src="groups.js?v=20261116"></script>
+<script src="groups.js?v=20261119"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>

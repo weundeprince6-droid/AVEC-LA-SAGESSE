@@ -106,12 +106,13 @@ function grpRenderAdmin() {
         const list = members.filter(m => m.groupId === g.id), s = grpStats(list), open = grpOpenId === g.id;
         h += '<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;">' +
             '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><div style="flex:1;min-width:200px;"><strong>' + E(g.name) + '</strong> ' + (g.status === 'suspendu' ? '<span class="badge badge-due">Suspendu</span>' : '') + '<br><small style="color:var(--text-muted);">Chef : ' + E(g.leaderName || '') + ' (' + E(g.id) + ')</small></div>' +
-            '<button type="button" class="btn-small" onclick="grpToggle(\'' + E(g.id) + '\')"><i class="fa-solid fa-' + (open ? 'chevron-up' : 'chevron-down') + '"></i> Membres</button>' +
+            '<button type="button" class="btn-small" onclick="grpToggle(\'' + E(g.id) + '\')"><i class="fa-solid fa-' + (open ? 'chevron-up' : 'chevron-down') + '"></i> ' + (open ? 'Réduire' : 'Voir tout') + '</button>' +
             '<button type="button" class="btn-small" onclick="grpExportPdf(\'' + E(g.id) + '\')" title="Rapport PDF du groupe"><i class="fa-solid fa-file-pdf"></i> PDF</button>' +
             '<button type="button" class="btn-small" onclick="grpSuspend(\'' + E(g.id) + '\')" title="' + (g.status === 'suspendu' ? 'Réactiver' : 'Suspendre') + '"><i class="fa-solid fa-' + (g.status === 'suspendu' ? 'play' : 'pause') + '"></i></button>' +
             (canDelete(currentUser) ? '<button type="button" class="btn-small danger" onclick="grpDissolve(\'' + E(g.id) + '\')" title="Dissoudre le groupe"><i class="fa-solid fa-trash"></i></button>' : '') + '</div>' +
             '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:0.88rem;"><span><strong>' + s.n + '</strong> membre(s)</span><span>Épargne : <strong>' + grpMoney(s.sUSD, 'USD') + '</strong> · <strong>' + grpMoney(s.sFC, 'FC') + '</strong></span><span>Crédits en cours : <strong>' + grpMoney(s.cUSD, 'USD') + '</strong> · <strong>' + grpMoney(s.cFC, 'FC') + '</strong></span>' + (s.late ? '<span style="color:#b91c1c;"><strong>' + s.late + '</strong> en retard</span>' : '') + '</div>';
         if (open) {
+            h += '<div style="margin-top:8px;font-size:0.85rem;color:var(--text-muted);">Groupe créé le ' + E(formatISOtoFR(String(g.date || '').slice(0, 10))) + (g.by ? ' par ' + E(g.by) : '') + ' · Chef : ' + E(g.leaderName || '') + ' (' + E(g.leaderId || g.id) + ')</div>' + grpDetailHtml(g.id) + '<h4 style="margin:14px 0 6px;font-size:0.95rem;">Membres du groupe</h4>';
             const free = members.filter(m => !m.groupId).sort((a, b) => String(a.name).localeCompare(String(b.name)));
             h += '<div style="margin-top:10px;overflow-x:auto;"><table><thead><tr><th>Membre</th><th>Épargne $</th><th>Épargne FC</th><th>Crédit en cours</th><th></th></tr></thead><tbody>' +
                 (list.map(m => '<tr><td>' + E(m.name) + ' <small>(' + E(m.id) + ')</small>' + (m.id === g.id ? ' <span class="badge badge-ok">Chef</span>' : '') + '</td><td>' + grpMoney(sav(m, 'USD'), 'USD') + '</td><td>' + grpMoney(sav(m, 'FC'), 'FC') + '</td><td>' + grpMoney(memberOutstanding(m, 'USD'), 'USD') + ' · ' + grpMoney(memberOutstanding(m, 'FC'), 'FC') + '</td><td>' +
@@ -129,6 +130,33 @@ function grpRenderAdmin() {
     const a = document.activeElement, keep = a && a.id ? [a.id, a.value] : null;
     box.innerHTML = h;
     if (keep) { const n = document.getElementById(keep[0]); if (n && n.tagName !== 'BUTTON') { n.value = keep[1]; } }
+}
+// Toutes les informations d'un groupe : chiffres, opérations récentes, demandes, réclamations, inscriptions, propositions
+function grpDetailHtml(gid) {
+    const E = escapeHtml, list = members.filter(m => m.groupId === gid), ids = new Set(list.map(m => m.id)), today = todayISO();
+    const nameOf = id => { const m = list.find(x => x.id === id); return m ? m.name : id; };
+    let inter = 0, octroye = { USD: 0, FC: 0 }, late = 0;
+    list.forEach(m => { (m.credits || []).forEach(c => { inter += 0; octroye[devOf(c)] += Number(c.amount) || 0; }); if ((m.credits || []).some(c => creditRemaining(c) > 0 && c.dueDate && c.dueDate < today)) late++; });
+    const s = grpStats(list);
+    const card = (label, val) => '<div style="flex:1 1 140px;border:1px solid var(--border);border-radius:10px;padding:8px 10px;"><div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;">' + label + '</div><div style="font-weight:700;">' + val + '</div></div>';
+    const hist = [];
+    list.forEach(m => (m.history || []).forEach(h => hist.push({ m: m, h: h })));
+    hist.sort((a, b) => String(b.h.date).localeCompare(String(a.h.date)));
+    const reqs = requests.filter(r => ids.has(r.memberId)).sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 15);
+    const cls = claims.filter(c => ids.has(c.memberId)).sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 15);
+    const regs = (typeof registrations !== 'undefined' ? registrations : []).filter(r => r.groupId === gid && r.status === 'pending');
+    const ops = grpOps.filter(o => o.groupId === gid).sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 15);
+    const sec = (title, body) => '<h4 style="margin:14px 0 6px;font-size:0.95rem;">' + title + '</h4>' + body;
+    const none = '<p style="color:var(--text-muted);font-size:0.88rem;">Rien pour le moment.</p>';
+    const tbl = (head, rows) => '<div style="overflow-x:auto;"><table><thead><tr>' + head.map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table></div>';
+    let h = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' + card('Membres', s.n) + card('Épargne', grpMoney(s.sUSD, 'USD') + '<br>' + grpMoney(s.sFC, 'FC')) +
+        card('Crédits octroyés', grpMoney(octroye.USD, 'USD') + '<br>' + grpMoney(octroye.FC, 'FC')) + card('Reste à rembourser', grpMoney(s.cUSD, 'USD') + '<br>' + grpMoney(s.cFC, 'FC')) + card('Membres en retard', late) + '</div>';
+    h += sec('Opérations récentes du groupe', hist.length ? tbl(['Date', 'Membre', 'Opération', 'Montant', 'Précision'], hist.slice(0, 25).map(x => '<tr><td>' + E(formatISOtoFR(String(x.h.date).slice(0, 10))) + '</td><td>' + E(x.m.name) + '</td><td>' + E((typeof OP_LABELS !== 'undefined' && OP_LABELS[x.h.type]) || x.h.type) + '</td><td>' + grpMoney(x.h.amount, x.h.devise) + '</td><td>' + E(x.h.note || '') + '</td></tr>')) : none);
+    h += sec('Demandes de crédit / retrait', reqs.length ? tbl(['Date', 'Membre', 'Type', 'Montant', 'Statut'], reqs.map(r => '<tr><td>' + E(formatISOtoFR(String(r.date || '').slice(0, 10))) + '</td><td>' + E(nameOf(r.memberId)) + '</td><td>' + (r.type === 'credit' ? 'Crédit' : 'Retrait') + '</td><td>' + grpMoney(r.amount, devOf(r)) + '</td><td>' + E(r.status || '') + '</td></tr>')) : none);
+    h += sec('Réclamations', cls.length ? tbl(['Date', 'Membre', 'Sujet', 'Statut'], cls.map(c => '<tr><td>' + E(formatISOtoFR(String(c.date || '').slice(0, 10))) + '</td><td>' + E(nameOf(c.memberId)) + '</td><td>' + E(c.subject || '') + '</td><td>' + E(c.status || '') + '</td></tr>')) : none);
+    h += sec('Inscriptions en attente (' + regs.length + ')', regs.length ? tbl(['Nom', 'Téléphone', 'Date'], regs.map(r => '<tr><td>' + E(r.name) + '</td><td>' + E(r.phone || '') + '</td><td>' + E(formatISOtoFR(String(r.date || '').slice(0, 10))) + '</td></tr>')) : none);
+    if (ops.length) h += sec('Anciennes propositions au chef', tbl(['Date', 'Membre', 'Opération', 'Montant', 'Statut'], ops.map(o => '<tr><td>' + E(formatISOtoFR(String(o.date).slice(0, 10))) + '</td><td>' + E(o.memberName || '') + '</td><td>' + grpOpLabel(o) + '</td><td>' + grpMoney(o.amount, o.devise) + '</td><td>' + (GRP_ST[o.status] || '') + '</td></tr>')));
+    return h;
 }
 function grpToggle(id) { grpOpenId = grpOpenId === id ? '' : id; grpRenderAdmin(); }
 
@@ -250,6 +278,7 @@ function grpRenderMember() {
     if (mine.length) h += '<section class="card"><div class="card-header"><i class="fa-solid fa-clipboard-list"></i><h3>Anciennes propositions</h3></div>' + (mine.length ? '<div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Membre</th><th>Opération</th><th>Montant</th><th>Statut</th><th></th></tr></thead><tbody>' + mine.map(o =>
         '<tr><td>' + E(formatISOtoFR(String(o.date).slice(0, 10))) + '</td><td>' + E(o.memberName || '') + '</td><td>' + grpOpLabel(o) + '</td><td>' + grpMoney(o.amount, o.devise) + '</td><td>' + (GRP_ST[o.status] || '') + (o.decisionNote ? '<br><small style="color:var(--text-muted);">' + E(o.decisionNote) + '</small>' : '') + '</td><td>' +
         (o.status === 'à valider' ? '<button type="button" class="btn-small danger" onclick="grpCancel(\'' + E(o.id) + '\')" title="Annuler"><i class="fa-solid fa-xmark"></i></button>' : '') + '</td></tr>').join('') + '</tbody></table></div>' : '<p style="color:var(--text-muted);font-size:0.9rem;">Aucune proposition pour le moment. Vos propositions sont vérifiées et validées par l\'équipe avant d\'être enregistrées.</p>') + '</section>';
+    h += '<section class="card"><div class="card-header"><i class="fa-solid fa-circle-info"></i><h3>Toutes les informations du groupe</h3></div>' + grpDetailHtml(grpMine.id) + '</section>';
     const a = document.activeElement, keep = a && a.id && a.id.indexOf('grp') === 0 ? [a.id, a.value] : null;
     box.innerHTML = h;
     if (keep) { const n = document.getElementById(keep[0]); if (n && n.tagName !== 'BUTTON') { n.value = keep[1]; n.focus(); } }
@@ -422,6 +451,7 @@ function grpEnterManage() {
     setHidden('dashboardSection', false);
     document.getElementById('currentUserDisplay').textContent = (me.username || me.memberId) + ' · Chef de groupe';
     setHidden('btnExportXlsx', true);
+    setHidden('tabBtnGroupes', false);
     showTab('dashboard');
     updateDashboard();
     setSync('connecting');
