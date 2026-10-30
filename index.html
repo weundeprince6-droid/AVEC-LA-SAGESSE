@@ -4341,7 +4341,7 @@
             if (!isRootAdmin()) { alert("Le rapport Excel est réservé à l'administrateur principal."); return; }
             try {
                 await loadScriptOnce('vendor/jszip.min.js?v=3.10.1');
-                await loadScriptOnce('report-xlsx.js?v=20261110');
+                await loadScriptOnce('report-xlsx.js?v=20261121');
             } catch (e) {
                 if (confirm("Le rapport Excel n'a pas pu être préparé (fichiers non chargés : connexion ou ancienne version en cache).\n\nTélécharger à la place le rapport simplifié (CSV) ?")) exportCSV();
                 return;
@@ -4362,7 +4362,7 @@
         function buildReportXlsx() {
             const X = window.AvecXlsx, today = todayISO(), U = X.util, nowFR = formatISOtoFR(today);
             const wb = new X(window.JSZip);
-            const xp = reportProtectPwd(); if (xp && xp !== true) wb.protectPwd = xp;
+            wb.protectPwd = '';   // feuilles protégées sans mot de passe : évite les fausses manipulations
             const who = currentUser ? String(currentUser.username) : '';
             wb.props = { title: 'Rapport ' + orgName() + ' ' + nowFR, creator: who || orgName() };
             const sub = (extra) => 'Situation au ' + nowFR + (extra ? ' · ' + extra : '') + (who ? ' · par ' + who : '');
@@ -4575,17 +4575,7 @@
         // Mot de passe de protection des fichiers de rapport (ouverture et impression seulement).
         // L'administrateur principal le choisit une fois par session ; il n'est jamais écrit dans le code ni enregistré en ligne.
         // Pour tous les autres comptes, un mot de passe aléatoire est utilisé : personne ne peut modifier le fichier.
-        function reportProtectPwd() {
-            if (!isRootAdmin()) return true;
-            let p = '';
-            try { p = sessionStorage.getItem('avec_protect_pwd') || ''; } catch (e) {}
-            if (!p) {
-                p = (prompt("Mot de passe de PROTECTION des rapports (administrateur principal).\nLes fichiers s'ouvriront et s'imprimeront librement, mais ne pourront être modifiés qu'avec ce mot de passe.\nRetenez-le bien :") || '').trim();
-                if (!p) return true;
-                try { sessionStorage.setItem('avec_protect_pwd', p); } catch (e) {}
-            }
-            return p;
-        }
+        function reportProtectPwd() { return true; }   // plus de question : PDF protégé automatiquement (ouverture et impression seulement)
         function savePdfFile(bytes, fileName) {
             const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
             const a = document.createElement('a');
