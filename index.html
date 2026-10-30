@@ -288,6 +288,18 @@
             .dtab .tab-badge { position: absolute; top: 0; right: 10px; margin: 0; min-width: 16px; padding: 0 4px; font-size: 0.65rem; }
             .sync-status { bottom: 104px; right: 8px; font-size: 0.68rem; padding: 4px 9px; }
             body { padding-bottom: 110px; }
+            /* Entête : le nom, le groupe et les boutons d'espace passent sur leurs propres lignes (rien n'est coupé) */
+            .user-info { flex-wrap: wrap; width: 100%; justify-content: space-between; }
+            .user-info > span:not(.hidden) { max-width: 100%; }
+            .user-info #hdrGrp, .user-info #hdrGrpAdm { max-width: 100% !important; white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
+            .dtab { box-sizing: border-box; max-width: 20%; word-break: break-word; hyphens: auto; }
+            #swMember, #btnLeaderBack { flex: 1 1 100%; display: flex !important; gap: 6px; order: 5; }
+            #swMember.hidden, #btnLeaderBack.hidden { display: none !important; }
+            #swMember .btn-export, #btnLeaderBack .btn-small { flex: 1 1 0; font-size: 0.74rem; padding: 7px 6px; margin: 0; white-space: normal; text-align: center; }
+            #swMember .btn-export i, #btnLeaderBack .btn-small i { font-size: 0.8rem; margin-right: 3px; }
+            .card-header { flex-wrap: wrap; }
+            .card-header h3 { min-width: 0; overflow-wrap: anywhere; }
+            .card-header .btn-small { margin-left: 0 !important; }
             /* Chiffres : deux par ligne, compacts */
             .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
             .stat-card { padding: 12px; gap: 10px; flex-direction: column; align-items: flex-start; }
@@ -3856,6 +3868,8 @@
         // Onglets du tableau de bord
         let currentTab = 'dashboard';
         // Téléphone : donne à chaque cellule le nom de sa colonne (affiché dans la fiche)
+        // Étiquette automatiquement les tableaux ajoutés dynamiquement (fiches sur téléphone)
+        (function () { let t = null; try { new MutationObserver(() => { clearTimeout(t); t = setTimeout(() => { try { labelTables(); } catch (e) {} }, 120); }).observe(document.body, { childList: true, subtree: true }); } catch (e) {} })();
         function labelTables() {
             try {
                 document.querySelectorAll('table').forEach(t => {
@@ -5523,7 +5537,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261118"></script>
-<script src="groups.js?v=20261122"></script>
+<script src="groups.js?v=20261124"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>
