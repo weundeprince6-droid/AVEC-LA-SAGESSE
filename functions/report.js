@@ -403,10 +403,66 @@ function buildGroupReport(PDFLib, input) {
   })();
 }
 
+/**
+ * Bordereau de transaction : buildReceipt(PDFLib, { member, entry, ref, org, logo, copy }) -> { bytes, fileName, ref }
+ * entry = ligne d'historique { date, type, amount, devise, note, sav, rest, by }. Format A5, prêt à imprimer, avec cases de signature.
+ */
+function buildReceipt(PDFLib, input) {
+  const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  const m = input.member || {}, e = input.entry || {}, ORG = safe(String(input.org || 'WEBSERVICES FIN').slice(0, 60));
+  const ref = safe(input.ref || e.ref || 'BRD'), dev = devOf(e), amt = Number(e.amount) || 0;
+  const kinds = { epargne: ['BORDEREAU DE VERSEMENT', 'Versement d\'épargne', 'Somme reçue', C.green], retrait: ['BORDEREAU DE RETRAIT', 'Retrait d\'épargne', 'Somme remise au membre', C.amber],
+    credit: ['BORDEREAU DE CRÉDIT', 'Crédit accordé', 'Somme à remettre au membre (net)', C.blue], remboursement: ['BORDEREAU DE REMBOURSEMENT', 'Remboursement de crédit', 'Somme reçue', C.violet] };
+  const k = kinds[e.type] || ['BORDEREAU D\'OPÉRATION', OP_LABELS[e.type] || 'Opération', 'Montant', C.navy];
+  return (async () => {
+    const pdf = await PDFDocument.create();
+    pdf.setTitle(k[0] + ' - ' + safe(m.name) + ' - ' + ref); pdf.setAuthor(ORG); pdf.setCreator(ORG); pdf.setProducer(ORG); pdf.setSubject(ref);
+    const F = await pdf.embedFont(StandardFonts.Helvetica), B = await pdf.embedFont(StandardFonts.HelveticaBold), I = await pdf.embedFont(StandardFonts.HelveticaOblique);
+    const col = c => rgb(c[0], c[1], c[2]);
+    const W = 419.53, H = 595.28, M = 28, page = pdf.addPage([W, H]);
+    const wid = (t, s, f) => (f || F).widthOfTextAtSize(safe(t), s);
+    const text = (t, x, y, s, o) => { o = o || {}; const f = o.bold ? B : (o.italic ? I : F); const v = safe(t); let xx = x; if (o.align === 'right') xx = x - wid(v, s, f); else if (o.align === 'center') xx = x - wid(v, s, f) / 2; page.drawText(v, { x: xx, y, size: s, font: f, color: col(o.color || C.ink) }); };
+    const fit = (t, s, mw) => { t = safe(t); while (t.length > 1 && wid(t, s) > mw) t = t.slice(0, -1); return t; };
+    const lg = await embedLogo(pdf, input.logo);
+    let y = H - M;
+    page.drawRectangle({ x: M, y: y - 56, width: W - 2 * M, height: 56, color: col(C.navy) });
+    let lx = M + 12;
+    if (lg) { const lh = 40, lw = Math.min(90, lh * lg.width / lg.height); page.drawImage(lg, { x: M + 8, y: y - 48, width: lw, height: lh }); lx = M + 8 + lw + 8; }
+    text(ORG, lx, y - 26, 16, { bold: true, color: C.white });
+    text(k[0], lx, y - 44, 9.5, { bold: true, color: [0.85, 0.9, 1] });
+    y -= 76;
+    const rows = [['Référence', ref], ['Date', frDate(e.date)], ['Membre', (m.name || '') + ' (' + (m.id || '') + ')'], ['Opération', k[1]]];
+    if (e.note && e.note !== 'Épargne initiale') rows.push(['Détail', e.note]);
+    if (e.by) rows.push(['Enregistré par', e.by]);
+    rows.forEach((rw, i) => {
+      if (i % 2 === 0) page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: col(C.band) });
+      text(rw[0], M + 8, y, 9, { color: C.grey }); text(fit(rw[1], 9.5, W - 2 * M - 120), M + 110, y, 9.5, { bold: true }); y -= 20;
+    });
+    y -= 10;
+    page.drawRectangle({ x: M, y: y - 52, width: W - 2 * M, height: 62, borderColor: col(k[3]), borderWidth: 1.5, color: rgb(1, 1, 1) });
+    text(k[2], W / 2, y - 6, 9, { align: 'center', color: C.grey });
+    text(fmt(amt, dev), W / 2, y - 36, 26, { align: 'center', bold: true, color: k[3] });
+    y -= 82;
+    const bal = [];
+    if (e.sav !== undefined && e.sav !== null) bal.push(['Épargne après l\'opération (' + dev + ')', fmt(e.sav, dev)]);
+    if (e.rest !== undefined && e.rest !== null) bal.push(['Crédit restant à rembourser (' + dev + ')', fmt(e.rest, dev)]);
+    bal.forEach(b => { text(b[0], M + 8, y, 9, { color: C.grey }); text(b[1], W - M - 8, y, 10.5, { bold: true, align: 'right' }); y -= 18; });
+    if (!bal.length) { text('Soldes non disponibles pour cette ancienne opération.', M + 8, y, 8.5, { italic: true, color: C.grey }); y -= 18; }
+    y = 150;
+    text('Le membre', M + 4, y, 9, { bold: true }); text('Le caissier / responsable', W - M - 4, y, 9, { bold: true, align: 'right' });
+    page.drawLine({ start: { x: M, y: y - 52 }, end: { x: M + 150, y: y - 52 }, thickness: 0.8, color: col(C.grey) });
+    page.drawLine({ start: { x: W - M - 150, y: y - 52 }, end: { x: W - M, y: y - 52 }, thickness: 0.8, color: col(C.grey) });
+    text('Signature', M + 4, y - 64, 7.5, { color: C.grey }); text('Signature et cachet', W - M - 4, y - 64, 7.5, { color: C.grey, align: 'right' });
+    text(input.copy ? 'DUPLICATA - réimprimé le ' + frDate(input.printedOn || '') : 'ORIGINAL', W / 2, 60, 9, { bold: true, align: 'center', color: input.copy ? C.red : C.green });
+    text(ORG + ' - ' + ref, W / 2, 40, 7.5, { align: 'center', color: C.grey });
+    return { bytes: await saveDoc(PDFLib, pdf, input), fileName: 'bordereau-' + safe(ref) + '.pdf', ref };
+  })();
+}
+
 function saveDoc(PDFLib, pdf, input) {
     var P = (typeof window !== 'undefined' ? window.AvecProtect : null) || (typeof require === 'function' && input && input.protect ? require('./pdf-protect') : null);
     if (input && input.protect && P) { P.apply(PDFLib, pdf, input.protect === true ? '' : String(input.protect)); return pdf.save({ useObjectStreams: false }); }
     return pdf.save();
 }
-exports.buildPdf = buildPdf; exports.buildStatement = buildStatement; exports.buildGroupReport = buildGroupReport;
+exports.buildPdf = buildPdf; exports.buildStatement = buildStatement; exports.buildGroupReport = buildGroupReport; exports.buildReceipt = buildReceipt;
 })(typeof module !== 'undefined' && module.exports ? module.exports : (window.AvecPdf = {}));

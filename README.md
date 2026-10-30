@@ -113,3 +113,7 @@ Quand un membre télécharge son relevé, une ligne « Relevé de compte téléc
 ## Onglet Groupes et « Gros plan »
 
 L'onglet **Groupes** (équipe) liste les groupes ; **Voir tout** déplie la fiche complète et **Gros plan** fait entrer l'administrateur dans la vue du groupe : tous les onglets (tableau de bord, membres, groupes, opérations, demandes, réclamations, galerie, rapport PDF) ne montrent plus que les membres, demandes, réclamations et inscriptions de ce groupe, comme pour son chef, avec les droits de l'équipe. Le bandeau bleu « Quitter le gros plan » ramène à la vue complète.
+
+## Bordereaux de transaction
+
+Chaque versement d'épargne, retrait, crédit accordé et remboursement saisi par l'équipe, un administrateur ou un chef de groupe ouvre automatiquement un **bordereau PDF (format A5)** à imprimer : référence `BRD-…`, date, membre, opération, montant, soldes après l'opération, auteur, cases de signature. La référence et les soldes sont archivés dans l'historique du membre ; le bouton imprimante (onglet Membres > fiche, et espace du membre) **réimprime** le bordereau (marqué « DUPLICATA », réimpression notée dans le journal). Si le navigateur bloque la fenêtre, le fichier est téléchargé. Les anciennes opérations sans soldes archivés se réimpriment aussi, avec la mention « soldes non disponibles ».

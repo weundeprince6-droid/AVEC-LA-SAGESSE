@@ -336,10 +336,11 @@ async function grpSubmit(e) {
     const note = (document.getElementById('grpNote').value || '').trim().slice(0, 200);
     const label = { epargne: 'Versement d\'épargne', retrait: 'Retrait d\'épargne', credit: 'Crédit', remboursement: 'Remboursement' }[type];
     const r = grpApplyOp(m, type, amount, dev, creditId, note);
-    if (r.err) { grpMsg('grpPropMsg', r.err, false); return; }
-    if (!confirm('Enregistrer : ' + label + ' de ' + grpMoney(amount, dev) + ' pour ' + m.name + ' ?' + (type === 'credit' ? '\nIntérêt de 10 % prélevé : ' + grpMoney(round2(amount * 0.10), dev) : '') + '\nVérifiez l\'argent avant de valider.')) return;
+    if (r.err) { bdrQueue = []; grpMsg('grpPropMsg', r.err, false); return; }
+    if (!confirm('Enregistrer : ' + label + ' de ' + grpMoney(amount, dev) + ' pour ' + m.name + ' ?' + (type === 'credit' ? '\nIntérêt de 10 % prélevé : ' + grpMoney(round2(amount * 0.10), dev) : '') + '\nVérifiez l\'argent avant de valider.')) { bdrQueue = []; return; }
     try {
         await F().write('members', [{ id: m.id, data: r.m }], []);
+        bdrFlush();
         grpDraft = {}; grpRenderMember();
         grpMsg('grpPropMsg', 'Opération enregistrée : ' + label + ' de ' + grpMoney(amount, dev) + ' pour ' + m.name + '.', true);
     } catch (err) { grpMsg('grpPropMsg', 'Enregistrement impossible : ' + errText(err), false); }
@@ -368,8 +369,8 @@ async function grpReqDecide(id, ok) {
     let mNew = null;
     if (ok) {
         const res = grpApplyOp(m0, r0.type === 'credit' ? 'credit' : 'retrait', round2(Number(r0.amount)), dev, '', 'Demande approuvée');
-        if (res.err) { alert('Impossible d\'accepter : ' + res.err); return; }
-        if (!confirm((r0.type === 'credit' ? 'Accorder un crédit' : 'Retirer') + ' de ' + grpMoney(r0.amount, dev) + ' pour ' + m0.name + ' ?')) return;
+        if (res.err) { bdrQueue = []; alert('Impossible d\'accepter : ' + res.err); return; }
+        if (!confirm((r0.type === 'credit' ? 'Accorder un crédit' : 'Retirer') + ' de ' + grpMoney(r0.amount, dev) + ' pour ' + m0.name + ' ?')) { bdrQueue = []; return; }
         mNew = res.m; r.status = 'approuvée'; r.decision = note || (r0.type === 'credit' ? 'Crédit accordé. À rembourser dans les 3 mois.' : 'Retrait accepté.');
     } else {
         if (!confirm('Refuser cette demande ?')) return;
@@ -377,7 +378,7 @@ async function grpReqDecide(id, ok) {
     }
     r.decisionDate = todayISO();
     try {
-        if (mNew) await F().write('members', [{ id: mNew.id, data: mNew }], []);
+        if (mNew) { await F().write('members', [{ id: mNew.id, data: mNew }], []); bdrFlush(); }
         await F().write('requests', [{ id: r.id, data: r }], []);
     } catch (err) { alert('Décision non enregistrée : ' + errText(err) + '\n(Actualisez la page avant de recommencer : l\'opération a peut-être déjà été appliquée.)'); }
 }

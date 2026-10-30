@@ -1283,6 +1283,7 @@
                                         <th>Date</th>
                                         <th>Opération</th>
                                         <th>Montant</th>
+                                        <th>Bordereau</th>
                                     </tr>
                                 </thead>
                                 <tbody id="mHistoryBody"></tbody>
@@ -1532,6 +1533,7 @@
                 }
             },
             set(key, value) {
+                if (key === 'avec_members' && typeof bdrFlush === 'function') setTimeout(bdrFlush, 0);
                 if (CLOUD) {
                     // En mode en ligne, les données vont dans Firebase (jamais dans le navigateur)
                     if (CLOUD_COLLECTIONS[key]) cloudPush(CLOUD_COLLECTIONS[key]);
@@ -1708,10 +1710,52 @@
             correction: "Correction de l'administrateur"
         };
         // Garde une trace des opérations pour que le membre (et l'admin) puissent vérifier
+        // ---------- Bordereaux de transaction (versement, retrait, crédit, remboursement) ----------
+        const BDR_TYPES = ['epargne', 'retrait', 'credit', 'remboursement'];
+        let bdrQueue = [];
+        function bdrBtn(mid, idx) {
+            const h = ((members.find(x => x.id === mid) || {}).history || [])[idx];
+            if (!h || BDR_TYPES.indexOf(h.type) < 0 || h.note === 'Épargne initiale') return '';
+            return '<button type="button" class="btn-small" title="Imprimer le bordereau" onclick="bdrPrint(\'' + escapeHtml(mid) + '\', ' + idx + ')"><i class="fa-solid fa-print"></i></button> ';
+        }
+        function bdrOpenWindow() { try { return window.open('', '_blank'); } catch (e) { return null; } }
+        async function bdrMake(mid, name, entry, copy) {
+            await preparePdfLib();
+            const m = members.find(x => x.id === mid) || { id: mid, name: name };
+            const idx = (m.history || []).indexOf(entry);
+            const ref = entry.ref || ('BRD-' + mid + '-' + String(entry.date || '').replace(/-/g, '') + '-' + (idx + 1));
+            return AvecPdf.buildReceipt(PDFLib, { member: { id: m.id, name: m.name || name }, entry: entry, ref: ref, org: orgName(), logo: orgLogo(), copy: !!copy, printedOn: todayISO(), protect: true });
+        }
+        async function bdrShow(r, win) {
+            const url = URL.createObjectURL(new Blob([r.bytes], { type: 'application/pdf' }));
+            if (win && !win.closed) { win.location = url; } else { savePdfFile(r.bytes, r.fileName); }
+            setTimeout(() => URL.revokeObjectURL(url), 120000);
+        }
+        // Appelé après chaque enregistrement d'opération : ouvre le bordereau (à imprimer) et l'archive est déjà dans l'historique du membre
+        function bdrFlush() {
+            const q = bdrQueue; bdrQueue = [];
+            if (!q.length) return;
+            const win = bdrOpenWindow();
+            q.forEach((x, i) => { bdrMake(x.mid, x.name, x.entry, false).then(r => bdrShow(r, i === 0 ? win : null)).catch(err => { console.error(err); if (win && i === 0) win.close(); alert('Opération enregistrée, mais le bordereau n\'a pas pu être créé : ' + errText(err) + '\nVous pourrez l\'imprimer depuis l\'historique du membre.'); }); });
+        }
+        async function bdrPrint(mid, idx) {
+            const m = members.find(x => x.id === mid); const h = m && (m.history || [])[idx]; if (!h) return;
+            const win = bdrOpenWindow();
+            try { const r = await bdrMake(mid, m.name, h, true); await bdrShow(r, win); if (currentUser && currentUser.role !== 'member') logActivity('Bordereau réimprimé : ' + (OP_LABELS[h.type] || h.type) + ' ' + fmt(h.amount, devOf(h)) + ' — ' + m.name + ' (' + m.id + ')', m.id); }
+            catch (err) { if (win) win.close(); alert('Le bordereau n\'a pas pu être créé : ' + errText(err)); }
+        }
         function logOp(m, type, amount, note, devise) {
             if (!Array.isArray(m.history)) m.history = [];
             const entry = { date: todayISO(), type: type, amount: round2(amount), note: note || '' };
             if (devise === 'FC') entry.devise = 'FC';
+            if (BDR_TYPES.indexOf(type) >= 0 && note !== 'Épargne initiale') {
+                // Bordereau : numéro, auteur et soldes après l'opération, pour pouvoir le réimprimer à l'identique
+                const dv = devise === 'FC' ? 'FC' : 'USD';
+                entry.ref = 'BRD-' + m.id + '-' + entry.date.replace(/-/g, '') + '-' + Date.now().toString(36).slice(-4).toUpperCase();
+                entry.by = currentUser ? String(currentUser.username).slice(0, 80) : '';
+                entry.sav = sav(m, dv); entry.rest = memberOutstanding(m, dv);
+                if (currentUser && currentUser.role !== 'member') bdrQueue.push({ mid: m.id, name: m.name, entry: entry });
+            }
             m.history.push(entry);
             if (type === 'epargne') m.lastEpargneDay = Math.floor(Date.parse(entry.date + 'T12:00:00Z') / 86400000);
             if (m.history.length > 200) m.history = m.history.slice(-200);
@@ -3247,7 +3291,7 @@
                 const amt = Number(h.amount) || 0;
                 const shown = h.type === 'correction' ? (amt > 0 ? '+' : '−') + fmt(Math.abs(amt), devOf(h)) : fmt(amt, devOf(h));
                 hrows += '<tr><td>' + escapeHtml(formatISOtoFR(h.date)) + '</td><td>' + escapeHtml(OP_LABELS[h.type] || 'Opération') +
-                    (h.note ? '<br><small style="color:var(--text-muted);">' + escapeHtml(h.note) + '</small>' : '') + '</td><td>' + shown + '</td><td><button class="btn-small wa" title="Envoyer la confirmation sur WhatsApp" onclick="waSend(\'' + id + '\', \'recu\', ' + hIdx + ')"><i class="fa-brands fa-whatsapp"></i></button></td></tr>';
+                    (h.note ? '<br><small style="color:var(--text-muted);">' + escapeHtml(h.note) + '</small>' : '') + '</td><td>' + shown + '</td><td>' + bdrBtn(id, hIdx) + '<button class="btn-small wa" title="Envoyer la confirmation sur WhatsApp" onclick="waSend(\'' + id + '\', \'recu\', ' + hIdx + ')"><i class="fa-brands fa-whatsapp"></i></button></td></tr>';
             });
             const moves = detailCard('fa-money-bill-transfer', 'Mouvements (' + (m.history || []).length + ')', hrows
                 ? '<div style="overflow-x:auto;max-height:420px;overflow-y:auto;"><table><thead><tr><th>Date</th><th>Opération</th><th>Montant</th><th></th></tr></thead><tbody>' + hrows + '</tbody></table></div>'
@@ -4569,7 +4613,7 @@
         async function preparePdfLib() {
             await loadScriptOnce('vendor/pdf-lib.min.js?v=1171');
             await loadScriptOnce('functions/pdf-protect.js?v=20261110');
-            await loadScriptOnce('functions/report.js?v=20261110');
+            await loadScriptOnce('functions/report.js?v=20261122');
             if (!window.PDFLib || !window.AvecPdf) throw new Error('bibliothèque PDF non chargée');
         }
         // Mot de passe de protection des fichiers de rapport (ouverture et impression seulement).
@@ -4974,10 +5018,11 @@
                     '<td>' + escapeHtml(formatISOtoFR(h.date)) + '</td>' +
                     '<td>' + escapeHtml(label) + (h.note ? '<br><small style="color:var(--text-muted);">' + escapeHtml(h.note) + '</small>' : '') + '</td>' +
                     '<td>' + shown + '</td>' +
+                    '<td>' + bdrBtn(m.id, (m.history || []).indexOf(h)) + '</td>' +
                     '</tr>';
             });
             document.getElementById('mHistoryBody').innerHTML = hrows ||
-                '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">Aucune opération enregistrée.</td></tr>';
+                '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">Aucune opération enregistrée.</td></tr>';
 
             renderMemberSocial(m);
             renderMemberProfile(m);
@@ -5477,7 +5522,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261118"></script>
-<script src="groups.js?v=20261120"></script>
+<script src="groups.js?v=20261122"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>
