@@ -78,10 +78,10 @@ function grpAdminBadge() {
 function grpRenderAdmin() {
     const box = document.getElementById('grpAdminBox');
     if (!box || document.getElementById('panel-groupes').classList.contains('hidden')) return;
-    const E = escapeHtml;
+    const E = escapeHtml, fgid = currentUser && currentUser.focusGid;
     const leaders = new Set(grpGroups.map(g => g.id));
     const cand = members.filter(m => !leaders.has(m.id)).sort((a, b) => String(a.name).localeCompare(String(b.name)));
-    let h = '<section class="card"><div class="card-header"><i class="fa-solid fa-people-group"></i><h3>Créer un sous-groupe</h3></div>' +
+    let h = fgid ? '' : '<section class="card"><div class="card-header"><i class="fa-solid fa-people-group"></i><h3>Créer un sous-groupe</h3></div>' +
         '<p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Choisissez un membre comme <strong>chef de groupe</strong>. Il aura son propre réseau de membres, qu\'il suit et dont il propose les opérations ; l\'équipe valide tout.</p>' +
         '<form onsubmit="grpCreate(event)" style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));align-items:end;">' +
         '<div class="form-group" style="margin:0;"><label>Chef de groupe</label><select id="grpLeader" required><option value="">-- Choisir un membre --</option>' + cand.map(m => '<option value="' + E(m.id) + '">' + E(m.name) + ' (' + E(m.id) + ')</option>').join('') + '</select></div>' +
@@ -89,24 +89,25 @@ function grpRenderAdmin() {
         '<button type="submit" class="btn" style="width:auto;"><i class="fa-solid fa-plus"></i> Créer le groupe</button></form>' +
         '<div id="grpCreateMsg" class="alert" style="margin-top:10px;display:none;"></div></section>';
     // propositions à valider
-    const pend = grpOps.filter(o => o.status === 'à valider').sort((a, b) => String(a.date).localeCompare(String(b.date)));
-    h += '<section class="card"><div class="card-header"><i class="fa-solid fa-clipboard-check"></i><h3>Opérations proposées à valider (' + pend.length + ')</h3></div>';
-    h += pend.length ? '<div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Groupe</th><th>Membre</th><th>Opération</th><th>Montant</th><th>Détail</th><th></th></tr></thead><tbody>' + pend.map(o => {
+    const pend = fgid ? [] : grpOps.filter(o => o.status === 'à valider').sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    if (!fgid) h += '<section class="card"><div class="card-header"><i class="fa-solid fa-clipboard-check"></i><h3>Opérations proposées à valider (' + pend.length + ')</h3></div>';
+    if (!fgid) h += pend.length ? '<div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Groupe</th><th>Membre</th><th>Opération</th><th>Montant</th><th>Détail</th><th></th></tr></thead><tbody>' + pend.map(o => {
         const m = members.find(x => x.id === o.memberId);
         const cr = o.type === 'remboursement' && m ? (m.credits || []).find(c => c.id === o.creditId) : null;
         return '<tr><td>' + E(formatISOtoFR(String(o.date).slice(0, 10))) + '</td><td>' + E(grpName(o.groupId) || o.groupId) + '<br><small style="color:var(--text-muted);">chef : ' + E(o.leaderName || '') + '</small></td><td>' + E(o.memberName || '') + ' <small>(' + E(o.memberId) + ')</small></td><td>' + grpOpLabel(o) +
             '</td><td><strong>' + grpMoney(o.amount, o.devise) + '</strong></td><td>' + E(o.note || '') + (cr ? '<br><small style="color:var(--text-muted);">Crédit du ' + E(cr.date || '') + ' : reste ' + grpMoney(creditRemaining(cr), devOf(cr)) + '</small>' : '') +
             '</td><td style="white-space:nowrap;"><button type="button" class="btn-small" onclick="grpDecide(\'' + E(o.id) + '\',true)"><i class="fa-solid fa-check"></i> Valider</button> <button type="button" class="btn-small danger" onclick="grpDecide(\'' + E(o.id) + '\',false)"><i class="fa-solid fa-xmark"></i> Refuser</button></td></tr>';
     }).join('') + '</tbody></table></div>' : '<p style="color:var(--text-muted);font-size:0.9rem;">Aucune opération en attente.</p>';
-    h += '</section>';
+    if (!fgid) h += '</section>';
     // groupes
     h += '<section class="card"><div class="card-header"><i class="fa-solid fa-diagram-project"></i><h3>Les groupes (' + grpGroups.length + ')</h3></div>';
     if (!grpGroups.length) h += '<p style="color:var(--text-muted);font-size:0.9rem;">Aucun groupe pour le moment.</p>';
-    grpGroups.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).forEach(g => {
-        const list = members.filter(m => m.groupId === g.id), s = grpStats(list), open = grpOpenId === g.id;
+    grpGroups.filter(g0 => !fgid || g0.id === fgid).sort((a, b) => String(a.name).localeCompare(String(b.name))).forEach(g => {
+        const list = members.filter(m => m.groupId === g.id), s = grpStats(list), open = fgid ? true : grpOpenId === g.id;
         h += '<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;">' +
             '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><div style="flex:1;min-width:200px;"><strong>' + E(g.name) + '</strong> ' + (g.status === 'suspendu' ? '<span class="badge badge-due">Suspendu</span>' : '') + '<br><small style="color:var(--text-muted);">Chef : ' + E(g.leaderName || '') + ' (' + E(g.id) + ')</small></div>' +
-            '<button type="button" class="btn-small" onclick="grpToggle(\'' + E(g.id) + '\')"><i class="fa-solid fa-' + (open ? 'chevron-up' : 'chevron-down') + '"></i> ' + (open ? 'Réduire' : 'Voir tout') + '</button>' +
+            (fgid ? '' : '<button type="button" class="btn-small" onclick="grpFocus(\'' + E(g.id) + '\')" title="Gros plan : voir le groupe comme son chef"><i class="fa-solid fa-magnifying-glass-plus"></i> Gros plan</button>') +
+            (fgid ? '' : '<button type="button" class="btn-small" onclick="grpToggle(\'' + E(g.id) + '\')"><i class="fa-solid fa-' + (open ? 'chevron-up' : 'chevron-down') + '"></i> ' + (open ? 'Réduire' : 'Voir tout') + '</button>') +
             '<button type="button" class="btn-small" onclick="grpExportPdf(\'' + E(g.id) + '\')" title="Rapport PDF du groupe"><i class="fa-solid fa-file-pdf"></i> PDF</button>' +
             '<button type="button" class="btn-small" onclick="grpSuspend(\'' + E(g.id) + '\')" title="' + (g.status === 'suspendu' ? 'Réactiver' : 'Suspendre') + '"><i class="fa-solid fa-' + (g.status === 'suspendu' ? 'play' : 'pause') + '"></i></button>' +
             (canDelete(currentUser) ? '<button type="button" class="btn-small danger" onclick="grpDissolve(\'' + E(g.id) + '\')" title="Dissoudre le groupe"><i class="fa-solid fa-trash"></i></button>' : '') + '</div>' +
@@ -468,4 +469,30 @@ function grpLeaveManage() {
     setSync('connecting');
     startListening();
     renderMemberPortal();
+}
+
+// =================== Gros plan sur un groupe (administrateur) ===================
+// L'administrateur voit toute l'application « comme le chef de groupe » : uniquement les membres, demandes,
+// réclamations et inscriptions de ce groupe, avec tous les onglets utiles. Ses droits restent ceux de l'équipe.
+function grpFocus(gid) {
+    if (!grpIsAdmin() || !CLOUD) return;
+    const g = grpGroups.find(x => x.id === gid); if (!g) return;
+    if (stopListening) { stopListening(); stopListening = null; }
+    resetCloudState();
+    currentUser.focusGid = gid; currentUser.focusName = g.name;
+    document.body.classList.add('focus-on');
+    document.getElementById('focusTxt').innerHTML = '<strong>Gros plan : groupe ' + escapeHtml(g.name) + '</strong> · chef ' + escapeHtml(g.leaderName || '') + ' — vous voyez uniquement les membres de ce groupe, comme son chef.';
+    setSync('connecting');
+    showTab('groupes');
+    startListening();
+}
+function grpFocusExit() {
+    if (!currentUser || !currentUser.focusGid) return;
+    if (stopListening) { stopListening(); stopListening = null; }
+    resetCloudState();
+    delete currentUser.focusGid; delete currentUser.focusName;
+    document.body.classList.remove('focus-on');
+    setSync('connecting');
+    showTab('groupes');
+    startListening();
 }

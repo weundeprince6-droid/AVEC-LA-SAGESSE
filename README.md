@@ -109,3 +109,7 @@ Nécessite de republier `firestore.rules`.
 ## Relevés de compte : trace dans le journal et copie à l'identique
 
 Quand un membre télécharge son relevé, une ligne « Relevé de compte téléchargé… · réf. REL-… » apparaît dans le **Journal d'activité** de l'administrateur, avec le bouton **Rouvrir ce relevé** : il retélécharge exactement le même fichier (mêmes références, même date, mêmes chiffres du jour). Une copie est conservée dans la collection `statements` (réservée à l'administrateur). Nécessite de republier `firestore.rules`. Pour un relevé avec les chiffres d'aujourd'hui, l'administrateur utilise le relevé du membre comme avant.
+
+## Onglet Groupes et « Gros plan »
+
+L'onglet **Groupes** (équipe) liste les groupes ; **Voir tout** déplie la fiche complète et **Gros plan** fait entrer l'administrateur dans la vue du groupe : tous les onglets (tableau de bord, membres, groupes, opérations, demandes, réclamations, galerie, rapport PDF) ne montrent plus que les membres, demandes, réclamations et inscriptions de ce groupe, comme pour son chef, avec les droits de l'équipe. Le bandeau bleu « Quitter le gros plan » ramène à la vue complète.

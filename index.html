@@ -196,7 +196,8 @@
         .kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; width: 100%; padding: 4px 0; border-bottom: 1px dashed var(--border); font-size: 0.9rem; }
         .kv span:first-child { color: var(--text-muted); }
         .kv span:last-child { text-align: right; font-weight: 600; word-break: break-word; }
-        body.leader-mode .lm-hide, body.leader-mode .dtab[data-tab="equipe"], body.leader-mode .dtab[data-tab="boutique"], body.leader-mode .dtab[data-tab="annonces"] { display: none !important; }
+        body:not(.focus-on) #focusBar { display: none !important; } body.focus-on #focusBar { display: flex !important; }
+        body.leader-mode .lm-hide, body.leader-mode .dtab[data-tab="equipe"], body.leader-mode .dtab[data-tab="boutique"], body.leader-mode .dtab[data-tab="annonces"], body.focus-on .dtab[data-tab="equipe"], body.focus-on .dtab[data-tab="boutique"], body.focus-on .dtab[data-tab="annonces"] { display: none !important; }
         .dtabs { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; overflow-x: hidden; max-width: 100%; position: sticky; top: var(--hdr-h, 0px); z-index: 40; background: var(--bg-main); padding-top: 4px; }
         .dtab { flex: 0 1 auto; max-width: 100%; padding: 10px 12px; border: none; background: none; font-weight: 600; font-size: 0.92rem; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; white-space: normal; text-align: center; line-height: 1.2; }
         .dtab.active { color: var(--primary); border-bottom-color: var(--primary); }
@@ -461,6 +462,7 @@
             <button class="dtab" data-tab="galerie" onclick="showTab('galerie')"><i class="fa-solid fa-images"></i> Galerie &amp; exposition</button>
         </nav>
 
+        <div id="focusBar" class="hidden" style="background:#1e3a8a;color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:14px;gap:10px;align-items:center;flex-wrap:wrap;"><i class="fa-solid fa-magnifying-glass-plus"></i><span id="focusTxt" style="flex:1;min-width:200px;"></span><button type="button" class="btn-small" onclick="grpFocusExit()"><i class="fa-solid fa-arrow-left"></i> Quitter le gros plan</button></div>
         <div class="dpanel" id="panel-dashboard">
             <section class="card hidden" id="bqShowcaseA" style="overflow:hidden;">
                 <div class="card-header"><i class="fa-solid fa-store"></i><h3>Articles publiés par les membres</h3>
@@ -1873,6 +1875,7 @@
             if (isAdmin(currentUser)) {
                 if (name === 'members') { normalizeMembers(); leaderWatchProfiles(); maybeImportLocal(); if (typeof bqBackfill === 'function') bqBackfill(); }
                 updateDashboard();
+                try { if (currentTab === 'groupes' && typeof grpRefresh === 'function') grpRefresh(); } catch (e) {}
             } else {
                 renderMemberPortal();
             }
@@ -1890,7 +1893,22 @@
         }
 
         function startListening() {
-            const h = {
+            const fg = currentUser.focusGid || '';
+            const raw = { members: [], claims: [], requests: [] };
+            // Vue « gros plan » d'un groupe (administrateur) : on ne garde que les membres du groupe et leurs demandes / réclamations
+            const focusAll = () => {
+                const ids = new Set(raw.members.filter(m => m.groupId === fg).map(m => m.id));
+                members = raw.members.filter(m => ids.has(m.id));
+                claims = raw.claims.filter(c => ids.has(c.memberId));
+                requests = raw.requests.filter(r => ids.has(r.memberId));
+                ['members', 'claims', 'requests'].forEach(n => syncSnapshot(n));
+            };
+            const h = fg ? {
+                members: a => { raw.members = a; focusAll(); },
+                claims: a => { raw.claims = a; focusAll(); },
+                requests: a => { raw.requests = a; focusAll(); },
+                error: onSyncError
+            } : {
                 members: a => { members = a; syncSnapshot('members'); },
                 claims: a => { claims = a; syncSnapshot('claims'); },
                 requests: a => { requests = a; syncSnapshot('requests'); },
@@ -1906,7 +1924,7 @@
                 : F().listenMyProfile(currentUser.memberId, onProfiles, err => { /* sans gravité */ });
             let stopReg = () => {};
             if (leader && F().listenRegistrationsGroup) stopReg = F().listenRegistrationsGroup(currentUser.groupId, list => { registrations = list || []; renderRegistrations(); }, err => { /* sans gravité */ });
-            else if (isAdmin(currentUser) && F().listenRegistrations) stopReg = F().listenRegistrations(list => { registrations = list || []; renderRegistrations(); }, err => { /* sans gravité */ });
+            else if (isAdmin(currentUser) && F().listenRegistrations) stopReg = F().listenRegistrations(list => { registrations = (list || []).filter(r => !fg || r.groupId === fg); renderRegistrations(); }, err => { /* sans gravité */ });
             let stopWa = () => {}, stopWaQ = () => {};
             if (isAdmin(currentUser) && !leader && F().listenWaSettings) {
                 stopWa = F().listenWaSettings(d => { waSettings = Object.assign({}, WA_DEFAULTS, d || {}); renderWaSettings(); applyWaMode(); }, err => { /* sans gravité */ });
@@ -2284,7 +2302,7 @@
 
         function logout() {
             try { currentMTab = 'accueil'; } catch (e) {}
-            try { grpLeaderBackup = null; grpSetLeaderUi(false); } catch (e) {}
+            try { grpLeaderBackup = null; grpSetLeaderUi(false); document.body.classList.remove('focus-on'); } catch (e) {}
             try { localStorage.removeItem('avec_session'); } catch (e) {}
             if (CLOUD) {
                 if (stopListening) { stopListening(); stopListening = null; }
@@ -3842,7 +3860,7 @@
         }
         function buildTabBars(name) {
             Object.keys(TAB_GROUPS).forEach(k => {
-                const items = TAB_GROUPS[k].filter(x => !(currentUser && currentUser.leader && (x[0] === 'pub' || x[0] === 'journal')) && (!x[3] || (x[3] === 'cloud' ? CLOUD : (CLOUD && !!currentUser && currentUser.level === 'total'))));
+                const items = TAB_GROUPS[k].filter(x => !(currentUser && (currentUser.leader || currentUser.focusGid) && (x[0] === 'pub' || x[0] === 'journal')) && (!x[3] || (x[3] === 'cloud' ? CLOUD : (CLOUD && !!currentUser && currentUser.level === 'total'))));
                 TAB_GROUPS[k].forEach(x => {
                     const p = document.getElementById('panel-' + x[0]); if (!p) return;
                     let bar = p.querySelector(':scope > .grpnav');
@@ -3872,7 +3890,7 @@
             // Équipe et Journal : réservés à l'accès total (en ligne)
             if ((name === 'equipe' || name === 'journal') && (!CLOUD || !currentUser || currentUser.level !== 'total')) name = 'dashboard';
             if ((name === 'boutique' || name === 'pub' || name === 'groupes') && !CLOUD) name = 'dashboard';
-            if (currentUser && currentUser.leader && ['boutique', 'pub', 'annonces', 'equipe', 'journal'].indexOf(name) >= 0) name = 'dashboard';
+            if (currentUser && (currentUser.leader || currentUser.focusGid) && ['boutique', 'pub', 'annonces', 'equipe', 'journal'].indexOf(name) >= 0) name = 'dashboard';
             currentTab = name;
             if (name === 'galerie') { try { renderGallery(); } catch (e) {} }
             if (name === 'boutique' && typeof bqRenderAdmin === 'function') bqRenderAdmin();
@@ -5469,7 +5487,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261118"></script>
-<script src="groups.js?v=20261119"></script>
+<script src="groups.js?v=20261120"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
 </body>
