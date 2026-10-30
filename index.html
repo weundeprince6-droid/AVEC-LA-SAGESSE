@@ -1724,7 +1724,7 @@
             const m = members.find(x => x.id === mid) || { id: mid, name: name };
             const idx = (m.history || []).indexOf(entry);
             const ref = entry.ref || ('BRD-' + mid + '-' + String(entry.date || '').replace(/-/g, '') + '-' + (idx + 1));
-            return AvecPdf.buildReceipt(PDFLib, { member: { id: m.id, name: m.name || name }, entry: entry, ref: ref, org: orgName(), logo: orgLogo(), copy: !!copy, printedOn: todayISO(), protect: true });
+            return AvecPdf.buildReceipt(PDFLib, { member: { id: m.id, name: m.name || name }, entry: entry, ref: ref, org: orgName(), logo: orgLogo(), copy: !!copy, printedOn: todayISO(), printedTime: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }), protect: true });
         }
         async function bdrShow(r, win) {
             const url = URL.createObjectURL(new Blob([r.bytes], { type: 'application/pdf' }));
@@ -1753,6 +1753,7 @@
                 const dv = devise === 'FC' ? 'FC' : 'USD';
                 entry.ref = 'BRD-' + m.id + '-' + entry.date.replace(/-/g, '') + '-' + Date.now().toString(36).slice(-4).toUpperCase();
                 entry.by = currentUser ? String(currentUser.username).slice(0, 80) : '';
+                entry.time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
                 entry.sav = sav(m, dv); entry.rest = memberOutstanding(m, dv);
                 if (currentUser && currentUser.role !== 'member') bdrQueue.push({ mid: m.id, name: m.name, entry: entry });
             }
@@ -4613,7 +4614,7 @@
         async function preparePdfLib() {
             await loadScriptOnce('vendor/pdf-lib.min.js?v=1171');
             await loadScriptOnce('functions/pdf-protect.js?v=20261110');
-            await loadScriptOnce('functions/report.js?v=20261122');
+            await loadScriptOnce('functions/report.js?v=20261123');
             if (!window.PDFLib || !window.AvecPdf) throw new Error('bibliothèque PDF non chargée');
         }
         // Mot de passe de protection des fichiers de rapport (ouverture et impression seulement).

@@ -431,7 +431,7 @@ function buildReceipt(PDFLib, input) {
     text(ORG, lx, y - 26, 16, { bold: true, color: C.white });
     text(k[0], lx, y - 44, 9.5, { bold: true, color: [0.85, 0.9, 1] });
     y -= 76;
-    const rows = [['Référence', ref], ['Date', frDate(e.date)], ['Membre', (m.name || '') + ' (' + (m.id || '') + ')'], ['Opération', k[1]]];
+    const rows = [['Référence', ref], ['Date', frDate(e.date)], ['Heure de l\'opération', e.time || '—'], ['Membre', (m.name || '') + ' (' + (m.id || '') + ')'], ['Opération', k[1]]];
     if (e.note && e.note !== 'Épargne initiale') rows.push(['Détail', e.note]);
     if (e.by) rows.push(['Enregistré par', e.by]);
     rows.forEach((rw, i) => {
@@ -453,7 +453,7 @@ function buildReceipt(PDFLib, input) {
     page.drawLine({ start: { x: M, y: y - 52 }, end: { x: M + 150, y: y - 52 }, thickness: 0.8, color: col(C.grey) });
     page.drawLine({ start: { x: W - M - 150, y: y - 52 }, end: { x: W - M, y: y - 52 }, thickness: 0.8, color: col(C.grey) });
     text('Signature', M + 4, y - 64, 7.5, { color: C.grey }); text('Signature et cachet', W - M - 4, y - 64, 7.5, { color: C.grey, align: 'right' });
-    text(input.copy ? 'DUPLICATA - réimprimé le ' + frDate(input.printedOn || '') : 'ORIGINAL', W / 2, 60, 9, { bold: true, align: 'center', color: input.copy ? C.red : C.green });
+    text(input.copy ? 'DUPLICATA - réimprimé le ' + frDate(input.printedOn || '') + (input.printedTime ? ' à ' + input.printedTime : '') : 'ORIGINAL', W / 2, 60, 9, { bold: true, align: 'center', color: input.copy ? C.red : C.green });
     text(ORG + ' - ' + ref, W / 2, 40, 7.5, { align: 'center', color: C.grey });
     return { bytes: await saveDoc(PDFLib, pdf, input), fileName: 'bordereau-' + safe(ref) + '.pdf', ref };
   })();
