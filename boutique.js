@@ -282,7 +282,7 @@ function bqRenderAdmin() {
     const badge = document.getElementById('bqAdminBadge');
     const n = orders.filter(o => o.status === 'acceptée').length;
     if (badge) { badge.textContent = n; setHidden('bqAdminBadge', !(n > 0)); }
-    const stat = (t, v) => '<div style="flex:1;min-width:150px;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:10px;"><div style="font-size:0.78rem;color:var(--text-muted);">' + t + '</div><div style="font-weight:800;font-size:1.1rem;">' + v + '</div></div>';
+    const stat = (t, v) => '<div style="flex:1;min-width:150px;background:rgba(148,163,184,.12);border:1px solid var(--border);border-radius:10px;padding:10px;"><div style="font-size:0.78rem;color:var(--text-muted);">' + t + '</div><div style="font-weight:800;font-size:1.1rem;">' + v + '</div></div>';
     const stats = document.getElementById('bqAdminStats');
     if (stats) stats.innerHTML = stat('Encaissé par l\'AVEC (USD)', fmt(com('USD'), 'USD')) + stat('Encaissé par l\'AVEC (FC)', fmt(com('FC'), 'FC')) + stat('Ventes conclues', done.length) + stat('Commandes à conclure', n);
 
