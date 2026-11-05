@@ -1042,89 +1042,6 @@
         </div>
         <div class="dpanel" id="panel-dashboard">
 
-        <!-- TABLEAU DE BORD - STATS CAISSE GLOBALE -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon bg-blue"><i class="fa-solid fa-wallet"></i></div>
-                <div class="stat-content">
-                    <div class="label">Épargne (Dollars / Francs)</div>
-                    <div class="value" id="statTotalEpargne">$0</div>
-                    <div class="value-fc" id="statTotalEpargneFC">0 FC</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon bg-warning"><i class="fa-solid fa-hand-holding-dollar"></i></div>
-                <div class="stat-content">
-                    <div class="label">Crédits octroyés</div>
-                    <div class="value" id="statTotalCredits">$0</div>
-                    <div class="value-fc" id="statTotalCreditsFC">0 FC</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon bg-warning"><i class="fa-solid fa-hourglass-half"></i></div>
-                <div class="stat-content">
-                    <div class="label">Reste à Rembourser</div>
-                    <div class="value" id="statTotalRestant">$0</div>
-                    <div class="value-fc" id="statTotalRestantFC">0 FC</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon bg-green"><i class="fa-solid fa-percent"></i></div>
-                <div class="stat-content">
-                    <div class="label">Total Intérêts Perçus (10%)</div>
-                    <div class="value" id="statTotalInterets">$0</div>
-                    <div class="value-fc" id="statTotalInteretsFC">0 FC</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon bg-green"><i class="fa-solid fa-sack-dollar"></i></div>
-                <div class="stat-content">
-                    <div class="label">Argent en caisse</div>
-                    <div class="value" id="statCaisseUSD">$0</div>
-                    <div class="value-fc" id="statCaisseFC">0 FC</div>
-                    <small id="statCaisseFCNote" style="color:var(--text-muted);"></small>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon bg-purple"><i class="fa-solid fa-hand-holding-heart"></i></div>
-                <div class="stat-content">
-                    <div class="label">Fonds Cas Sociaux</div>
-                    <div class="value" id="statSocialFund">0 FC</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon bg-purple"><i class="fa-solid fa-vault"></i></div>
-                <div class="stat-content">
-                    <div class="label">Membres Actifs</div>
-                    <div class="value" id="statTotalMembres">0</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon bg-red"><i class="fa-solid fa-bell"></i></div>
-                <div class="stat-content">
-                    <div class="label">Réclamations Ouvertes</div>
-                    <div class="value" id="statOpenClaims">0</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon bg-blue"><i class="fa-solid fa-inbox"></i></div>
-                <div class="stat-content">
-                    <div class="label">Demandes en Attente</div>
-                    <div class="value" id="statPendingReq">0</div>
-                </div>
-            </div>
-        </div>
-        <section class="avec-dash-insights" id="avecDashInsights">
-            <div class="avec-dash-section-head"><div><span class="avec-dash-eyebrow">ANALYSE FINANCIÈRE</span><h2>Vue d’ensemble de votre caisse</h2><p>Comparaison des principaux indicateurs en dollars américains.</p></div><span class="avec-dash-live"><i></i> Données actualisées</span></div>
-            <div class="avec-dash-insight-grid">
-                <article class="avec-dash-panel avec-dash-chart-panel"><div class="avec-dash-panel-title"><span class="avec-dash-panel-icon"><i class="fa-solid fa-chart-column"></i></span><div><h3>Répartition financière</h3><small>Épargne, crédits restants et caisse</small></div></div><div id="avecDashBars" class="avec-dash-bars"><p>Chargement des indicateurs…</p></div><div class="avec-dash-foot">Les montants sont calculés à partir des comptes enregistrés.</div></article>
-                <article class="avec-dash-panel"><div class="avec-dash-panel-title"><span class="avec-dash-panel-icon purple"><i class="fa-solid fa-shield-heart"></i></span><div><h3>Suivi communautaire</h3><small>État des demandes et réclamations</small></div></div><div class="avec-dash-status-list">
-                    <div><span class="avec-dash-status-dot amber"></span><span>Demandes en attente</span><strong id="dashPendingCount">0</strong></div>
-                    <div><span class="avec-dash-status-dot red"></span><span>Réclamations ouvertes</span><strong id="dashClaimsCount">0</strong></div>
-                    <div><span class="avec-dash-status-dot green"></span><span>Membres enregistrés</span><strong id="dashMembersCount">0</strong></div>
-                </div><div class="avec-dash-note" id="dashHealthNote">Votre tableau de bord est prêt.</div></article>
-            </div>
-        </section>
             <div class="grid-2" style="margin-top:24px;">
                 <div>
                     <section class="card hidden" id="orgSection">
@@ -1294,6 +1211,89 @@
         </div>
 
         <div class="dpanel hidden" id="panel-operations">
+        <!-- TABLEAU DE BORD - STATS CAISSE GLOBALE -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon bg-blue"><i class="fa-solid fa-wallet"></i></div>
+                <div class="stat-content">
+                    <div class="label">Épargne (Dollars / Francs)</div>
+                    <div class="value" id="statTotalEpargne">$0</div>
+                    <div class="value-fc" id="statTotalEpargneFC">0 FC</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-warning"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                <div class="stat-content">
+                    <div class="label">Crédits octroyés</div>
+                    <div class="value" id="statTotalCredits">$0</div>
+                    <div class="value-fc" id="statTotalCreditsFC">0 FC</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-warning"><i class="fa-solid fa-hourglass-half"></i></div>
+                <div class="stat-content">
+                    <div class="label">Reste à Rembourser</div>
+                    <div class="value" id="statTotalRestant">$0</div>
+                    <div class="value-fc" id="statTotalRestantFC">0 FC</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-green"><i class="fa-solid fa-percent"></i></div>
+                <div class="stat-content">
+                    <div class="label">Total Intérêts Perçus (10%)</div>
+                    <div class="value" id="statTotalInterets">$0</div>
+                    <div class="value-fc" id="statTotalInteretsFC">0 FC</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-green"><i class="fa-solid fa-sack-dollar"></i></div>
+                <div class="stat-content">
+                    <div class="label">Argent en caisse</div>
+                    <div class="value" id="statCaisseUSD">$0</div>
+                    <div class="value-fc" id="statCaisseFC">0 FC</div>
+                    <small id="statCaisseFCNote" style="color:var(--text-muted);"></small>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-purple"><i class="fa-solid fa-hand-holding-heart"></i></div>
+                <div class="stat-content">
+                    <div class="label">Fonds Cas Sociaux</div>
+                    <div class="value" id="statSocialFund">0 FC</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-purple"><i class="fa-solid fa-vault"></i></div>
+                <div class="stat-content">
+                    <div class="label">Membres Actifs</div>
+                    <div class="value" id="statTotalMembres">0</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-red"><i class="fa-solid fa-bell"></i></div>
+                <div class="stat-content">
+                    <div class="label">Réclamations Ouvertes</div>
+                    <div class="value" id="statOpenClaims">0</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-blue"><i class="fa-solid fa-inbox"></i></div>
+                <div class="stat-content">
+                    <div class="label">Demandes en Attente</div>
+                    <div class="value" id="statPendingReq">0</div>
+                </div>
+            </div>
+        </div>
+        <section class="avec-dash-insights" id="avecDashInsights">
+            <div class="avec-dash-section-head"><div><span class="avec-dash-eyebrow">ANALYSE FINANCIÈRE</span><h2>Vue d’ensemble de votre caisse</h2><p>Comparaison des principaux indicateurs en dollars américains.</p></div><span class="avec-dash-live"><i></i> Données actualisées</span></div>
+            <div class="avec-dash-insight-grid">
+                <article class="avec-dash-panel avec-dash-chart-panel"><div class="avec-dash-panel-title"><span class="avec-dash-panel-icon"><i class="fa-solid fa-chart-column"></i></span><div><h3>Répartition financière</h3><small>Épargne, crédits restants et caisse</small></div></div><div id="avecDashBars" class="avec-dash-bars"><p>Chargement des indicateurs…</p></div><div class="avec-dash-foot">Les montants sont calculés à partir des comptes enregistrés.</div></article>
+                <article class="avec-dash-panel"><div class="avec-dash-panel-title"><span class="avec-dash-panel-icon purple"><i class="fa-solid fa-shield-heart"></i></span><div><h3>Suivi communautaire</h3><small>État des demandes et réclamations</small></div></div><div class="avec-dash-status-list">
+                    <div><span class="avec-dash-status-dot amber"></span><span>Demandes en attente</span><strong id="dashPendingCount">0</strong></div>
+                    <div><span class="avec-dash-status-dot red"></span><span>Réclamations ouvertes</span><strong id="dashClaimsCount">0</strong></div>
+                    <div><span class="avec-dash-status-dot green"></span><span>Membres enregistrés</span><strong id="dashMembersCount">0</strong></div>
+                </div><div class="avec-dash-note" id="dashHealthNote">Votre tableau de bord est prêt.</div></article>
+            </div>
+        </section>
             <div class="grid-2">
                 <div>
                 <section class="card">
