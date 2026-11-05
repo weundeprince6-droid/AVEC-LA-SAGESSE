@@ -678,6 +678,21 @@
             .dpanel{min-width:0}
             #focusBar{position:relative}
         }
+        /* Verrouillage manuel accessible depuis la barre de navigation fixe */
+        .header-lock-btn{
+            flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+            min-height:40px;padding:8px 13px;margin:2px 0 2px auto;
+            border:1px solid var(--border);border-radius:10px;
+            background:var(--success-light);color:var(--primary);
+            font-size:.82rem;font-weight:800;cursor:pointer;white-space:nowrap;
+        }
+        .header-lock-btn:hover{filter:brightness(.96);transform:translateY(-1px)}
+        @media(min-width:1001px){
+            #dashTabs .header-lock-btn{width:100%;margin:8px 0 0;justify-content:flex-start;padding:11px 14px}
+        }
+        @media(max-width:1000px){
+            #dashTabs .header-lock-btn{margin:2px 0 2px auto;min-height:42px}
+        }
         /* En-tête de l'espace de travail */
         .dashboard-header{
             background:var(--surface)!important;color:var(--text-main)!important;
@@ -788,6 +803,9 @@
                 background:var(--surface)!important;box-shadow:var(--app-card-shadow)!important;
                 z-index:5!important;scrollbar-width:thin;overscroll-behavior-x:contain;
                 -webkit-overflow-scrolling:touch;
+                position:sticky!important;top:0!important;bottom:auto!important;
+                z-index:100!important;
+                max-height:none!important;
             }
             #dashTabs::before,#dashTabs::after{display:none!important;content:none!important}
             #dashTabs .dtab{
@@ -1036,6 +1054,7 @@
             <button class="dtab" data-tab="annonces" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces &amp; journal</button>
             <button class="dtab" data-tab="galerie" onclick="showTab('galerie')"><i class="fa-solid fa-images"></i> Galerie &amp; exposition</button>
             <button class="dtab" data-tab="reglages" onclick="showTab('reglages')"><i class="fa-solid fa-sliders"></i> Réglages</button>
+            <button type="button" class="header-lock-btn" onclick="lockSession()" title="Verrouiller immédiatement la session"><i class="fa-solid fa-lock"></i><span>Verrouiller</span></button>
             <div class="sidebar-tools" id="sidebarTools">
                 <button type="button" id="themeToggle" class="theme-toggle" onclick="toggleTheme()"><i class="fa-solid fa-moon"></i> Mode sombre</button>
                 <label for="lockSelSidebar"><i class="fa-solid fa-lock"></i> Verrouillage automatique</label>
