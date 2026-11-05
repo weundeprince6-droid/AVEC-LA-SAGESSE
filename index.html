@@ -1007,7 +1007,7 @@
         </div>
 
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchAuthTab('login')">Se Connecter</button>
+            <button class="tab-btn active" onclick="switchAuthTab('login')">Accès au compte</button>
             <button class="tab-btn hidden" id="registerTabBtn" onclick="switchAuthTab('register')">Créer le compte administrateur</button>
         </div>
 
@@ -1023,11 +1023,11 @@
                     <button type="button" class="login-password-toggle" aria-label="Afficher le mot de passe" aria-pressed="false" onclick="toggleLoginPassword()"><i class="fa-solid fa-eye"></i></button>
                 </div>
             </div>
-            <button type="submit" class="btn"><i class="fa-solid fa-right-to-bracket"></i> Connexion</button>
-            <p class="login-help">Membre : utilisez votre identifiant commençant par <strong>MBR-</strong>. Administrateur : utilisez l'adresse e-mail du compte.</p>
-            <p id="forgotWrap" style="text-align:center;margin-top:12px;font-size:0.9rem;">
-                <a href="#" onclick="forgotPassword(); return false;" style="color:var(--primary);">Mot de passe oublié ? (administrateur / équipe)</a>
+            <p id="forgotWrap" style="display:block!important;visibility:visible!important;text-align:right;margin:4px 0 16px;font-size:0.92rem;">
+                <a href="#" onclick="forgotPassword(); return false;" style="color:var(--primary);font-weight:700;text-decoration:underline;">Mot de passe oublié ?</a>
             </p>
+            <button type="submit" class="btn"><i class="fa-solid fa-right-to-bracket"></i> Entrer dans mon compte</button>
+            <p class="login-help">Membre : utilisez votre identifiant MBR-001. Administrateur : utilisez l'adresse e-mail du compte.</p>
         </form>
 
         <form id="registerForm" class="hidden" onsubmit="handleRegister(event)">
