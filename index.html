@@ -753,28 +753,28 @@
         /* Mobile : navigation basse réellement défilable, aucun onglet caché */
         @media(max-width:1000px){
             /* Réserve l'espace de la barre fixe afin qu'elle ne recouvre pas le contenu du tableau de bord. */
-            #dashboardSection:not(.hidden){padding-bottom:calc(112px + env(safe-area-inset-bottom))!important}
-            body{padding:10px 10px 100px!important}
-            .dashboard-header{margin:0 0 12px!important;width:100%!important;max-width:none!important;position:sticky!important;top:0!important;z-index:120!important}
+            #dashboardSection:not(.hidden){padding-bottom:24px!important}
+            body{padding:10px!important}
+            .dashboard-header{margin:0 0 12px!important;width:100%!important;max-width:none!important;position:relative!important;top:auto!important;z-index:2!important}
             .dpanel,#focusBar{margin-left:0!important;width:100%!important;max-width:none!important}
+            /* Onglets mobiles placés directement sous l'en-tête, comme les autres bases */
             #dashTabs{
-                position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;
-                width:100%!important;height:auto!important;max-height:94px!important;
+                position:relative!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;
+                width:100%!important;height:auto!important;max-height:none!important;
                 box-sizing:border-box!important;
                 display:flex!important;flex-direction:row!important;align-items:stretch!important;
                 justify-content:flex-start!important;flex-wrap:nowrap!important;
-                gap:4px!important;overflow-x:auto!important;overflow-y:hidden!important;
-                padding:7px 9px calc(7px + env(safe-area-inset-bottom))!important;
-                margin:0!important;border:1px solid var(--border)!important;border-bottom:0!important;
-                border-radius:15px 15px 0 0!important;background:var(--surface)!important;
-                box-shadow:0 -7px 24px rgba(20,45,35,.12)!important;
-                z-index:100!important;scrollbar-width:thin;overscroll-behavior-x:contain;
+                gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;
+                padding:8px!important;margin:0 0 14px!important;
+                border:1px solid var(--border)!important;border-radius:12px!important;
+                background:var(--surface)!important;box-shadow:var(--app-card-shadow)!important;
+                z-index:5!important;scrollbar-width:thin;overscroll-behavior-x:contain;
                 -webkit-overflow-scrolling:touch;
             }
             #dashTabs::before,#dashTabs::after{display:none!important;content:none!important}
             #dashTabs .dtab{
                 display:flex!important;flex:0 0 78px!important;width:78px!important;min-width:78px!important;
-                max-width:78px!important;min-height:65px!important;height:auto!important;
+                max-width:78px!important;min-height:58px!important;height:auto!important;
                 flex-direction:column!important;justify-content:center!important;align-items:center!important;
                 gap:5px!important;padding:6px 4px!important;margin:0!important;
                 border:1px solid transparent!important;border-radius:10px!important;
