@@ -880,6 +880,54 @@
             .settings-trigger{font-size:10px!important}
         }
 
+
+        /* En-tête du tableau de bord uniquement — connexion et formulaires préservés */
+        .avec-dash-welcome{
+            background:linear-gradient(125deg,#172554 0%,#1e40af 52%,#2563eb 100%)!important;
+            border:1px solid rgba(147,197,253,.24)!important;
+            border-radius:22px!important;
+            padding:clamp(20px,3vw,32px)!important;
+            box-shadow:0 16px 38px rgba(30,64,175,.22)!important;
+        }
+        .avec-dash-welcome:after{
+            border-color:rgba(255,255,255,.20)!important;
+            box-shadow:0 0 0 30px rgba(255,255,255,.06),0 0 0 62px rgba(255,255,255,.035)!important;
+        }
+        .avec-dash-eyebrow{color:#bfdbfe!important}
+        .avec-dash-welcome p{color:#e0ecff!important}
+        .avec-dash-cloud{
+            background:rgba(255,255,255,.10)!important;
+            border-color:rgba(255,255,255,.24)!important;
+            backdrop-filter:blur(8px);
+        }
+        .avec-dash-cloud>i{color:#bfdbfe!important}
+        .avec-dash-cloud span{color:#dbeafe!important}
+        .avec-dash-actions button{
+            border-color:rgba(255,255,255,.30)!important;
+            background:rgba(255,255,255,.10)!important;
+        }
+        .avec-dash-actions button:hover{background:#fff!important;color:#1d4ed8!important}
+        .dashboard-header{
+            background:linear-gradient(110deg,#172554 0%,#1e3a8a 58%,#1d4ed8 100%)!important;
+            border:1px solid rgba(147,197,253,.20)!important;
+            border-radius:14px!important;
+            box-shadow:0 8px 22px rgba(30,64,175,.18)!important;
+            padding:9px 16px!important;
+        }
+        .dashboard-header .btn-logout,
+        .dashboard-header .lock-select,
+        .dashboard-header .theme-toggle{
+            background:rgba(255,255,255,.13)!important;
+            border:1px solid rgba(255,255,255,.20)!important;
+            color:#fff!important;
+        }
+        .dashboard-header .btn-logout:hover{background:#dc2626!important}
+        @media(max-width:640px){
+            .avec-dash-welcome{padding:18px!important;border-radius:16px!important;gap:14px!important}
+            .avec-dash-cloud{min-width:0;width:100%}
+            .dashboard-header{padding:9px 10px!important;border-radius:12px!important}
+        }
+
 </style>
 </head>
 <body>
