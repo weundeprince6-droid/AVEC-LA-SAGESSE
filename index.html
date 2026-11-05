@@ -962,13 +962,6 @@
 
         <div id="focusBar" class="hidden" style="background:#1e3a8a;color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:14px;gap:10px;align-items:center;flex-wrap:wrap;"><i class="fa-solid fa-magnifying-glass-plus"></i><span id="focusTxt" style="flex:1;min-width:200px;"></span><button type="button" class="btn-small" onclick="grpFocusExit()"><i class="fa-solid fa-arrow-left"></i> Quitter le gros plan</button></div>
         <div class="dpanel" id="panel-dashboard">
-            <section class="card hidden" id="bqShowcaseA" style="overflow:hidden;">
-                <div class="card-header"><i class="fa-solid fa-store"></i><h3>Articles publiés par les membres</h3>
-                    <button type="button" class="btn-small" style="margin-left:auto;" onclick="showTab('boutique')">Gérer</button></div>
-                <div id="bqSlideA" style="position:relative;" onmouseenter="bqPause(true)" onmouseleave="bqPause(false)" ontouchstart="bqPause(true)" ontouchend="bqPause(false)"></div>
-                <div id="bqDotsA" style="display:flex;justify-content:center;gap:6px;margin-top:10px;"></div>
-            </section>
-
         <!-- TABLEAU DE BORD - STATS CAISSE GLOBALE -->
         <div class="stats-grid">
             <div class="stat-card">
@@ -1682,12 +1675,6 @@
                         <button type="button" class="ghost" onclick="showMemberTab('credits')"><i class="fa-solid fa-hand-holding-dollar"></i> Mes crédits</button>
                     </div>
                 </div>
-                <section class="card hidden" id="bqShowcase" style="overflow:hidden;">
-                    <div class="card-header"><i class="fa-solid fa-store"></i><h3>Dans la boutique des membres</h3>
-                        <button type="button" class="btn-small" style="margin-left:auto;" onclick="showMemberTab('boutique');bqShowSub('catalogue')">Tout voir</button></div>
-                    <div id="bqSlide" style="position:relative;" onmouseenter="bqPause(true)" onmouseleave="bqPause(false)" ontouchstart="bqPause(true)" ontouchend="bqPause(false)"></div>
-                    <div id="bqDots" style="display:flex;justify-content:center;gap:6px;margin-top:10px;"></div>
-                </section>
                 <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon bg-blue"><i class="fa-solid fa-wallet"></i></div>
