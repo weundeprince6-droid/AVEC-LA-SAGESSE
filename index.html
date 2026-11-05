@@ -694,6 +694,19 @@
             #dashTabs .header-lock-btn{margin:0 0 0 6px!important;min-height:42px!important;flex:0 0 auto!important;padding:8px 10px!important}
             #dashTabs .header-lock-btn span{display:none!important}
         }
+
+        /* En-tête principal qui reste visible pendant le défilement */
+        .dashboard-header{
+            position:sticky!important;top:0!important;z-index:80!important;
+            background:var(--surface)!important;
+            box-shadow:0 5px 18px rgba(20,35,50,.12)!important;
+        }
+        @media(max-width:1000px){
+            .dashboard-header{
+                position:sticky!important;top:92px!important;z-index:8000!important;
+                margin-top:0!important;
+            }
+        }
         /* En-tête de l'espace de travail */
         .dashboard-header{
             background:var(--surface)!important;color:var(--text-main)!important;
