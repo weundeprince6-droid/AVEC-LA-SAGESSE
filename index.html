@@ -822,7 +822,42 @@
         :root[data-theme="dark"] th{background:#203b32!important;color:#dceee6!important}
         :root[data-theme="dark"] .theme-toggle{background:#20372f!important;color:#8de0bd!important;border-color:#315849!important}
 
-    </style>
+            /* Tableau de bord enrichi — inspiration ESE DB */
+        .avec-dash-welcome{display:flex;justify-content:space-between;align-items:center;gap:22px;margin:0 0 22px;padding:26px 30px;border-radius:20px;background:linear-gradient(125deg,#176b55,#105441 72%,#143e35);color:#fff;box-shadow:0 14px 34px rgba(23,107,85,.17);position:relative;overflow:hidden;isolation:isolate}
+        .avec-dash-welcome:after{content:"";position:absolute;z-index:-1;width:290px;height:290px;right:110px;top:-190px;border:1px solid #ffffff25;border-radius:50%;box-shadow:0 0 0 30px #ffffff0c,0 0 0 62px #ffffff08}
+        .avec-dash-eyebrow{display:block;font-size:10px;letter-spacing:1.7px;font-weight:900;color:#aee8d1;margin-bottom:6px}
+        .avec-dash-welcome h1{font-size:clamp(22px,3vw,30px);line-height:1.2;letter-spacing:-.7px;margin:0}
+        .avec-dash-welcome p{color:#d7eee5;font-size:13px;margin:7px 0 16px;max-width:690px}
+        .avec-dash-actions{display:flex;flex-wrap:wrap;gap:8px}
+        .avec-dash-actions button{border:1px solid #ffffff42;background:#ffffff15;color:#fff;border-radius:10px;padding:9px 12px;font-weight:750;font-size:12px;cursor:pointer;transition:.18s}
+        .avec-dash-actions button:hover{background:#fff;color:#176b55;transform:translateY(-2px)}
+        .avec-dash-actions i{margin-right:5px}
+        .avec-dash-cloud{flex:0 0 auto;min-width:160px;padding:15px 17px;border:1px solid #ffffff38;border-radius:14px;background:#ffffff12;display:flex;flex-direction:column;gap:5px}
+        .avec-dash-cloud>i{font-size:20px;color:#b9f2dc}.avec-dash-cloud span{font-size:9px;letter-spacing:1.2px;color:#ccefe0;font-weight:800}.avec-dash-cloud strong{font-size:12px}
+        .avec-dash-insights{margin:24px 0 10px}
+        .avec-dash-section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin-bottom:14px}
+        .avec-dash-section-head h2{font-size:19px;letter-spacing:-.4px;margin:0;color:var(--text-main)}
+        .avec-dash-section-head p{font-size:12px;color:var(--text-muted);margin:3px 0 0}
+        .avec-dash-live{font-size:11px;font-weight:750;color:var(--success);white-space:nowrap}.avec-dash-live i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#20b981;margin-right:6px;box-shadow:0 0 0 4px rgba(32,185,129,.12)}
+        .avec-dash-insight-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.85fr);gap:16px}
+        .avec-dash-panel{min-width:0;padding:20px;border:1px solid var(--border);border-radius:17px;background:var(--surface);box-shadow:var(--app-card-shadow,0 8px 24px rgba(31,50,81,.045))}
+        .avec-dash-panel-title{display:flex;align-items:center;gap:11px;margin-bottom:18px}
+        .avec-dash-panel-icon{width:39px;height:39px;border-radius:12px;display:grid;place-items:center;background:var(--primary-soft);color:var(--primary);font-size:16px}
+        .avec-dash-panel-icon.purple{background:rgba(139,92,246,.12);color:#8b5cf6}
+        .avec-dash-panel-title h3{font-size:14px;margin:0;color:var(--text-main)}.avec-dash-panel-title small{font-size:11px;color:var(--text-muted)}
+        .avec-dash-bars{display:grid;gap:15px}.avec-dash-bar-row{display:grid;grid-template-columns:130px minmax(50px,1fr) auto;align-items:center;gap:11px;font-size:12px}
+        .avec-dash-bar-label{font-weight:700;color:var(--text-main)}.avec-dash-bar-track{height:11px;border-radius:20px;background:var(--bg-main);overflow:hidden}.avec-dash-bar-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,#176b55,#43b68a);min-width:2px;transition:width .35s}
+        .avec-dash-bar-fill.gold{background:linear-gradient(90deg,#d58a38,#f2c078)}.avec-dash-bar-fill.blue{background:linear-gradient(90deg,#3978c6,#72a9e9)}
+        .avec-dash-bar-value{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--text-main)}
+        .avec-dash-foot{font-size:10px;color:var(--text-muted);margin-top:17px;padding-top:10px;border-top:1px solid var(--border)}
+        .avec-dash-status-list{display:grid;gap:0}.avec-dash-status-list>div{display:flex;align-items:center;gap:9px;padding:12px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-muted)}.avec-dash-status-list strong{margin-left:auto;font-size:17px;color:var(--text-main);font-variant-numeric:tabular-nums}
+        .avec-dash-status-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}.avec-dash-status-dot.amber{background:#e6a23c}.avec-dash-status-dot.red{background:#e45b63}.avec-dash-status-dot.green{background:#20a879}
+        .avec-dash-note{margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--primary-soft);color:var(--primary);font-size:11px;font-weight:650}
+        @media(max-width:800px){.avec-dash-insight-grid{grid-template-columns:1fr}.avec-dash-cloud{min-width:130px}}
+        @media(max-width:560px){.avec-dash-welcome{padding:20px;align-items:flex-start;flex-direction:column;gap:14px;margin-bottom:15px}.avec-dash-cloud{display:none}.avec-dash-welcome h1{font-size:22px}.avec-dash-actions{gap:6px}.avec-dash-actions button{font-size:11px;padding:8px 9px}.avec-dash-section-head{align-items:flex-start;flex-direction:column}.avec-dash-panel{padding:15px}.avec-dash-bar-row{grid-template-columns:94px minmax(35px,1fr);gap:7px}.avec-dash-bar-value{grid-column:2;text-align:right;margin-top:-5px;font-size:11px}}
+        :root[data-theme="dark"] .avec-dash-bar-track{background:#253342}
+
+</style>
 </head>
 <body>
     <div id="syncStatus" class="sync-status hidden"></div>
@@ -962,6 +997,16 @@
 
         <div id="focusBar" class="hidden" style="background:#1e3a8a;color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:14px;gap:10px;align-items:center;flex-wrap:wrap;"><i class="fa-solid fa-magnifying-glass-plus"></i><span id="focusTxt" style="flex:1;min-width:200px;"></span><button type="button" class="btn-small" onclick="grpFocusExit()"><i class="fa-solid fa-arrow-left"></i> Quitter le gros plan</button></div>
         <div class="dpanel" id="panel-dashboard">
+        <section class="avec-dash-welcome">
+            <div class="avec-dash-welcome-copy"><span class="avec-dash-eyebrow">ESPACE DE PILOTAGE</span><h1>Bienvenue dans votre espace de gestion</h1><p>Suivez en un seul regard l’épargne, les crédits, la trésorerie et la vie de votre communauté.</p>
+                <div class="avec-dash-actions">
+                    <button type="button" onclick="showTab('membres')"><i class="fa-solid fa-user-plus"></i> Membres</button>
+                    <button type="button" onclick="showTab('operations')"><i class="fa-solid fa-arrow-right-arrow-left"></i> Opérations</button>
+                    <button type="button" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes</button>
+                    <button type="button" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
+                </div>
+            </div><div class="avec-dash-cloud"><i class="fa-solid fa-cloud-arrow-up"></i><span>ESPACE SYNCHRONISÉ</span><strong id="dashModeLabel">Suivi en temps réel</strong></div>
+        </section>
         <!-- TABLEAU DE BORD - STATS CAISSE GLOBALE -->
         <div class="stats-grid">
             <div class="stat-card">
@@ -1034,6 +1079,17 @@
                 </div>
             </div>
         </div>
+        <section class="avec-dash-insights" id="avecDashInsights">
+            <div class="avec-dash-section-head"><div><span class="avec-dash-eyebrow">ANALYSE FINANCIÈRE</span><h2>Vue d’ensemble de votre caisse</h2><p>Comparaison des principaux indicateurs en dollars américains.</p></div><span class="avec-dash-live"><i></i> Données actualisées</span></div>
+            <div class="avec-dash-insight-grid">
+                <article class="avec-dash-panel avec-dash-chart-panel"><div class="avec-dash-panel-title"><span class="avec-dash-panel-icon"><i class="fa-solid fa-chart-column"></i></span><div><h3>Répartition financière</h3><small>Épargne, crédits restants et caisse</small></div></div><div id="avecDashBars" class="avec-dash-bars"><p>Chargement des indicateurs…</p></div><div class="avec-dash-foot">Les montants sont calculés à partir des comptes enregistrés.</div></article>
+                <article class="avec-dash-panel"><div class="avec-dash-panel-title"><span class="avec-dash-panel-icon purple"><i class="fa-solid fa-shield-heart"></i></span><div><h3>Suivi communautaire</h3><small>État des demandes et réclamations</small></div></div><div class="avec-dash-status-list">
+                    <div><span class="avec-dash-status-dot amber"></span><span>Demandes en attente</span><strong id="dashPendingCount">0</strong></div>
+                    <div><span class="avec-dash-status-dot red"></span><span>Réclamations ouvertes</span><strong id="dashClaimsCount">0</strong></div>
+                    <div><span class="avec-dash-status-dot green"></span><span>Membres enregistrés</span><strong id="dashMembersCount">0</strong></div>
+                </div><div class="avec-dash-note" id="dashHealthNote">Votre tableau de bord est prêt.</div></article>
+            </div>
+        </section>
             <div class="grid-2" style="margin-top:24px;">
                 <div>
                     <section class="card hidden" id="orgSection">
@@ -3147,6 +3203,26 @@
             updateDashboard();
         }
 
+        function renderAvecDashboardInsights(T, fund) {
+            const cashUSD = T.USD.epargne + T.USD.interets - T.USD.restant + bqCom('USD');
+            const items = [
+                {label:'Épargne totale',value:Math.max(0,T.USD.epargne),cls:''},
+                {label:'Crédits restants',value:Math.max(0,T.USD.restant),cls:'gold'},
+                {label:'Argent en caisse',value:Math.max(0,cashUSD),cls:'blue'}
+            ];
+            const max = Math.max(1,...items.map(x=>x.value));
+            const bars = document.getElementById('avecDashBars');
+            if (bars) bars.innerHTML = items.map(x => '<div class="avec-dash-bar-row"><span class="avec-dash-bar-label">'+x.label+'</span><div class="avec-dash-bar-track"><div class="avec-dash-bar-fill '+x.cls+'" style="width:'+Math.max(x.value>0?1:0,(x.value/max)*100)+'%"></div></div><strong class="avec-dash-bar-value">'+fmt(x.value)+'</strong></div>').join('');
+            const pending = requests.filter(r => r.status === 'en attente').length;
+            const opened = claims.filter(c => c.status === 'ouverte').length;
+            const put = (id,value) => { const el=document.getElementById(id); if(el) el.textContent=value; };
+            put('dashPendingCount',pending); put('dashClaimsCount',opened); put('dashMembersCount',members.length);
+            const note=document.getElementById('dashHealthNote');
+            if(note) note.textContent = pending+opened===0 ? 'Tout est à jour : aucune demande ni réclamation ouverte.' : 'Une action est nécessaire : '+pending+' demande(s) et '+opened+' réclamation(s) à traiter.';
+            const mode=document.getElementById('dashModeLabel');
+            if(mode) mode.textContent = CLOUD ? 'Synchronisation Firebase active' : 'Mode local sur cet appareil';
+        }
+
         function updateDashboard() {
             try { renderRegistrations(); } catch (e) {}
             try { fillDefaultPassword(); } catch (e) {}
@@ -3241,6 +3317,7 @@
             document.getElementById('statCaisseFC').textContent = fmt(T.FC.epargne + T.FC.interets - T.FC.restant + fund.balance + occFund().balance + bqCom('FC'), 'FC');
             document.getElementById('statCaisseFCNote').textContent = 'dont cas sociaux : ' + fmt(round2(fund.balance + occFund().balance), 'FC');
             document.getElementById('statSocialFund').textContent = fmt(round2(fund.balance + occFund().balance), 'FC');
+            renderAvecDashboardInsights(T, fund);
             renderSocial();
 
             renderAdminRequests();
