@@ -67,15 +67,18 @@
         :root[data-theme="dark"] .btn-small { background: #1b2a40; }
         :root[data-theme="dark"] .sync-status { background: var(--surface); color: var(--text-main); }
         :root[data-theme="dark"] .alert { color: var(--text-main); }
+        /* Bouton de thème intégré à l'en-tête de l'application */
         .theme-toggle {
-            position: fixed; right: 14px; bottom: 16px; z-index: 1000;
-            border: 1px solid var(--border); border-radius: 999px;
-            padding: 10px 14px; background: var(--surface); color: var(--text-main);
-            box-shadow: var(--shadow); font-weight: 700; cursor: pointer;
-            display: inline-flex; align-items: center; gap: 8px;
+            position: static; flex: 0 0 auto;
+            border: 1px solid #64748b; border-radius: 7px;
+            padding: 5px 10px; background: #334155; color: #fff;
+            box-shadow: none; font-weight: 700; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            white-space: nowrap; font-size: .8rem;
         }
+        .theme-toggle:hover { background: var(--primary); }
         @media (max-width: 640px) {
-            .theme-toggle { right: 10px; bottom: 82px; padding: 9px 12px; font-size: .82rem; }
+            .theme-toggle { padding: 6px 9px; font-size: .78rem; }
         }
 
         /* AUTHENTIFICATION */
@@ -5591,7 +5594,9 @@
                 btn.onclick = window.toggleTheme;
                 btn.innerHTML = '<i class="fa-solid fa-moon"></i> Mode sombre';
                 btn.setAttribute('aria-label', 'Passer en mode sombre');
-                document.body.appendChild(btn);
+                const headerActions = document.querySelector('.dashboard-header .header-actions');
+                if (headerActions) headerActions.insertBefore(btn, headerActions.querySelector('.user-info'));
+                else document.body.appendChild(btn);
                 applyTheme(root.getAttribute('data-theme') || saved);
             }
             if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addButton);
