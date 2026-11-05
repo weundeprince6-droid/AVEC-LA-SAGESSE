@@ -29,6 +29,55 @@
 
         .hidden { display: none !important; }
 
+        /* Thème clair/sombre indépendant des préférences du navigateur */
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --bg-main: #0b1220;
+            --surface: #111c2e;
+            --text-main: #e5edf7;
+            --text-muted: #a6b4c8;
+            --border: #29384d;
+            --shadow: 0 8px 22px rgba(0,0,0,.28);
+            --success-light: #123b32;
+            --danger-light: #451f28;
+        }
+        :root[data-theme="dark"] body { background: var(--bg-main); color: var(--text-main); }
+        :root[data-theme="dark"] .card,
+        :root[data-theme="dark"] .stat-card,
+        :root[data-theme="dark"] .kpi,
+        :root[data-theme="dark"] .auth-container,
+        :root[data-theme="dark"] .mprogress,
+        :root[data-theme="dark"] .claim-item,
+        :root[data-theme="dark"] .insc-card,
+        :root[data-theme="dark"] .gal-item,
+        :root[data-theme="dark"] .member-details-box,
+        :root[data-theme="dark"] .subtab,
+        :root[data-theme="dark"] .btn-small,
+        :root[data-theme="dark"] input,
+        :root[data-theme="dark"] select,
+        :root[data-theme="dark"] textarea,
+        :root[data-theme="dark"] table,
+        :root[data-theme="dark"] tr { background-color: var(--surface); color: var(--text-main); border-color: var(--border); }
+        :root[data-theme="dark"] th { background: #1b2a40; color: var(--text-muted); }
+        :root[data-theme="dark"] .dtabs { background: var(--surface); border-color: var(--border); }
+        :root[data-theme="dark"] .tab-btn,
+        :root[data-theme="dark"] .dtab { color: var(--text-muted); }
+        :root[data-theme="dark"] .tab-btn.active,
+        :root[data-theme="dark"] .dtab.active { color: #93c5fd; }
+        :root[data-theme="dark"] .btn-small { background: #1b2a40; }
+        :root[data-theme="dark"] .sync-status { background: var(--surface); color: var(--text-main); }
+        :root[data-theme="dark"] .alert { color: var(--text-main); }
+        .theme-toggle {
+            position: fixed; right: 14px; bottom: 16px; z-index: 1000;
+            border: 1px solid var(--border); border-radius: 999px;
+            padding: 10px 14px; background: var(--surface); color: var(--text-main);
+            box-shadow: var(--shadow); font-weight: 700; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+        @media (max-width: 640px) {
+            .theme-toggle { right: 10px; bottom: 82px; padding: 9px 12px; font-size: .82rem; }
+        }
+
         /* AUTHENTIFICATION */
         .auth-container {
             max-width: 420px;
@@ -5505,6 +5554,49 @@
             document.addEventListener('visibilitychange', () => { if (!document.hidden) checkAutoLock(); });
             if (typeof setInterval === 'function') setInterval(() => checkAutoLock(), 15000);
         }
+
+        // ---------- Thème clair/sombre manuel ---------- 
+        (function initThemeToggle() {
+            const root = document.documentElement;
+            const key = 'avec_theme_preference';
+            function applyTheme(theme) {
+                root.setAttribute('data-theme', theme);
+                const btn = document.getElementById('themeToggle');
+                if (btn) {
+                    const dark = theme === 'dark';
+                    btn.innerHTML = dark
+                        ? '<i class="fa-solid fa-sun"></i> Mode clair'
+                        : '<i class="fa-solid fa-moon"></i> Mode sombre';
+                    btn.setAttribute('aria-label', dark ? 'Passer en mode clair' : 'Passer en mode sombre');
+                    btn.title = dark ? 'Activer le mode clair' : 'Activer le mode sombre';
+                }
+            }
+            let saved = 'light';
+            try {
+                const value = localStorage.getItem(key);
+                if (value === 'dark' || value === 'light') saved = value;
+            } catch (e) {}
+            applyTheme(saved);
+            window.toggleTheme = function () {
+                const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                applyTheme(next);
+                try { localStorage.setItem(key, next); } catch (e) {}
+            };
+            function addButton() {
+                if (document.getElementById('themeToggle')) return;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.id = 'themeToggle';
+                btn.className = 'theme-toggle';
+                btn.onclick = window.toggleTheme;
+                btn.innerHTML = '<i class="fa-solid fa-moon"></i> Mode sombre';
+                btn.setAttribute('aria-label', 'Passer en mode sombre');
+                document.body.appendChild(btn);
+                applyTheme(root.getAttribute('data-theme') || saved);
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addButton);
+            else addButton();
+        })();
 
         // ---------- Démarrage ----------
         window.onload = function () {
