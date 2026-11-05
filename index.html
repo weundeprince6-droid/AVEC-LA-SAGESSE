@@ -752,6 +752,8 @@
         .modal-box{background:var(--surface)!important;color:var(--text-main)!important;border:1px solid var(--border)}
         /* Mobile : navigation basse réellement défilable, aucun onglet caché */
         @media(max-width:1000px){
+            /* Réserve l'espace de la barre fixe afin qu'elle ne recouvre pas le contenu du tableau de bord. */
+            #dashboardSection:not(.hidden){padding-bottom:calc(112px + env(safe-area-inset-bottom))!important}
             body{padding:10px 10px 100px!important}
             .dashboard-header{margin:0 0 12px!important;width:100%!important;max-width:none!important}
             .dpanel,#focusBar{margin-left:0!important;width:100%!important;max-width:none!important}
