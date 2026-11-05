@@ -1041,6 +1041,8 @@
         </header>
         </div>
         <div class="dpanel" id="panel-dashboard">
+            <div class="stats-grid" id="dashMirrorStats"></div>
+            <div id="dashMirrorInsights"></div>
 
             <div class="grid-2" style="margin-top:24px;">
                 <div>
@@ -1261,21 +1263,21 @@
                     <div class="value" id="statSocialFund">0 FC</div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card stat-notif">
                 <div class="stat-icon bg-purple"><i class="fa-solid fa-vault"></i></div>
                 <div class="stat-content">
                     <div class="label">Membres Actifs</div>
                     <div class="value" id="statTotalMembres">0</div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card stat-notif">
                 <div class="stat-icon bg-red"><i class="fa-solid fa-bell"></i></div>
                 <div class="stat-content">
                     <div class="label">Réclamations Ouvertes</div>
                     <div class="value" id="statOpenClaims">0</div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card stat-notif">
                 <div class="stat-icon bg-blue"><i class="fa-solid fa-inbox"></i></div>
                 <div class="stat-content">
                     <div class="label">Demandes en Attente</div>
@@ -6180,5 +6182,29 @@
 <script src="groups.js?v=20261124"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261041"></script>
+    <script>
+        (function(){
+            function strip(n){n.removeAttribute&&n.removeAttribute('id');[].forEach.call(n.querySelectorAll('[id]'),function(e){e.removeAttribute('id')});return n}
+            function mirror(){
+                try{
+                    var st=document.getElementById('dashMirrorStats'),ins=document.getElementById('dashMirrorInsights'),src=document.getElementById('avecDashInsights');
+                    if(!st||!ins||!src)return;
+                    st.innerHTML='';
+                    [].forEach.call(document.querySelectorAll('#panel-operations .stat-notif'),function(c){st.appendChild(strip(c.cloneNode(true)))});
+                    ins.innerHTML='';ins.appendChild(strip(src.cloneNode(true)));
+                }catch(e){}
+            }
+            var t=null;
+            function later(){clearTimeout(t);t=setTimeout(mirror,60)}
+            function init(){
+                var p=document.getElementById('panel-operations');
+                if(p&&window.MutationObserver)new MutationObserver(later).observe(p,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['style','class']});
+                mirror();
+            }
+            if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+            window.mirrorDash=mirror;
+        })();
+    
+</script>
 </body>
 </html>
