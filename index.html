@@ -5424,7 +5424,37 @@
                 '.note{margin-top:14px;background:#fffbeb;border:1px solid #fcd34d;border-left:5px solid #f59e0b;border-radius:6px;padding:9px 14px;break-inside:avoid}.note h4{margin:0 0 5px;color:#92400e;font-size:12.5px}.note ul{margin:0;padding-left:18px}.note li{margin:3px 0;line-height:1.45}' +
                 '.tot td{background:#e0e7ff!important;color:#1e3a8a;font-weight:700}.gal{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}figure{margin:0;text-align:center;break-inside:avoid}figure img{width:100%;max-width:130px;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid #d9e1ec}figcaption{margin-top:4px;font-weight:700}figcaption small{color:#6b7280;font-weight:400}' +
                 '@media print{body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}.bar{display:none}.page{box-shadow:none;margin:0;padding:0;max-width:none}}';
-            return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport ' + E(orgName()) + ' ' + E(nowFR) + '</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style></head><body>' +
+            return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport ' + E(orgName()) + ' ' + E(nowFR) + '</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '
+        /* Navigation sous la bannière verte sur toutes les tailles d'écran.
+           Empêche l'ancien menu latéral fixe de recouvrir le côté gauche. */
+        #dashboardSection:not(.hidden){padding-left:0!important}
+        #dashTabs{
+            position:relative!important;left:auto!important;right:auto!important;
+            top:auto!important;bottom:auto!important;
+            width:100%!important;height:auto!important;max-height:none!important;
+            display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;
+            align-items:center!important;justify-content:flex-start!important;
+            overflow:visible!important;gap:7px!important;
+            margin:0 0 18px!important;padding:9px!important;
+            border:1px solid var(--border)!important;border-radius:13px!important;
+            background:var(--surface)!important;box-shadow:var(--app-card-shadow)!important;
+            z-index:5!important;
+        }
+        #dashTabs::before,#dashTabs::after{display:none!important;content:none!important}
+        #dashTabs .dtab{
+            position:relative!important;flex:0 0 auto!important;width:auto!important;
+            min-width:0!important;max-width:none!important;min-height:42px!important;
+            height:auto!important;display:inline-flex!important;flex-direction:row!important;
+            align-items:center!important;justify-content:center!important;gap:7px!important;
+            padding:9px 12px!important;margin:0!important;border-radius:9px!important;
+            white-space:nowrap!important;font-size:.78rem!important;line-height:1.2!important;
+        }
+        #dashTabs .dtab i{display:inline-block!important;font-size:1rem!important}
+        @media(max-width:640px){
+            #dashTabs{flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important}
+            #dashTabs .dtab{flex:0 0 auto!important;min-height:42px!important}
+        }
+</style></head><body>' +
                 '<div class="bar"><button onclick="window.print()">Enregistrer en PDF / Imprimer</button><span>Dans la fenêtre qui s\'ouvre, choisissez « Enregistrer au format PDF » comme imprimante (orientation paysage).</span></div>' + html + '</body></html>';
         }
 
