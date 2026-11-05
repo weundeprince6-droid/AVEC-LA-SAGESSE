@@ -903,6 +903,13 @@
         }
 
 </style>
+<style>
+@media (max-width:760px) {
+ .settings-grid { grid-template-columns:minmax(0,1fr)!important; }
+ .dashboard-bottom { grid-template-columns:minmax(0,1fr)!important; }
+ .dashboard-shortcuts .avec-dash-actions button { flex:1 1 100%; }
+}
+</style>
 </head>
 <body>
     <div id="syncStatus" class="sync-status hidden"></div>
@@ -1062,9 +1069,8 @@
             </div>
         </header>
         
-            <div class="grid-2" style="margin-top:18px;">
-                <div>
-<section class="card hidden" id="orgSection">
+            <div class="settings-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px;align-items:start;">
+                <div class="settings-column"><section class="card hidden" id="orgSection">
                     <div class="card-header"><i class="fa-solid fa-building-columns"></i><h3>Identité de l'organisation</h3></div>
                     <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Le nom et le logo s'affichent sur la page de connexion, dans les espaces, dans les messages WhatsApp et dans les rapports PDF et Excel.</p>
                     <form onsubmit="orgSave(event)">
@@ -1079,15 +1085,14 @@
                         <button type="submit" class="btn" style="width:auto;"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
                     </form>
                     <div id="orgMsg" class="alert hidden" style="margin-top:10px;"></div>
-                </section>
-<section class="card">
+                </section><section class="card">
                         <div class="card-header">
                             <i class="fa-solid fa-id-badge"></i>
                             <h3>Mon profil</h3>
                         </div>
                         <div id="adminProfileBox"></div>
-                    </section>
-<section class="card">
+                    </section></div>
+                <div class="settings-column"><section class="card">
                         <div class="card-header">
                             <i class="fa-solid fa-key"></i>
                             <h3>Changer mon mot de passe</h3>
@@ -1109,37 +1114,32 @@
                         </form>
                         <div id="admPwdResultBox" class="alert hidden"></div>
                     </section>
+                    <section class="card settings-security-note">
+                        <div class="card-header"><i class="fa-solid fa-shield-halved"></i><h3>Conseils de sécurité</h3></div>
+                        <ul style="padding-left:19px;margin:0;color:var(--text-muted);font-size:.88rem;line-height:1.8;">
+                            <li>Utilisez un mot de passe personnel et difficile à deviner.</li>
+                            <li>Ne partagez jamais votre mot de passe avec un autre utilisateur.</li>
+                            <li>Verrouillez votre session lorsque vous quittez l'appareil.</li>
+                        </ul>
+                    </section>
                 </div>
             </div>
 </div>
         <div class="dpanel" id="panel-dashboard">
             <div class="stats-grid" id="dashMirrorStats"></div>
             <div id="dashMirrorInsights"></div>
-
-            <div class="grid-2" style="margin-top:24px;">
-                <div>
-                    
-                
-
-                    
+            <section class="card dashboard-shortcuts" style="margin-top:18px;">
+                <div class="card-header"><i class="fa-solid fa-bolt"></i><h3>Accès rapides</h3></div>
+                <div class="avec-dash-actions" style="display:flex;flex-wrap:wrap;gap:9px;">
+                    <button type="button" onclick="showTab('membres')"><i class="fa-solid fa-user-plus"></i> Gérer les membres</button>
+                    <button type="button" onclick="showTab('operations')"><i class="fa-solid fa-money-bill-transfer"></i> Effectuer une opération</button>
+                    <button type="button" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Voir les demandes</button>
+                    <button type="button" onclick="exportPDF()"><i class="fa-solid fa-file-pdf"></i> Rapport PDF</button>
                 </div>
-                <div>
-                    <section class="card">
-                        <div class="card-header">
-                            <i class="fa-solid fa-envelope-open-text"></i>
-                            <h3>Messages à traiter</h3>
-                        </div>
-                        <div id="todoBox"></div>
-                    </section>
-
-                    <section class="card">
-                        <div class="card-header">
-                            <i class="fa-solid fa-list-check"></i>
-                            <h3>Dernières opérations effectuées</h3>
-                        </div>
-                        <div id="recentOpsBox" style="overflow-x:auto;"></div>
-                    </section>
-                </div>
+            </section>
+            <div class="grid-2 dashboard-bottom" style="margin-top:18px;">
+                <section class="card"><div class="card-header"><i class="fa-solid fa-envelope-open-text"></i><h3>Messages à traiter</h3></div><div id="todoBox"></div></section>
+                <section class="card"><div class="card-header"><i class="fa-solid fa-list-check"></i><h3>Dernières opérations effectuées</h3></div><div id="recentOpsBox" style="overflow-x:auto;"></div></section>
             </div>
         </div>
 
