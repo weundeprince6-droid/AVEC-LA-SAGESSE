@@ -880,71 +880,6 @@
             .settings-trigger{font-size:10px!important}
         }
 
-
-        /* En-tête du tableau de bord uniquement — connexion et formulaires préservés */
-        .avec-dash-welcome{
-            background:linear-gradient(125deg,#172554 0%,#1e40af 52%,#2563eb 100%)!important;
-            border:1px solid rgba(147,197,253,.24)!important;
-            border-radius:22px!important;
-            padding:clamp(20px,3vw,32px)!important;
-            box-shadow:0 16px 38px rgba(30,64,175,.22)!important;
-        }
-        .avec-dash-welcome:after{
-            border-color:rgba(255,255,255,.20)!important;
-            box-shadow:0 0 0 30px rgba(255,255,255,.06),0 0 0 62px rgba(255,255,255,.035)!important;
-        }
-        .avec-dash-eyebrow{color:#bfdbfe!important}
-        .avec-dash-welcome p{color:#e0ecff!important}
-        .avec-dash-cloud{
-            background:rgba(255,255,255,.10)!important;
-            border-color:rgba(255,255,255,.24)!important;
-            backdrop-filter:blur(8px);
-        }
-        .avec-dash-cloud>i{color:#bfdbfe!important}
-        .avec-dash-cloud span{color:#dbeafe!important}
-        .avec-dash-actions button{
-            border-color:rgba(255,255,255,.30)!important;
-            background:rgba(255,255,255,.10)!important;
-        }
-        .avec-dash-actions button:hover{background:#fff!important;color:#1d4ed8!important}
-        .dashboard-header{
-            background:linear-gradient(110deg,#172554 0%,#1e3a8a 58%,#1d4ed8 100%)!important;
-            border:1px solid rgba(147,197,253,.20)!important;
-            border-radius:14px!important;
-            box-shadow:0 8px 22px rgba(30,64,175,.18)!important;
-            padding:9px 16px!important;
-        }
-        .dashboard-header .btn-logout,
-        .dashboard-header .lock-select,
-        .dashboard-header .theme-toggle{
-            background:rgba(255,255,255,.13)!important;
-            border:1px solid rgba(255,255,255,.20)!important;
-            color:#fff!important;
-        }
-        .dashboard-header .btn-logout:hover{background:#dc2626!important}
-        @media(max-width:640px){
-            .avec-dash-welcome{padding:18px!important;border-radius:16px!important;gap:14px!important}
-            .avec-dash-cloud{min-width:0;width:100%}
-            .dashboard-header{padding:9px 10px!important;border-radius:12px!important}
-        }
-
-
-        /* Connexion : amélioration isolée, sans toucher à l'authentification */
-        #authSection.auth-container{max-width:440px;padding:30px;margin:clamp(24px,7vh,70px) auto;border-radius:18px}
-        #authSection .auth-header{margin-bottom:22px}
-        #authSection .auth-header i{color:#2563eb}
-        #authSection .tabs{margin-bottom:22px}
-        #authSection .form-group{margin-bottom:16px}
-        #authSection input{min-height:42px;padding:10px 12px}
-        #authSection .btn{min-height:44px;border-radius:9px;font-weight:700}
-        .login-password-wrap{position:relative;display:flex;align-items:center}
-        .login-password-wrap input{padding-right:48px!important}
-        .login-password-toggle{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:34px;height:32px;border:0;border-radius:7px;background:transparent;color:var(--text-muted);cursor:pointer}
-        .login-password-toggle:hover{background:var(--bg-main);color:var(--primary)}
-        .login-help{margin-top:14px;text-align:center;color:var(--text-muted);font-size:12px;line-height:1.55}
-        :root[data-theme="dark"] .login-password-toggle:hover{background:#20304a}
-        @media(max-width:600px){#authSection.auth-container{margin:18px auto;padding:22px 18px;max-width:100%}}
-
 </style>
 </head>
 <body>
@@ -1007,27 +942,23 @@
         </div>
 
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchAuthTab('login')">Accès au compte</button>
+            <button class="tab-btn active" onclick="switchAuthTab('login')">Se Connecter</button>
             <button class="tab-btn hidden" id="registerTabBtn" onclick="switchAuthTab('register')">Créer le compte administrateur</button>
         </div>
 
         <form id="loginForm" onsubmit="handleLogin(event)">
             <div class="form-group">
-                <label for="loginUsername">Nom d'utilisateur <small id="loginUserHint" style="color:var(--text-muted);font-weight:400;">(membres : identifiant MBR-001 ; administrateur : adresse e-mail)</small></label>
-                <input type="text" id="loginUsername" required autocomplete="username" autocapitalize="off" spellcheck="false">
+                <label>Nom d'utilisateur <small id="loginUserHint" style="color:var(--text-muted);font-weight:400;">(membres : votre identifiant, ex. MBR-001)</small></label>
+                <input type="text" id="loginUsername" required autocomplete="username">
             </div>
             <div class="form-group">
-                <label for="loginPassword">Mot de passe</label>
-                <div class="login-password-wrap">
-                    <input type="password" id="loginPassword" required placeholder="Saisissez votre mot de passe" autocomplete="current-password">
-                    <button type="button" class="login-password-toggle" aria-label="Afficher le mot de passe" aria-pressed="false" onclick="toggleLoginPassword()"><i class="fa-solid fa-eye"></i></button>
-                </div>
+                <label>Mot de passe</label>
+                <input type="password" id="loginPassword" required placeholder="••••••••" autocomplete="current-password">
             </div>
-            <p id="forgotWrap" style="display:block!important;visibility:visible!important;text-align:right;margin:4px 0 16px;font-size:0.92rem;">
-                <a href="#" onclick="forgotPassword(); return false;" style="color:var(--primary);font-weight:700;text-decoration:underline;">Mot de passe oublié ?</a>
+            <button type="submit" class="btn"><i class="fa-solid fa-right-to-bracket"></i> Connexion</button>
+            <p id="forgotWrap" class="hidden" style="text-align:center;margin-top:12px;font-size:0.9rem;">
+                <a href="#" onclick="forgotPassword(); return false;" style="color:var(--primary);">Mot de passe oublié ? (administrateur / équipe)</a>
             </p>
-            <button type="submit" class="btn"><i class="fa-solid fa-right-to-bracket"></i> Entrer dans mon compte</button>
-            <p class="login-help">Membre : utilisez votre identifiant MBR-001. Administrateur : utilisez l'adresse e-mail du compte.</p>
         </form>
 
         <form id="registerForm" class="hidden" onsubmit="handleRegister(event)">
@@ -2933,18 +2864,7 @@
             setHidden('registerTabBtn', CLOUD ? false : users.length > 0);
         }
 
-        async function toggleLoginPassword() {
-            const input = document.getElementById('loginPassword');
-            const button = document.querySelector('.login-password-toggle');
-            if (!input || !button) return;
-            const visible = input.type === 'password';
-            input.type = visible ? 'text' : 'password';
-            button.setAttribute('aria-pressed', visible ? 'true' : 'false');
-            button.setAttribute('aria-label', visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
-            button.innerHTML = visible ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
-        }
-
-        function handleLogin(e) {
+        async function handleLogin(e) {
             e.preventDefault();
             const u = document.getElementById('loginUsername').value.trim();
             const p = document.getElementById('loginPassword').value;
