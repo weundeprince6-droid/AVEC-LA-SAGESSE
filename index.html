@@ -857,6 +857,27 @@
         @media(max-width:560px){.avec-dash-welcome{padding:20px;align-items:flex-start;flex-direction:column;gap:14px;margin-bottom:15px}.avec-dash-cloud{display:none}.avec-dash-welcome h1{font-size:22px}.avec-dash-actions{gap:6px}.avec-dash-actions button{font-size:11px;padding:8px 9px}.avec-dash-section-head{align-items:flex-start;flex-direction:column}.avec-dash-panel{padding:15px}.avec-dash-bar-row{grid-template-columns:94px minmax(35px,1fr);gap:7px}.avec-dash-bar-value{grid-column:2;text-align:right;margin-top:-5px;font-size:11px}}
         :root[data-theme="dark"] .avec-dash-bar-track{background:#253342}
 
+        /* Réglages regroupés dans un seul bouton de la barre d’onglets */
+        .settings-menu{position:relative;flex:0 0 auto;z-index:80}
+        .settings-trigger{list-style:none;cursor:pointer;white-space:nowrap}
+        .settings-trigger::-webkit-details-marker{display:none}
+        .settings-menu .dashboard-header{display:none;position:absolute;right:0;top:calc(100% + 10px);width:min(680px,calc(100vw - 28px));margin:0;padding:16px;gap:14px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:15px;box-shadow:0 18px 50px rgba(0,0,0,.2);z-index:150}
+        .settings-menu[open] .dashboard-header{display:flex}
+        .settings-menu .dashboard-header>div:first-child{min-width:190px}
+        .settings-menu .header-actions{justify-content:flex-end;gap:8px;flex-wrap:wrap}
+        .settings-menu .user-info{gap:8px;flex-wrap:wrap}
+        .settings-menu .dashboard-header h2{white-space:normal}
+        .settings-menu .dashboard-header p{display:block}
+        .avec-dash-welcome{margin-top:0!important}
+        @media(max-width:700px){
+            .settings-menu .dashboard-header{position:fixed;top:auto;right:8px;bottom:calc(64px + env(safe-area-inset-bottom));width:calc(100vw - 16px);max-height:min(72vh,560px);overflow:auto;display:none;align-items:flex-start;flex-direction:column;padding:15px}
+            .settings-menu[open] .dashboard-header{display:flex}
+            .settings-menu .header-actions,.settings-menu .user-info{width:100%;justify-content:flex-start}
+            .settings-menu .dashboard-header>div:first-child{width:100%}
+            .settings-menu .user-info span{max-width:100%}
+            .settings-trigger{font-size:10px!important}
+        }
+
 </style>
 </head>
 <body>
@@ -959,6 +980,33 @@
 
     <!-- SECTION TABLEAU DE BORD -->
     <div id="dashboardSection" class="hidden">
+        <section class="avec-dash-welcome">
+            <div class="avec-dash-welcome-copy"><span class="avec-dash-eyebrow">ESPACE DE PILOTAGE</span><h1>Bienvenue dans votre espace de gestion</h1><p>Suivez en un seul regard l’épargne, les crédits, la trésorerie et la vie de votre communauté.</p>
+                <div class="avec-dash-actions">
+                    <button type="button" onclick="showTab('membres')"><i class="fa-solid fa-user-plus"></i> Membres</button>
+                    <button type="button" onclick="showTab('operations')"><i class="fa-solid fa-arrow-right-arrow-left"></i> Opérations</button>
+                    <button type="button" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes</button>
+                    <button type="button" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
+                </div>
+            </div><div class="avec-dash-cloud"><i class="fa-solid fa-cloud-arrow-up"></i><span>ESPACE SYNCHRONISÉ</span><strong id="dashModeLabel">Suivi en temps réel</strong></div>
+        </section>
+
+
+
+        <!-- ONGLETS PAR CATÉGORIE -->
+        <nav class="dtabs" id="dashTabs">
+            <button class="dtab active" data-tab="dashboard" onclick="showTab('dashboard')"><i class="fa-solid fa-chart-pie"></i> Tableau de bord</button>
+            <button class="dtab" data-tab="membres" onclick="showTab('membres')"><i class="fa-solid fa-users"></i> Membres <span class="tab-badge hidden" id="tabBadgeMembres">0</span></button>
+            <button class="dtab hidden" id="tabBtnGroupes" data-tab="groupes" onclick="showTab('groupes')"><i class="fa-solid fa-people-group"></i> Groupes <span class="tab-badge hidden" id="tabBadgeGrp">0</span></button>
+            <button class="dtab" data-tab="operations" onclick="showTab('operations')"><i class="fa-solid fa-money-bill-transfer"></i> Opérations &amp; cas sociaux</button>
+            <button class="dtab hidden" id="tabBtnEquipe" data-tab="equipe" onclick="showTab('equipe')"><i class="fa-solid fa-user-shield"></i> Équipe</button>
+            <button class="dtab hidden" id="tabBtnBoutique" data-tab="boutique" onclick="showTab('boutique')"><i class="fa-solid fa-store"></i> Boutique <span class="tab-badge hidden" id="bqAdminBadge">0</span></button>
+            <button class="dtab" data-tab="demandes" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes &amp; réclamations <span class="tab-badge hidden" id="tabBadgeReq">0</span></button>
+            <button class="dtab" data-tab="annonces" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces &amp; journal</button>
+            <button class="dtab" data-tab="galerie" onclick="showTab('galerie')"><i class="fa-solid fa-images"></i> Galerie &amp; exposition</button>
+        </nav>
+        <details class="settings-menu" id="adminSettingsMenu">
+            <summary class="dtab settings-trigger"><i class="fa-solid fa-sliders"></i> Réglages</summary>
         <header class="dashboard-header">
             <div>
                 <h2><img class="org-logo" alt="" style="display:none;height:30px;width:auto;vertical-align:middle;border-radius:6px;margin-right:6px;"><i class="fa-solid fa-piggy-bank org-logo-alt"></i> Gestion <span class="org-name">WEBSERVICES FIN</span></h2>
@@ -981,32 +1029,12 @@
                 </div>
             </div>
         </header>
+        </details>
 
-        <!-- ONGLETS PAR CATÉGORIE -->
-        <nav class="dtabs" id="dashTabs">
-            <button class="dtab active" data-tab="dashboard" onclick="showTab('dashboard')"><i class="fa-solid fa-chart-pie"></i> Tableau de bord</button>
-            <button class="dtab" data-tab="membres" onclick="showTab('membres')"><i class="fa-solid fa-users"></i> Membres <span class="tab-badge hidden" id="tabBadgeMembres">0</span></button>
-            <button class="dtab hidden" id="tabBtnGroupes" data-tab="groupes" onclick="showTab('groupes')"><i class="fa-solid fa-people-group"></i> Groupes <span class="tab-badge hidden" id="tabBadgeGrp">0</span></button>
-            <button class="dtab" data-tab="operations" onclick="showTab('operations')"><i class="fa-solid fa-money-bill-transfer"></i> Opérations &amp; cas sociaux</button>
-            <button class="dtab hidden" id="tabBtnEquipe" data-tab="equipe" onclick="showTab('equipe')"><i class="fa-solid fa-user-shield"></i> Équipe</button>
-            <button class="dtab hidden" id="tabBtnBoutique" data-tab="boutique" onclick="showTab('boutique')"><i class="fa-solid fa-store"></i> Boutique <span class="tab-badge hidden" id="bqAdminBadge">0</span></button>
-            <button class="dtab" data-tab="demandes" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes &amp; réclamations <span class="tab-badge hidden" id="tabBadgeReq">0</span></button>
-            <button class="dtab" data-tab="annonces" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces &amp; journal</button>
-            <button class="dtab" data-tab="galerie" onclick="showTab('galerie')"><i class="fa-solid fa-images"></i> Galerie &amp; exposition</button>
-        </nav>
 
         <div id="focusBar" class="hidden" style="background:#1e3a8a;color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:14px;gap:10px;align-items:center;flex-wrap:wrap;"><i class="fa-solid fa-magnifying-glass-plus"></i><span id="focusTxt" style="flex:1;min-width:200px;"></span><button type="button" class="btn-small" onclick="grpFocusExit()"><i class="fa-solid fa-arrow-left"></i> Quitter le gros plan</button></div>
         <div class="dpanel" id="panel-dashboard">
-        <section class="avec-dash-welcome">
-            <div class="avec-dash-welcome-copy"><span class="avec-dash-eyebrow">ESPACE DE PILOTAGE</span><h1>Bienvenue dans votre espace de gestion</h1><p>Suivez en un seul regard l’épargne, les crédits, la trésorerie et la vie de votre communauté.</p>
-                <div class="avec-dash-actions">
-                    <button type="button" onclick="showTab('membres')"><i class="fa-solid fa-user-plus"></i> Membres</button>
-                    <button type="button" onclick="showTab('operations')"><i class="fa-solid fa-arrow-right-arrow-left"></i> Opérations</button>
-                    <button type="button" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes</button>
-                    <button type="button" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
-                </div>
-            </div><div class="avec-dash-cloud"><i class="fa-solid fa-cloud-arrow-up"></i><span>ESPACE SYNCHRONISÉ</span><strong id="dashModeLabel">Suivi en temps réel</strong></div>
-        </section>
+
         <!-- TABLEAU DE BORD - STATS CAISSE GLOBALE -->
         <div class="stats-grid">
             <div class="stat-card">
