@@ -650,6 +650,24 @@
                 box-shadow:inset 3px 0 0 var(--primary)!important;
             }
             #dashTabs .tab-badge{margin-left:auto;position:static;min-width:20px}
+            #dashTabs .sidebar-tools{
+                flex:0 0 auto;margin-top:8px;padding:12px 8px 4px;
+                border-top:1px solid var(--border);display:flex;flex-direction:column;gap:9px;
+            }
+            #dashTabs .sidebar-tools .theme-toggle{
+                width:100%;min-height:42px;text-align:left;padding:10px 12px;
+                display:flex;align-items:center;gap:10px;font-size:.86rem;font-weight:750;
+                cursor:pointer;border-radius:10px;
+            }
+            #dashTabs .sidebar-tools label{
+                margin:3px 0 0;color:var(--text-muted);font-size:.76rem;font-weight:750;
+                display:flex;align-items:center;gap:7px;
+            }
+            #dashTabs .sidebar-tools .lock-select{
+                width:100%;max-width:none;min-height:40px;padding:8px 10px;
+                color:var(--text-main);background:var(--bg-main);border:1px solid var(--border);
+                border-radius:9px;font-size:.84rem;
+            }
             .dashboard-header,.dpanel,#focusBar,.avec-dash-welcome{
                 margin-left:276px!important;
                 width:calc(100% - 276px)!important;
@@ -1011,6 +1029,16 @@
             <button class="dtab" data-tab="annonces" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces &amp; journal</button>
             <button class="dtab" data-tab="galerie" onclick="showTab('galerie')"><i class="fa-solid fa-images"></i> Galerie &amp; exposition</button>
             <button class="dtab" data-tab="reglages" onclick="showTab('reglages')"><i class="fa-solid fa-sliders"></i> Réglages</button>
+            <div class="sidebar-tools" id="sidebarTools">
+                <button type="button" id="themeToggle" class="theme-toggle" onclick="toggleTheme()"><i class="fa-solid fa-moon"></i> Mode sombre</button>
+                <label for="lockSelSidebar"><i class="fa-solid fa-lock"></i> Verrouillage automatique</label>
+                <select id="lockSelSidebar" class="lock-select" onchange="setAutoLock(this.value)" title="Verrouillage automatique après une période d'inactivité">
+                    <option value="0">Aucun</option>
+                    <option value="5">5 minutes</option>
+                    <option value="30">30 minutes</option>
+                    <option value="60">1 heure</option>
+                </select>
+            </div>
         </nav>
 
 
@@ -1026,12 +1054,6 @@
                 <button class="btn-export" onclick="exportPDF()" title="Télécharger le rapport en PDF"><i class="fa-solid fa-file-pdf"></i> Rapport PDF</button>
                 <button class="btn-export hidden" id="btnExportXlsx" onclick="exportReport()" title="Rapport Excel : réservé à l'administrateur principal"><i class="fa-solid fa-file-excel"></i> Excel</button>
                 <div class="user-info">
-                    <select id="lockSelAdmin" class="lock-select" onchange="setAutoLock(this.value)" title="Verrouillage automatique : vous êtes déconnecté après ce temps sans utiliser l'application">
-                        <option value="0">🔒 Aucun</option>
-                        <option value="5">🔒 5 min</option>
-                        <option value="30">🔒 30 min</option>
-                        <option value="60">🔒 1 h</option>
-                    </select>
                     <span><i class="fa-solid fa-circle-user"></i> <strong id="currentUserDisplay">Utilisateur</strong></span>
                     <span class="hidden" id="hdrGrpAdm" style="background:#fff;color:#1e3a8a;border-radius:999px;padding:3px 10px;font-size:0.78rem;font-weight:700;white-space:nowrap;"></span>
                     <span class="hidden" id="btnLeaderBack" style="display:inline-flex;gap:6px;"><button type="button" class="btn-small" style="background:#334155;color:#fff;" onclick="grpLeaveManage()" title="Revenir à mon espace de membre"><i class="fa-solid fa-user"></i> Espace membre</button><button type="button" class="btn-small" style="background:#1e3a8a;color:#fff;cursor:default;" title="Vous êtes dans l\'espace gestionnaire"><i class="fa-solid fa-table-columns"></i> Espace gestionnaire</button></span>
@@ -1732,12 +1754,6 @@
             <div class="user-info">
                 <span class="hidden" id="swMember" style="display:inline-flex;gap:6px;"><button type="button" class="btn-export" style="background:#fff;color:#1e3a8a;cursor:default;" title="Vous êtes dans votre espace de membre"><i class="fa-solid fa-user"></i> Espace membre</button><button type="button" class="btn-export" onclick="grpEnterManage()" title="Ouvrir l\'espace gestionnaire de mon groupe"><i class="fa-solid fa-table-columns"></i> Espace gestionnaire</button></span>
                 <button class="btn-export" onclick="exportStatementPDF()" title="Télécharger mon rapport (relevé de compte) en PDF"><i class="fa-solid fa-file-pdf"></i> Mon rapport PDF</button>
-                <select id="lockSelMember" class="lock-select" onchange="setAutoLock(this.value)" title="Verrouillage automatique : vous êtes déconnecté après ce temps sans utiliser l'application">
-                        <option value="0">🔒 Aucun</option>
-                        <option value="5">🔒 5 min</option>
-                        <option value="30">🔒 30 min</option>
-                        <option value="60">🔒 1 h</option>
-                    </select>
                     <span><i class="fa-solid fa-circle-user"></i> <strong id="memberUserDisplay">Membre</strong></span>
                     <span class="hidden" id="hdrGrp" style="background:#fff;color:#1e3a8a;border-radius:999px;padding:3px 10px;font-size:0.78rem;font-weight:700;white-space:nowrap;"></span>
                 <button class="btn-logout" onclick="logout()" title="Se déconnecter"><i class="fa-solid fa-power-off"></i></button>
@@ -6055,7 +6071,7 @@
         let firstAuthEvent = true;
         function lockLabel(min) { return min >= 60 ? (min / 60) + ' h' : min + ' min'; }
         function syncLockSelects() {
-            ['lockSelAdmin', 'lockSelMember'].forEach(id => {
+            ['lockSelSidebar'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = String(autoLockMin);
             });
@@ -6131,17 +6147,9 @@
                 try { localStorage.setItem(key, next); } catch (e) {}
             };
             function addButton() {
-                if (document.getElementById('themeToggle')) return;
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.id = 'themeToggle';
-                btn.className = 'theme-toggle';
+                const btn = document.getElementById('themeToggle');
+                if (!btn) return;
                 btn.onclick = window.toggleTheme;
-                btn.innerHTML = '<i class="fa-solid fa-moon"></i> Mode sombre';
-                btn.setAttribute('aria-label', 'Passer en mode sombre');
-                const headerActions = document.querySelector('.dashboard-header .header-actions');
-                if (headerActions) headerActions.insertBefore(btn, headerActions.querySelector('.user-info'));
-                else document.body.appendChild(btn);
                 applyTheme(root.getAttribute('data-theme') || saved);
             }
             if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addButton);
