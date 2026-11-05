@@ -870,6 +870,8 @@
         .settings-menu .user-info{gap:8px;flex-wrap:wrap}
         .settings-menu .dashboard-header h2{white-space:normal}
         .settings-menu .dashboard-header p{display:block}
+        #panel-reglages .dashboard-header{margin:0!important;width:100%!important;display:flex!important;flex-wrap:wrap!important}
+        #panel-reglages .header-actions{justify-content:flex-start!important}
         .avec-dash-welcome{margin-top:0!important}
         @media(min-width:1001px){.avec-dash-welcome{margin-top:16px!important}}
         @media(max-width:1000px){.avec-dash-welcome{margin-left:0!important;width:100%!important;box-sizing:border-box}}
@@ -1008,10 +1010,14 @@
             <button class="dtab" data-tab="demandes" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes &amp; réclamations <span class="tab-badge hidden" id="tabBadgeReq">0</span></button>
             <button class="dtab" data-tab="annonces" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces &amp; journal</button>
             <button class="dtab" data-tab="galerie" onclick="showTab('galerie')"><i class="fa-solid fa-images"></i> Galerie &amp; exposition</button>
+            <button class="dtab" data-tab="reglages" onclick="showTab('reglages')"><i class="fa-solid fa-sliders"></i> Réglages</button>
         </nav>
-        <details class="settings-menu" id="adminSettingsMenu">
-            <summary class="dtab settings-trigger"><i class="fa-solid fa-sliders"></i> Réglages</summary>
-        <header class="dashboard-header">
+
+
+
+        <div id="focusBar" class="hidden" style="background:#1e3a8a;color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:14px;gap:10px;align-items:center;flex-wrap:wrap;"><i class="fa-solid fa-magnifying-glass-plus"></i><span id="focusTxt" style="flex:1;min-width:200px;"></span><button type="button" class="btn-small" onclick="grpFocusExit()"><i class="fa-solid fa-arrow-left"></i> Quitter le gros plan</button></div>
+        <div class="dpanel hidden" id="panel-reglages">
+            <header class="dashboard-header">
             <div>
                 <h2><img class="org-logo" alt="" style="display:none;height:30px;width:auto;vertical-align:middle;border-radius:6px;margin-right:6px;"><i class="fa-solid fa-piggy-bank org-logo-alt"></i> Gestion <span class="org-name">WEBSERVICES FIN</span></h2>
                 <p>Suivi de Caisse, Épargne et Crédits Membres</p>
@@ -1033,10 +1039,7 @@
                 </div>
             </div>
         </header>
-        </details>
-
-
-        <div id="focusBar" class="hidden" style="background:#1e3a8a;color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:14px;gap:10px;align-items:center;flex-wrap:wrap;"><i class="fa-solid fa-magnifying-glass-plus"></i><span id="focusTxt" style="flex:1;min-width:200px;"></span><button type="button" class="btn-small" onclick="grpFocusExit()"><i class="fa-solid fa-arrow-left"></i> Quitter le gros plan</button></div>
+        </div>
         <div class="dpanel" id="panel-dashboard">
 
         <!-- TABLEAU DE BORD - STATS CAISSE GLOBALE -->
@@ -4547,7 +4550,7 @@
             if (name === 'boutique' && typeof bqRenderAdmin === 'function') bqRenderAdmin();
             syncHeaderHeight();
             labelTables();
-            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'boutique', 'pub', 'groupes', 'equipe', 'journal'].forEach(t => {
+            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'boutique', 'pub', 'groupes', 'equipe', 'journal', 'reglages'].forEach(t => {
                 setHidden('panel-' + t, t !== name);
             });
             buildTabBars(name);
