@@ -449,6 +449,7 @@ let grpLeaderBackup = null;
 function grpSetLeaderUi(on) {
     document.body.classList.toggle('leader-mode', !!on);
     setHidden('btnLeaderBack', !on);
+    setHidden('bannerLeaderSw', !on);
 }
 function grpEnterManage() {
     if (!grpMine || !CLOUD || !F() || !F().listenLeaderData || !currentUser || currentUser.role !== 'member') return;

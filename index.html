@@ -922,10 +922,28 @@
         #panel-reglages .dashboard-header{margin:0!important;width:100%!important;display:flex!important;flex-wrap:wrap!important}
         #panel-reglages .header-actions{justify-content:flex-start!important}
 
+
+        /* Espace membre : même en-tête vert que l'espace de gestion */
+        #memberSection>header.member-banner{background:linear-gradient(125deg,#176b55,#105441 72%,#143e35)!important;color:#fff!important;border:0!important;border-radius:20px!important;padding:26px 30px!important;box-shadow:0 14px 34px rgba(23,107,85,.17)!important;align-items:center!important;flex-wrap:nowrap!important;gap:22px!important;position:sticky!important;top:8px!important;z-index:60!important}
+        #memberSection>header.member-banner h1{color:#fff;margin:0;font-size:clamp(20px,2.4vw,26px)!important}
+        #memberSection>header.member-banner p{margin:6px 0 0}
+        #memberSection>header.member-banner .avec-dash-welcome-copy{min-width:0;flex:1 1 auto}
+        #memberSection>header.member-banner .avec-dash-side{flex-wrap:wrap;justify-content:flex-end}
+        #memberSection>header.member-banner .avec-dash-cloud{display:flex;flex-direction:column}
+        #memberSection>header.member-banner #swMember{display:inline-flex;gap:6px}
+        #memberSection>header.member-banner #swMember.hidden{display:none!important}
+        #memberSection>header.member-banner #swMember .btn-export{border:1px solid #ffffff55!important;background:#ffffff1c!important;color:#fff!important;border-radius:10px;padding:9px 13px;font-weight:750;font-size:12px;box-shadow:none}
+        #memberSection>header.member-banner #swMember .btn-export:first-child{background:#fff!important;color:#176b55!important}
+        #memberSection>header.member-banner.compact{padding:12px 22px!important}
+        #memberSection>header.member-banner.compact p,#memberSection>header.member-banner.compact .avec-dash-eyebrow,#memberSection>header.member-banner.compact .avec-dash-cloud{display:none!important}
+        #memberSection>header.member-banner.compact h1{font-size:18px!important;margin-bottom:8px}
+        @media(max-width:1000px){#memberSection>header.member-banner{top:84px!important;padding:12px 14px!important;flex-wrap:wrap!important}#memberSection>header.member-banner p,#memberSection>header.member-banner .avec-dash-eyebrow{display:none!important}#memberSection>header.member-banner h1{font-size:17px!important;margin-bottom:8px}}
+        @media(max-width:560px){#memberSection>header.member-banner .avec-dash-side{position:static;width:100%;justify-content:flex-start}#memberSection>header.member-banner .avec-dash-logout{font-size:11px;padding:6px 9px}#memberSection>header.member-banner .avec-dash-cloud{display:none!important}#memberSection>header.member-banner .avec-dash-actions{display:none}}
         /* En-tête vert fixe + bouton de déconnexion */
         .avec-dash-welcome{position:sticky!important;top:8px;z-index:60;margin-bottom:16px!important}
-        .avec-dash-side{display:flex;align-items:center;gap:12px;flex-shrink:0}
+        .avec-dash-side{display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;max-width:520px}
         .avec-dash-logout{border:1px solid #ffffff55;background:#ffffff1c;color:#fff;border-radius:10px;padding:9px 13px;font-weight:750;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit}
+        #bannerLeaderSw.hidden{display:none!important}
         .avec-dash-logout:hover{background:#dc2626;border-color:#dc2626}
         .avec-dash-welcome,.avec-dash-welcome *{transition:padding .2s,font-size .2s}
         .avec-dash-welcome.compact{padding:12px 22px!important}
@@ -1163,7 +1181,7 @@
                     <button type="button" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes</button>
                     <button type="button" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
                 </div>
-            </div><div class="avec-dash-side"><div class="avec-dash-cloud"><i class="fa-solid fa-cloud-arrow-up"></i><span>ESPACE SYNCHRONISÉ</span><strong id="dashModeLabel">Suivi en temps réel</strong></div><button type="button" class="avec-dash-logout" onclick="logout()" title="Se déconnecter"><i class="fa-solid fa-power-off"></i> Déconnexion</button></div>
+            </div><div class="avec-dash-side"><span class="hidden" id="bannerLeaderSw" style="display:inline-flex;gap:6px;"><button type="button" class="avec-dash-logout" onclick="grpLeaveManage()" title="Revenir à mon espace de membre"><i class="fa-solid fa-user"></i> Espace membre</button><button type="button" class="avec-dash-logout" style="background:#fff;color:#176b55;cursor:default;" title="Vous êtes dans l'espace gestionnaire"><i class="fa-solid fa-briefcase"></i> Espace gestionnaire</button></span><div class="avec-dash-cloud"><i class="fa-solid fa-cloud-arrow-up"></i><span>ESPACE SYNCHRONISÉ</span><strong id="dashModeLabel">Suivi en temps réel</strong></div><button type="button" class="avec-dash-logout" onclick="logout()" title="Se déconnecter"><i class="fa-solid fa-power-off"></i> Déconnexion</button></div>
         </section>
 
 
@@ -1894,18 +1912,18 @@
 
     <!-- SECTION ESPACE MEMBRE (lecture seule) -->
     <div id="memberSection" class="hidden">
-        <header class="dashboard-header">
-            <div>
-                <h2><img class="org-logo" alt="" style="display:none;height:30px;width:auto;vertical-align:middle;border-radius:6px;margin-right:6px;"><i class="fa-solid fa-piggy-bank org-logo-alt"></i> Mon Espace <span class="org-name">WEBSERVICES FIN</span></h2>
+        <header class="dashboard-header avec-dash-welcome member-banner">
+            <div class="avec-dash-welcome-copy">
+                <span class="avec-dash-eyebrow">ESPACE MEMBRE</span>
+                <h1><img class="org-logo" alt="" style="display:none;height:30px;width:auto;vertical-align:middle;border-radius:6px;margin-right:6px;"> Mon Espace <span class="org-name">WEBSERVICES FIN</span></h1>
                 <p id="memberWelcome">Consultez votre épargne et vos crédits</p>
                 <p id="grpInfoBar" style="display:none;margin-top:4px;font-size:0.85rem;"></p>
             </div>
-            <div class="user-info">
+            <div class="avec-dash-side">
+                <div class="avec-dash-cloud"><span>CONNECTÉ EN TANT QUE</span><strong id="memberUserDisplay">Membre</strong><span class="hidden" id="hdrGrp" style="margin-top:4px;font-size:11px;font-weight:700;"></span></div>
                 <span class="hidden" id="swMember" style="display:inline-flex;gap:6px;"><button type="button" class="btn-export" style="background:#fff;color:#1e3a8a;cursor:default;" title="Vous êtes dans votre espace de membre"><i class="fa-solid fa-user"></i> Espace membre</button><button type="button" class="btn-export" onclick="grpEnterManage()" title="Ouvrir l\'espace gestionnaire de mon groupe"><i class="fa-solid fa-table-columns"></i> Espace gestionnaire</button></span>
-                <button class="btn-export" onclick="exportStatementPDF()" title="Télécharger mon rapport (relevé de compte) en PDF"><i class="fa-solid fa-file-pdf"></i> Mon rapport PDF</button>
-                    <span><i class="fa-solid fa-circle-user"></i> <strong id="memberUserDisplay">Membre</strong></span>
-                    <span class="hidden" id="hdrGrp" style="background:#fff;color:#1e3a8a;border-radius:999px;padding:3px 10px;font-size:0.78rem;font-weight:700;white-space:nowrap;"></span>
-                <button class="btn-logout" onclick="logout()" title="Se déconnecter"><i class="fa-solid fa-power-off"></i></button>
+                <button class="avec-dash-logout" onclick="exportStatementPDF()" title="Télécharger mon rapport (relevé de compte) en PDF"><i class="fa-solid fa-file-pdf"></i> Mon rapport</button>
+                <button class="avec-dash-logout" onclick="logout()" title="Se déconnecter"><i class="fa-solid fa-power-off"></i> Déconnexion</button>
             </div>
         </header>
 
@@ -6359,7 +6377,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261118"></script>
-<script src="groups.js?v=20261160"></script>
+<script src="groups.js?v=20261162"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261142"></script>
     <script>
@@ -6391,10 +6409,10 @@
     (function(){
         var on=false;
         window.addEventListener('scroll',function(){
-            var b=document.querySelector('.avec-dash-welcome');if(!b)return;
+            var bs=document.querySelectorAll('.avec-dash-welcome');if(!bs.length)return;
             var y=window.pageYOffset||document.documentElement.scrollTop||0;
-            if(!on&&y>140){on=true;b.classList.add('compact')}
-            else if(on&&y<20){on=false;b.classList.remove('compact')}
+            if(!on&&y>140){on=true;[].forEach.call(bs,function(b){b.classList.add('compact')})}
+            else if(on&&y<20){on=false;[].forEach.call(bs,function(b){b.classList.remove('compact')})}
         },{passive:true});
     })();
     </script>
