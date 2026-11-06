@@ -1950,13 +1950,14 @@
             <div class="avec-dash-side">
                 <div class="avec-dash-cloud"><span>CONNECTÉ EN TANT QUE</span><strong id="memberUserDisplay">Membre</strong><span class="hidden" id="hdrGrp" style="margin-top:4px;font-size:11px;font-weight:700;"></span></div>
                 <span class="hidden" id="swMember" style="display:inline-flex;gap:6px;"><button type="button" class="btn-export" style="background:#fff;color:#1e3a8a;cursor:default;" title="Vous êtes dans votre espace de membre"><i class="fa-solid fa-user"></i> Espace membre</button><button type="button" class="btn-export" onclick="grpEnterManage()" title="Ouvrir l\'espace gestionnaire de mon groupe"><i class="fa-solid fa-table-columns"></i> Espace gestionnaire</button></span>
+                <button type="button" id="memberThemeToggle" class="avec-dash-logout theme-toggle" onclick="toggleTheme()" title="Changer le thème"><i class="fa-solid fa-moon"></i> Mode sombre</button>
                 <button class="avec-dash-logout" onclick="exportStatementPDF()" title="Télécharger mon rapport (relevé de compte) en PDF"><i class="fa-solid fa-file-pdf"></i> Mon rapport</button>
                 <button class="avec-dash-logout" onclick="logout()" title="Se déconnecter"><i class="fa-solid fa-power-off"></i> Déconnexion</button>
             </div>
         </header>
 
         <nav class="dtabs" id="memberTabs">
-            <button class="dtab mtab active" data-mtab="accueil" onclick="showMemberTab('accueil')"><i class="fa-solid fa-house"></i> Accueil</button>
+            <button class="dtab mtab active" data-mtab="accueil" onclick="showMemberTab('accueil')"><i class="fa-solid fa-chart-pie"></i> Tableau de bord</button>
             <button class="dtab mtab" data-mtab="credits" onclick="showMemberTab('credits')"><i class="fa-solid fa-hand-holding-dollar"></i> Mes crédits</button>
             <button class="dtab mtab" data-mtab="demandes" onclick="showMemberTab('demandes')"><i class="fa-solid fa-paper-plane"></i> Demandes &amp; réclamations</button>
             <button class="dtab mtab" data-mtab="boutique" onclick="showMemberTab('boutique')"><i class="fa-solid fa-store"></i> Boutique <span class="tab-badge hidden" id="bqMemberBadge">0</span></button>
@@ -5686,7 +5687,22 @@
                 '.note{margin-top:14px;background:#fffbeb;border:1px solid #fcd34d;border-left:5px solid #f59e0b;border-radius:6px;padding:9px 14px;break-inside:avoid}.note h4{margin:0 0 5px;color:#92400e;font-size:12.5px}.note ul{margin:0;padding-left:18px}.note li{margin:3px 0;line-height:1.45}' +
                 '.tot td{background:#e0e7ff!important;color:#1e3a8a;font-weight:700}.gal{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}figure{margin:0;text-align:center;break-inside:avoid}figure img{width:100%;max-width:130px;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid #d9e1ec}figcaption{margin-top:4px;font-weight:700}figcaption small{color:#6b7280;font-weight:400}' +
                 '@media print{body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}.bar{display:none}.page{box-shadow:none;margin:0;padding:0;max-width:none}}';
-            return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport ' + E(orgName()) + ' ' + E(nowFR) + '</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style></head><body>' +
+            return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport ' + E(orgName()) + ' ' + E(nowFR) + '</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '
+/* Espace client : commandes à gauche et onglets horizontaux alignés comme dans l'espace gestionnaire */
+#memberSection>header.member-banner{display:flex!important;flex-direction:row!important;align-items:center!important;}
+#memberSection>header.member-banner .avec-dash-side{order:-1!important;justify-content:flex-start!important;margin-right:auto!important;}
+#memberSection>header.member-banner .avec-dash-welcome-copy{order:2!important;}
+#memberSection>header.member-banner #memberThemeToggle{white-space:nowrap!important;}
+#memberTabs{position:relative!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;width:100%!important;height:auto!important;max-height:none!important;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;flex-wrap:wrap!important;overflow-x:auto!important;overflow-y:visible!important;padding:8px 0!important;margin:0 0 16px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;gap:6px!important;z-index:50!important;}
+#memberTabs::before,#memberTabs::after{display:none!important;content:none!important;}
+#memberTabs .dtab{display:flex!important;flex:0 0 auto!important;width:auto!important;max-width:none!important;min-width:0!important;min-height:42px!important;height:auto!important;flex-direction:row!important;justify-content:flex-start!important;align-items:center!important;gap:8px!important;padding:10px 14px!important;margin:0!important;border:1px solid var(--border)!important;border-radius:10px!important;background:var(--surface)!important;color:var(--text-muted)!important;font-size:.82rem!important;white-space:nowrap!important;}
+#memberTabs .dtab i{display:inline-block!important;width:auto!important;flex:0 0 auto!important;font-size:.95rem!important;}
+#memberTabs .dtab.active{background:var(--success-light)!important;color:var(--primary)!important;border-color:color-mix(in srgb,var(--primary) 18%,transparent)!important;box-shadow:none!important;}
+#memberSection>.mpanel,#memberSection>#memberPwdNotice,#memberSection>.dashboard-header,#memberSection>#memberDataWrap{margin-left:0!important;width:100%!important;max-width:none!important;box-sizing:border-box!important;}
+@media(max-width:1000px){#memberSection{padding-top:0!important;}#memberSection>header.member-banner{top:8px!important;flex-wrap:wrap!important;}#memberTabs{position:relative!important;top:auto!important;left:auto!important;right:auto!important;max-height:none!important;flex-wrap:nowrap!important;overflow-x:auto!important;padding:8px 0!important;margin-bottom:14px!important;}#memberTabs .dtab{min-height:42px!important;min-width:max-content!important;max-width:none!important;flex-direction:row!important;font-size:.72rem!important;padding:9px 11px!important;}#memberTabs .dtab i{font-size:.95rem!important;}#memberSection>header.member-banner .avec-dash-side{position:static!important;width:auto!important;justify-content:flex-start!important;}
+}
+@media(max-width:560px){#memberSection>header.member-banner{flex-direction:column!important;align-items:flex-start!important;}#memberSection>header.member-banner .avec-dash-side{order:1!important;width:100%!important;display:flex!important;flex-wrap:wrap!important;}#memberSection>header.member-banner .avec-dash-welcome-copy{order:2!important;width:100%!important;}#memberSection>header.member-banner .avec-dash-logout{font-size:11px!important;padding:7px 9px!important;}#memberSection>header.member-banner .avec-dash-cloud{display:none!important;}#memberTabs{flex-wrap:nowrap!important;}}
+</style></head><body>' +
                 '<div class="bar"><button onclick="window.print()">Enregistrer en PDF / Imprimer</button><span>Dans la fenêtre qui s\'ouvre, choisissez « Enregistrer au format PDF » comme imprimante (orientation paysage).</span></div>' + html + '</body></html>';
         }
 
@@ -6422,9 +6438,10 @@
             const key = 'avec_theme_preference';
             function applyTheme(theme) {
                 root.setAttribute('data-theme', theme);
-                const btn = document.getElementById('themeToggle');
-                if (btn) {
-                    const dark = theme === 'dark';
+                const dark = theme === 'dark';
+                ['themeToggle', 'memberThemeToggle'].forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (!btn) return;
                     btn.innerHTML = dark
                         ? '<i class="fa-solid fa-sun"></i> Mode clair'
                         : '<i class="fa-solid fa-moon"></i> Mode sombre';
@@ -6444,9 +6461,10 @@
                 try { localStorage.setItem(key, next); } catch (e) {}
             };
             function addButton() {
-                const btn = document.getElementById('themeToggle');
-                if (!btn) return;
-                btn.onclick = window.toggleTheme;
+                ['themeToggle', 'memberThemeToggle'].forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.onclick = window.toggleTheme;
+                });
                 applyTheme(root.getAttribute('data-theme') || saved);
             }
             if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addButton);
