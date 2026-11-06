@@ -208,7 +208,7 @@ function pubZoom(postId, idx) {
         s.textContent = '#pubZoom{position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:3000;display:none;flex-direction:column;}' +
             '#pubZoom .pz-img{position:relative;flex:1 1 55%;min-height:0;display:flex;align-items:center;justify-content:center;padding:12px;}' +
             '#pubZoom .pz-img img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;cursor:zoom-out;}' +
-            '#pubZoom .pz-side{flex:0 0 42%;background:#fff;overflow-y:auto;padding:12px 14px;border-radius:14px 14px 0 0;}' +
+            '#pubZoom .pz-side{flex:0 0 42%;background:var(--surface,#fff);color:var(--text-main);overflow-y:auto;padding:12px 14px;border-radius:14px 14px 0 0;}' +
             '#pubZoom .pz-x{position:absolute;top:10px;right:12px;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:50%;width:38px;height:38px;font-size:1.2rem;cursor:pointer;z-index:2;}' +
             '@media (min-width:900px){#pubZoom{flex-direction:row;}#pubZoom .pz-img{flex:1 1 auto;}#pubZoom .pz-side{flex:0 0 360px;border-radius:0;}}';
         document.head.appendChild(s);

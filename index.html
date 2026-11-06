@@ -939,6 +939,9 @@
         #memberSection>header.member-banner.compact h1{font-size:18px!important;margin-bottom:8px}
         @media(max-width:1000px){#memberSection>header.member-banner{top:84px!important;padding:12px 14px!important;flex-wrap:wrap!important}#memberSection>header.member-banner p,#memberSection>header.member-banner .avec-dash-eyebrow{display:none!important}#memberSection>header.member-banner h1{font-size:17px!important;margin-bottom:8px}}
         @media(max-width:560px){#memberSection>header.member-banner .avec-dash-side{position:static;width:100%;justify-content:flex-start}#memberSection>header.member-banner .avec-dash-logout{font-size:11px;padding:6px 9px}#memberSection>header.member-banner .avec-dash-cloud{display:none!important}#memberSection>header.member-banner .avec-dash-actions{display:none}}
+
+        /* Espace membre : tous les panneaux se décalent à droite de la barre d'onglets */
+        @media(min-width:1001px){#memberSection>.mpanel,#memberSection>#memberPwdNotice{margin-left:276px!important;width:calc(100% - 276px)!important;max-width:none!important;box-sizing:border-box!important}}
         /* En-tête vert fixe + bouton de déconnexion */
         .avec-dash-welcome{position:sticky!important;top:8px;z-index:60;margin-bottom:16px!important}
         .avec-dash-side{display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;max-width:520px}
@@ -6376,10 +6379,10 @@
         };
     </script>
     <script src="org.js?v=20261070"></script>
-<script src="pub.js?v=20261118"></script>
+<script src="pub.js?v=20261163"></script>
 <script src="groups.js?v=20261162"></script>
 <script src="report-notes.js?v=20261032"></script>
-    <script src="boutique.js?v=20261142"></script>
+    <script src="boutique.js?v=20261163"></script>
     <script>
         (function(){
             function strip(n){n.removeAttribute&&n.removeAttribute('id');[].forEach.call(n.querySelectorAll('[id]'),function(e){e.removeAttribute('id')});return n}

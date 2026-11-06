@@ -94,7 +94,7 @@ function bqRenderMember() {
     if (cat) {
         cat.innerHTML = list.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;">' + list.map(i => {
             const open = bqOrders.some(o => o.itemId === i.id && o.buyerId === me && (o.status === 'en attente' || o.status === 'acceptée'));
-            return '<div style="border:1px solid var(--border);border-radius:12px;padding:10px;background:#fff;">' + bqImg(i.photo) +
+            return '<div style="border:1px solid var(--border);border-radius:12px;padding:10px;background:var(--surface,#fff);">' + bqImg(i.photo) +
                 '<div style="font-weight:700;margin-top:8px;">' + escapeHtml(i.title) + '</div>' +
                 '<div style="font-size:0.8rem;color:var(--text-muted);">' + escapeHtml(i.shopName || '') + ' · ' + escapeHtml(i.ownerName || '') + '</div>' +
                 (i.desc ? '<div style="font-size:0.82rem;margin-top:4px;">' + escapeHtml(i.desc) + '</div>' : '') +
@@ -478,7 +478,7 @@ function bqShowDrawIn(el, dots, sfx) {
     const st = document.createElement('style');
     st.textContent =
         '.bq-show-track{display:flex;gap:12px;align-items:stretch;}' +
-        '.bq-show-card{box-sizing:border-box;display:flex;flex-direction:column;flex:1 1 0;min-width:0;overflow:hidden;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;}' +
+        '.bq-show-card{box-sizing:border-box;display:flex;flex-direction:column;flex:1 1 0;min-width:0;overflow:hidden;border:1px solid var(--border);border-radius:12px;background:var(--surface,#fff);cursor:pointer;}' +
         '.bq-show-photo{height:130px;overflow:hidden;background:#f1f5f9;}' +
         '.bq-show-info{padding:10px;display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}' +
         '.bq-show-title{font-weight:700;font-size:.95rem;line-height:1.3;overflow-wrap:anywhere;}' +
@@ -507,7 +507,7 @@ function bqContact(id) {
         m.onclick = e => { if (e.target === m) m.style.display = 'none'; };
         document.body.appendChild(m);
     }
-    m.innerHTML = '<div style="background:#fff;border-radius:14px;padding:20px;max-width:400px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.35);">' +
+    m.innerHTML = '<div style="background:var(--surface,#fff);color:var(--text-main);border-radius:14px;padding:20px;max-width:400px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.35);">' +
         '<h3 style="margin:0 0 4px;font-size:1.05rem;">Contacter ' + escapeHtml(it.ownerName || 'le vendeur') + '</h3>' +
         '<p style="margin:0 0 10px;font-size:0.9rem;"><strong>' + escapeHtml(it.title) + '</strong> · ' + fmt(it.price, it.devise) + '<br><span style="color:var(--text-muted);">' + escapeHtml(it.shopName || '') + '</span></p>' +
         (contact ? '<p style="margin:0 0 12px;font-size:0.95rem;"><i class="fa-solid fa-address-book"></i> ' + escapeHtml(contact) + '</p>' : '<p style="margin:0 0 12px;font-size:0.9rem;color:var(--danger);">Le vendeur n\'a pas indiqué de contact. Passez plutôt par « Payer avec mon épargne », ou demandez-lui son numéro.</p>') +
