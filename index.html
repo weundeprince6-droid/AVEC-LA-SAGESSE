@@ -945,6 +945,10 @@
             .settings-trigger{font-size:10px!important}
         }
 
+        .member-simple tr.member-row:hover{background:var(--primary-soft,rgba(23,107,85,.08))}
+        .member-simple{width:100%}
+        .member-simple td{border-bottom:1px solid var(--border)}
+        .header-lock-btn{display:none!important}
 </style>
 <style>
 @media (max-width:760px) {
@@ -1080,7 +1084,6 @@
             <button class="dtab" data-tab="annonces" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces &amp; journal</button>
             <button class="dtab" data-tab="galerie" onclick="showTab('galerie')"><i class="fa-solid fa-images"></i> Galerie &amp; exposition</button>
             <button class="dtab" data-tab="reglages" onclick="showTab('reglages')"><i class="fa-solid fa-sliders"></i> Réglages</button>
-            <button type="button" class="header-lock-btn" onclick="lockSession()" title="Verrouiller immédiatement la session"><i class="fa-solid fa-lock"></i><span>Verrouiller</span></button>
             <div class="sidebar-tools" id="sidebarTools">
                 <button type="button" id="themeToggle" class="theme-toggle" onclick="toggleTheme()"><i class="fa-solid fa-moon"></i> Mode sombre</button>
                 <label for="lockSelSidebar"><i class="fa-solid fa-lock"></i> Verrouillage automatique</label>
@@ -1240,16 +1243,8 @@
                     </div>
                     <p id="memberSearchInfo" class="hidden" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;"></p>
                                     <div style="overflow-x: auto;">
-                                        <table>
-                                            <thead>
-                                                <tr>
-                                                    <th>ID</th>
-                                                    <th>Nom &amp; Post-nom</th>
-                                                    <th>Épargne ($)</th>
-                                                    <th>Crédits Reçus</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
+                                        <table class="member-simple">
+                                            <thead></thead>
                                             <tbody id="membersTableBody">
                                                 <!-- Données chargées dynamiquement -->
                                             </tbody>
@@ -3378,20 +3373,12 @@
                 const accessBadge = hasAccess
                     ? '<span class="badge badge-ok">Accès actif</span>'
                     : '<span class="badge badge-due">Pas d\'accès</span>';
-                rows += '<tr>' +
-                    '<td><strong>' + idAttr + '</strong></td>' +
-                    '<td>' + avatarHtml(m, 30) + ' <a href="#" class="member-link" onclick="openMemberDetail(\'' + idAttr + '\'); return false;">' + escapeHtml(m.name) + '</a><br><small style="color:var(--text-muted);">' + escapeHtml(m.phone || '') + '</small><br>' + accessBadge + '</td>' +
-                    '<td><strong>' + fmt(epargne) + '</strong><br><span style="font-weight:600;color:var(--text-muted);">' + fmt(sav(m, 'FC'), 'FC') + '</span></td>' +
-                    '<td>' + creditsListHtml + '</td>' +
-                    '<td style="white-space:nowrap;">' +
-                        '<button class="btn-small" onclick="openMemberDetail(\'' + idAttr + '\')" title="Voir tous les détails du membre : modifier, corriger, mot de passe…"><i class="fa-solid fa-eye"></i> Détails</button>' +
-                        '<button class="btn-small wa" onclick="waSend(\'' + idAttr + '\', \'situation\')" title="Envoyer la situation sur WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>' +
-                        (canDelete(currentUser) ? '<button class="btn-small danger" onclick="deleteMember(\'' + idAttr + '\')" title="Supprimer"><i class="fa-solid fa-trash"></i></button>' : '') +
-                    '</td>' +
+                rows += '<tr class="member-row" onclick="openMemberDetail(\'' + idAttr + '\')" style="cursor:pointer;" title="Voir toutes les informations de ' + escapeHtml(m.name) + '">' +
+                    '<td style="padding:10px 12px;"><div style="display:flex;align-items:center;gap:12px;">' + avatarHtml(m, 40) + '<a href="#" class="member-link" style="font-weight:700;font-size:1rem;" onclick="openMemberDetail(\'' + idAttr + '\'); return false;">' + escapeHtml(m.name) + '</a></div></td>' +
                     '</tr>';
             });
 
-            tbody.innerHTML = rows || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">' +
+            tbody.innerHTML = rows || '<tr><td colspan="1" style="text-align:center;color:var(--text-muted);">' +
                 (query ? 'Aucun membre ne correspond à cette recherche.' : 'Aucun membre enregistré.') + '</td></tr>';
             const info = document.getElementById('memberSearchInfo');
             if (info) {
@@ -4010,7 +3997,8 @@
                 kv('Dernière opération', lastH ? escapeHtml(formatISOtoFR(lastH.date)) + ' · ' + escapeHtml(OP_LABELS[lastH.type] || 'Opération') : '—') +
                 kv('Situation cas sociaux', arrearsText(m)) +
                 kv('Profil complété', p ? 'oui' : 'pas encore'));
-            box.innerHTML = kpis + '<div class="top-grid">' + head + activity + '</div><div class="detail-grid" style="margin-top:20px;">' + '<div>' + accounts + profile + social + '</div><div>' + credits + moves + claimsHtml + reqHtml + '</div></div>';
+            const delBtn = canDelete(currentUser) ? '<div style="margin-top:24px;text-align:right;"><button class="btn-small danger" onclick="deleteMember(\'' + id + '\')"><i class="fa-solid fa-trash"></i> Supprimer ce membre</button></div>' : '';
+            box.innerHTML = kpis + '<div class="top-grid">' + head + activity + '</div><div class="detail-grid" style="margin-top:20px;">' + '<div>' + accounts + profile + social + '</div><div>' + credits + moves + claimsHtml + reqHtml + '</div></div>' + delBtn;
             labelTables();
         }
 
