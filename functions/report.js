@@ -5,9 +5,9 @@
  */
 (function (exports) {
 'use strict';
-const A4 = [841.89, 595.28];
-const C = { navy: [0.118, 0.227, 0.541], blue: [0.145, 0.388, 0.922], ink: [0.122, 0.161, 0.216], grey: [0.42, 0.45, 0.5], band: [0.957, 0.969, 0.984], line: [0.85, 0.88, 0.925],
-  green: [0.063, 0.725, 0.506], amber: [0.961, 0.62, 0.043], red: [0.937, 0.267, 0.267], violet: [0.545, 0.361, 0.965], white: [1, 1, 1] };
+const A4 = [595.28, 841.89];   // portrait
+const C = { navy: [0.063, 0.329, 0.255], blue: [0.09, 0.42, 0.333], ink: [0.098, 0.145, 0.133], grey: [0.4, 0.46, 0.43], band: [0.945, 0.973, 0.961], line: [0.8, 0.89, 0.85],
+  green: [0.063, 0.725, 0.506], amber: [0.961, 0.62, 0.043], red: [0.937, 0.267, 0.267], violet: [0.545, 0.361, 0.965], white: [1, 1, 1], mint: [0.8, 0.93, 0.88] };
 const OP_LABELS = { epargne: "Versement d'épargne", credit: 'Crédit accordé', retrait: "Retrait d'épargne", remboursement: 'Remboursement', social: 'Cotisation cas sociaux', aide: 'Aide cas social', prolongation: 'Échéance prolongée', occ: 'Cotisation occasionnelle', remise: 'Somme remise (cas social)', correction: 'Correction' };
 
 const round2 = n => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
@@ -71,30 +71,42 @@ function buildPdf(PDFLib, input) {
     const W = A4[0], H = A4[1], M = 34;
     let page, y, pageNo = 0;
     const pages = [];
-    const newPage = () => { page = pdf.addPage(A4); pages.push(page); pageNo++; y = H - M; return page; };
+    const toc = [];
+    const newPage = (noHead) => {
+      page = pdf.addPage(A4); pages.push(page); pageNo++; y = H - M;
+      if (pageNo > 1 && !noHead) { text(ORG + ' · Rapport ' + monthLabel, M, y - 4, 8, { color: C.grey }); text('Situation au ' + frDate(today), W - M, y - 4, 8, { color: C.grey, align: 'right' }); page.drawLine({ start: { x: M, y: y - 10 }, end: { x: W - M, y: y - 10 }, thickness: 0.6, color: col(C.line) }); y -= 28; }
+      return page;
+    };
     const wid = (t, size, font) => (font || F).widthOfTextAtSize(safe(t), size);
     const fit = (t, size, maxW, font) => { t = safe(t); if (wid(t, size, font) <= maxW) return t; while (t.length > 1 && wid(t + '...', size, font) > maxW) t = t.slice(0, -1); return t + '...'; };
     const text = (t, x, yy, size, o) => { o = o || {}; const font = o.bold ? B : (o.italic ? I : F); let s = safe(t); let xx = x; if (o.align === 'right') xx = x - wid(s, size, font); else if (o.align === 'center') xx = x - wid(s, size, font) / 2; page.drawText(s, { x: xx, y: yy, size, font, color: col(o.color || C.ink) }); };
     const rect = (x, yy, w, h, c, o) => page.drawRectangle(Object.assign({ x, y: yy, width: w, height: h, color: col(c) }, o || {}));
     const banner = (title, sub) => {
       rect(M, y - 34, W - 2 * M, 34, C.navy); text(title, M + 12, y - 23, 17, { bold: true, color: C.white });
-      if (sub) text(sub, W - M - 12, y - 22, 9.5, { align: 'right', color: [0.85, 0.9, 1] });
+      if (sub) text(sub, W - M - 12, y - 22, 9.5, { align: 'right', color: [0.8, 0.93, 0.88] });
       y -= 48;
     };
-    const section = (t) => { text(t, M, y - 10, 12, { bold: true, color: C.navy }); page.drawLine({ start: { x: M, y: y - 15 }, end: { x: W - M, y: y - 15 }, thickness: 1, color: col(C.blue) }); y -= 26; };
-    const ensure = (h, title, sub) => { if (y - h < M + 14) { newPage(); banner(title || 'Rapport mensuel', sub || monthLabel); } };
+    const section = (t) => { if (y < M + 115) newPage(); text(t, M, y - 10, 11, { bold: true, color: C.navy }); page.drawLine({ start: { x: M, y: y - 15 }, end: { x: W - M, y: y - 15 }, thickness: 1, color: col(C.blue) }); y -= 26; };
+    const ensure = (h) => { if (y - h < M + 22) newPage(); };
+    // Chapitre : s'enchaîne à la suite du précédent (pas de saut de page forcé) ; ne passe à la page suivante que s'il manque de la place
+    const chapter = (title) => {
+      if (y < M + 150) newPage(); else y -= 8;
+      rect(M, y - 28, W - 2 * M, 28, C.navy); rect(M, y - 28, 5, 28, C.green);
+      text(title, M + 16, y - 19, 13, { bold: true, color: C.white });
+      toc.push([title, pageNo]); y -= 44;
+    };
     const tone = t => { const x = String(t).toLowerCase(); if (/retard|refus|pas d.acc/.test(x)) return [0.996, 0.886, 0.886]; if (/rembours|approuv|trait|actif|à jour|avance/.test(x)) return [0.82, 0.98, 0.9]; if (/cours|attente|ouverte|début/.test(x)) return [0.996, 0.953, 0.78]; return null; };
     // tableau : cols [{h, w, a:'l'|'r'|'c', st:true}], rows [[...]], total [...]
     function table(cols, rows, o) {
       o = o || {};
-      const tw = W - 2 * M, sw = cols.reduce((t, c) => t + c.w, 0), ws = cols.map(c => c.w / sw * tw), rh = 17, size = 8.5;
+      const tw = W - 2 * M, sw = cols.reduce((t, c) => t + c.w, 0), ws = cols.map(c => c.w / sw * tw), rh = 17, size = cols.length >= 7 ? 7.6 : 8.5;
       const head = () => { rect(M, y - rh - 3, tw, rh + 3, C.blue); let x = M; cols.forEach((c, i) => { text(fit(c.h, 8.5, ws[i] - 8, B), x + ws[i] / 2, y - 13, 8.5, { bold: true, color: C.white, align: 'center' }); x += ws[i]; }); y -= rh + 3; };
       if (!rows.length) { text(o.empty || 'Aucune donnée pour le moment.', M, y - 12, 10, { italic: true, color: C.grey }); y -= 24; return; }
-      ensure(rh * 3 + 20, o.title, o.sub); head();
+      ensure(rh * 3 + 24); head();
       rows.concat(o.total ? [o.total] : []).forEach((r, ri) => {
         const isTot = o.total && ri === rows.length;
-        if (y - rh < M + 12) { newPage(); banner(o.title || 'Rapport mensuel', o.sub || monthLabel); head(); }
-        rect(M, y - rh, tw, rh, isTot ? [0.878, 0.906, 1] : (ri % 2 ? C.band : C.white));
+        if (y - rh < M + 22) { newPage(); head(); }
+        rect(M, y - rh, tw, rh, isTot ? [0.86, 0.945, 0.905] : (ri % 2 ? C.band : C.white));
         let x = M;
         r.forEach((v, i) => {
           const c = cols[i], t = c.st && !isTot ? tone(v) : null;
@@ -118,18 +130,10 @@ function buildPdf(PDFLib, input) {
       if (sub) text(fit(sub, 7.5, w - 8), x + w / 2, yy - 46, 7.5, { color: C.grey, align: 'center' });
     };
 
-    // ---------- Page 1 : synthèse ----------
-    newPage();
-    rect(M, y - 62, W - 2 * M, 62, C.navy);
-    const lg = await embedLogo(pdf, input.logo); let lx = M + 16;
-    if (lg) { const lh = 46, lw = Math.min(120, lh * lg.width / lg.height); page.drawImage(lg, { x: M + 8, y: y - 54, width: lw, height: lh }); lx = M + 8 + lw + 10; }
-    text(ORG, lx, y - 28, 24, { bold: true, color: C.white });
-    text((input.current ? 'Rapport : ' : 'Rapport mensuel : ') + monthLabel, lx, y - 48, 12, { color: [0.85, 0.9, 1] });
-    text('Situation au ' + frDate(today), W - M - 16, y - 28, 11, { align: 'right', color: C.white });
-    text(input.current ? 'Document PDF non modifiable' : 'Généré automatiquement', W - M - 16, y - 46, 9, { align: 'right', color: [0.85, 0.9, 1] });
-    y -= 78;
-    const kw = (W - 2 * M - 4 * 8) / 5;
+    // ---------- Page 1 : page de garde (dessinée à la fin) ; page 2 : synthèse ----------
+    newPage(true); newPage(); chapter('Synthèse au ' + frDate(today));
     const late = all.filter(x => st(x.c) === 'En retard');
+    const kw = (W - 2 * M - 2 * 8) / 3;
     const k = [
       ['MEMBRES', String(members.length), members.filter(m => outstanding(m, 'USD') + outstanding(m, 'FC') > 0).length + ' avec un crédit en cours', C.blue],
       ['ÉPARGNE ($)', fmt(sum(members, m => sav(m, 'USD')), 'USD'), '', C.green],
@@ -142,8 +146,8 @@ function buildPdf(PDFLib, input) {
       ['DEMANDES EN ATTENTE', String(requests.filter(r => r.status === 'en attente').length), '', C.amber],
       ['RÉCLAMATIONS OUVERTES', String(claims.filter(c => c.status !== 'traitée').length), '', C.red]
     ];
-    k.forEach((it, i) => kpi(M + (i % 5) * (kw + 8), y - Math.floor(i / 5) * 62, kw, it[0], it[1], it[2], it[3]));
-    y -= 2 * 62 + 8;
+    k.forEach((it, i) => kpi(M + (i % 3) * (kw + 8), y - Math.floor(i / 3) * 62, i === 9 ? W - 2 * M : kw, it[0], it[1], it[2], it[3]));
+    y -= 4 * 62 + 8;
     // graphiques : statut des crédits (barres) et épargne des 8 premiers
     const gw = (W - 2 * M - 14) / 2, gy = y;
     rect(M, gy - 190, gw, 190, C.white, { borderColor: col(C.line), borderWidth: 0.8 });
@@ -159,7 +163,7 @@ function buildPdf(PDFLib, input) {
     y = gy - 206;
 
     // ---------- Activité du mois ----------
-    newPage(); banner('Activité de ' + monthLabel, 'Situation au ' + frDate(today));
+    chapter('Activité de ' + monthLabel);
     const ops = [];
     members.forEach(m => (m.history || []).forEach(h => { if (String(h.date).slice(0, 7) === monthKey && h.note !== 'Épargne initiale') ops.push({ m, h }); }));
     section(ops.length + ' opération(s) enregistrée(s) en ' + monthLabel);
@@ -172,7 +176,7 @@ function buildPdf(PDFLib, input) {
       ops.sort((a, b) => String(b.h.date).localeCompare(String(a.h.date))).slice(0, 60).map(o => [frDate(o.h.date), o.m.name, OP_LABELS[o.h.type] || 'Opération', fmt(Math.abs(Number(o.h.amount) || 0), devOf(o.h)), o.h.note || '']), { empty: 'Aucune opération.', title: 'Activité de ' + monthLabel });
 
     // ---------- Crédits à surveiller ----------
-    ensure(120, 'Crédits à surveiller'); if (y < H - M - 60) { newPage(); banner('Crédits à surveiller', 'Situation au ' + frDate(today)); }
+    chapter('Crédits à surveiller');
     section('Crédits en retard (' + late.length + ')');
     table([{ h: 'Membre', w: 3 }, { h: 'Accordé le', w: 1.4, a: 'c' }, { h: 'Échéance', w: 1.4, a: 'c' }, { h: 'Montant', w: 1.8, a: 'r' }, { h: 'Remboursé', w: 1.8, a: 'r' }, { h: 'Reste', w: 1.8, a: 'r' }, { h: 'Retard', w: 1.4, a: 'c' }],
       late.sort((a, b) => String(a.c.dueDate).localeCompare(String(b.c.dueDate))).map(x => { const d = devOf(x.c), days = Math.round((Date.parse(today) - Date.parse(x.c.dueDate)) / 86400000); return [x.m.name, frDate(x.c.date), frDate(x.c.dueDate), fmt(x.c.amount, d), fmt(x.c.repaid, d), fmt(creditRemaining(x.c), d), days + ' j']; }),
@@ -183,13 +187,13 @@ function buildPdf(PDFLib, input) {
       soon.sort((a, b) => String(a.c.dueDate).localeCompare(String(b.c.dueDate))).map(x => [x.m.name, frDate(x.c.dueDate), fmt(creditRemaining(x.c), devOf(x.c)), x.m.phone || '']), { empty: 'Aucune échéance proche.', title: 'Crédits à surveiller' });
 
     // ---------- Membres ----------
-    newPage(); banner('Membres', members.length + ' membre(s)');
+    chapter('Membres (' + members.length + ')');
     table([{ h: 'ID', w: 1.2, a: 'c' }, { h: 'Nom', w: 3.2 }, { h: 'Épargne ($)', w: 1.7, a: 'r' }, { h: 'Épargne (FC)', w: 1.9, a: 'r' }, { h: 'Crédit ($)', w: 1.7, a: 'r' }, { h: 'Crédit (FC)', w: 1.9, a: 'r' }, { h: 'Crédit', w: 1.5, st: true }, { h: 'Cas sociaux', w: 2.2, st: true }],
       members.map((m, i) => { const cr = m.credits || [], s = cr.some(c => creditRemaining(c) > 0 && c.dueDate && c.dueDate < today) ? 'En retard' : (cr.some(c => creditRemaining(c) > 0) ? 'En cours' : (cr.length ? 'Remboursé' : 'Aucun')); return [m.id, m.name, fmt(sav(m, 'USD'), 'USD'), fmt(sav(m, 'FC'), 'FC'), fmt(outstanding(m, 'USD'), 'USD'), fmt(outstanding(m, 'FC'), 'FC'), s, si[i].text]; }),
       { title: 'Membres', sub: monthLabel, total: ['Total', '', fmt(sum(members, m => sav(m, 'USD')), 'USD'), fmt(sum(members, m => sav(m, 'FC')), 'FC'), fmt(sum(members, m => outstanding(m, 'USD')), 'USD'), fmt(sum(members, m => outstanding(m, 'FC')), 'FC'), '', ''] });
 
     // ---------- Cas sociaux + à traiter ----------
-    ensure(200, 'Cas sociaux et points à traiter'); if (y < H - M - 80) { newPage(); banner('Cas sociaux et points à traiter', monthLabel); }
+    chapter('Cas sociaux et points à traiter');
     section('Cas sociaux : cotisation ' + fmt(weekly, 'FC') + ' par semaine · cotisé ' + fmt(fundPaid, 'FC') + ' · aides ' + fmt(fundAid, 'FC') + ' · solde ' + fmt(fundPaid - fundAid, 'FC'));
     const lateS = members.map((m, i) => ({ m, s: si[i] })).filter(x => x.s.late).sort((a, b) => b.s.arrears - a.s.arrears);
     table([{ h: 'Membre en retard de cotisation', w: 4 }, { h: 'Semaines de retard', w: 2, a: 'r' }, { h: 'Montant dû', w: 2, a: 'r' }], lateS.map(x => [x.m.name, x.s.arrears, fmt(x.s.amountLate, 'FC')]), { empty: 'Tous les membres sont à jour.', title: 'Cas sociaux' });
@@ -204,7 +208,7 @@ function buildPdf(PDFLib, input) {
     // ---------- Sous-groupes ----------
     const groups = input.groups || [];
     if (groups.length) {
-      ensure(160, 'Sous-groupes'); if (y < H - M - 60) { newPage(); banner('Sous-groupes', monthLabel); }
+      chapter('Sous-groupes');
       section('Sous-groupes (' + groups.length + ')');
       const gl = groups.map(g => ({ g, list: members.filter(m => m.groupId === g.id) }));
       table([{ h: 'Groupe', w: 3 }, { h: 'Chef de groupe', w: 3 }, { h: 'Membres', w: 1.2, a: 'r' }, { h: 'Épargne ($)', w: 1.8, a: 'r' }, { h: 'Épargne (FC)', w: 2, a: 'r' }, { h: 'Crédit ($)', w: 1.8, a: 'r' }, { h: 'Crédit (FC)', w: 2, a: 'r' }],
@@ -212,8 +216,40 @@ function buildPdf(PDFLib, input) {
         { title: 'Sous-groupes' });
     }
 
-    // pied de page sur chaque page
+    // ---------- Page de garde ----------
+    page = pages[0];
+    const lgc = await embedLogo(pdf, input.logo);
+    rect(0, H - 400, W, 400, C.navy);
+    [[W - 40, H - 60, 210, 0.07], [W - 40, H - 60, 150, 0.07], [60, H - 400, 120, 0.06]].forEach(c => page.drawCircle({ x: c[0], y: c[1], size: c[2], color: col(C.white), opacity: c[3] }));
+    rect(0, H - 404, W, 4, C.green);
+    if (lgc) { const lh = 64, lw = Math.min(170, lh * lgc.width / lgc.height); rect(M - 8, H - 130, lw + 16, lh + 16, C.white); page.drawImage(lgc, { x: M, y: H - 122, width: lw, height: lh }); }
+    text('RAPPORT MENSUEL', M, H - 215, 11, { bold: true, color: C.mint });
+    text(ORG, M, H - 258, ORG.length > 22 ? 30 : 38, { bold: true, color: C.white });
+    text(monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1), M, H - 300, 26, { color: C.white });
+    text(input.current ? 'Situation arrêtée à la date du jour' : 'Activité du mois écoulé et situation à ce jour', M, H - 330, 11, { color: C.mint });
+    text('Situation au ' + frDate(today), M, H - 372, 12, { bold: true, color: C.white });
+    // chiffres clés
+    const cw = (W - 2 * M - 16) / 3;
+    [['MEMBRES', String(members.length), C.blue], ['ÉPARGNE ($)', fmt(sum(members, m => sav(m, 'USD')), 'USD'), C.green], ['CRÉDITS EN COURS ($)', fmt(sum(members, m => outstanding(m, 'USD')), 'USD'), C.amber]].forEach((it, i) => {
+      const x = M + i * (cw + 8); rect(x, H - 500, cw, 60, C.band); rect(x, H - 443, cw, 3, it[2]);
+      text(it[0], x + cw / 2, H - 458, 7.5, { bold: true, color: C.grey, align: 'center' }); text(fit(it[1], 16, cw - 8, B), x + cw / 2, H - 484, 16, { bold: true, color: it[2], align: 'center' });
+    });
+    // sommaire
+    text('Sommaire', M, H - 545, 15, { bold: true, color: C.navy });
+    page.drawLine({ start: { x: M, y: H - 553 }, end: { x: M + 70, y: H - 553 }, thickness: 2.5, color: col(C.green) });
+    toc.forEach((t, i) => {
+      const yy = H - 580 - i * 26;
+      text(String(i + 1).padStart(2, '0'), M, yy, 11, { bold: true, color: C.green });
+      text(t[0], M + 30, yy, 11.5, { color: C.ink });
+      const w1 = wid(t[0], 11.5) + M + 36, w2 = W - M - 20;
+      for (let x = w1; x < w2; x += 5) page.drawCircle({ x, y: yy + 3, size: 0.6, color: col(C.grey) });
+      text(String(t[1]), W - M, yy, 11.5, { bold: true, color: C.navy, align: 'right' });
+    });
+    text('Document confidentiel destiné à la gestion de ' + ORG + '.', M, 64, 8.5, { color: C.grey });
+    text((input.current ? 'Document PDF non modifiable' : 'Généré automatiquement') + ' le ' + frDate(today) + ' à ' + String(local.getUTCHours()).padStart(2, '0') + ':' + String(local.getUTCMinutes()).padStart(2, '0'), M, 51, 8.5, { color: C.grey });
+    // pied de page (hors page de garde)
     pages.forEach((p, i) => {
+      if (i === 0) return;
       p.drawText(safe(ORG + ' · Rapport mensuel · ' + monthLabel), { x: M, y: 16, size: 7.5, font: F, color: col(C.grey) });
       const t = 'Page ' + (i + 1) + ' / ' + pages.length; p.drawText(t, { x: W - M - F.widthOfTextAtSize(t, 7.5), y: 16, size: 7.5, font: F, color: col(C.grey) });
     });
@@ -262,9 +298,9 @@ function buildStatement(PDFLib, input) {
         rect(M, y - 64, W - 2 * M, 64, C.navy); let lx = M + 14;
         if (lg) { const lh = 46, lw = Math.min(110, lh * lg.width / lg.height); page.drawImage(lg, { x: M + 8, y: y - 55, width: lw, height: lh }); lx = M + 8 + lw + 10; }
         text(ORG, lx, y - 28, 20, { bold: true, color: C.white });
-        text('Relevé de compte', lx, y - 48, 12, { color: [0.85, 0.9, 1] });
+        text('Relevé de compte', lx, y - 48, 12, { color: [0.8, 0.93, 0.88] });
         text('Édité le ' + frDate(todayIso) + ' à ' + hh, W - M - 14, y - 28, 9.5, { align: 'right', color: C.white });
-        text('Réf. ' + ref, W - M - 14, y - 46, 8.5, { align: 'right', color: [0.85, 0.9, 1] });
+        text('Réf. ' + ref, W - M - 14, y - 46, 8.5, { align: 'right', color: [0.8, 0.93, 0.88] });
         y -= 82;
       } else { text(ORG + ' · Relevé de ' + (m.name || ''), M, y - 8, 9, { color: C.grey }); y -= 26; }
     };
@@ -292,7 +328,7 @@ function buildStatement(PDFLib, input) {
     const kw = (W - 2 * M - 3 * 8) / 4;
     [['ÉPARGNE ($)', fmt(sav(m, 'USD'), 'USD'), C.green], ['ÉPARGNE (FC)', fmt(sav(m, 'FC'), 'FC'), C.green], ['CRÉDIT À REMBOURSER ($)', fmt(outstanding(m, 'USD'), 'USD'), C.amber], ['CRÉDIT À REMBOURSER (FC)', fmt(outstanding(m, 'FC'), 'FC'), C.amber]].forEach((k, i) => {
       const x = M + i * (kw + 8); rect(x, y - 50, kw, 50, C.band); rect(x, y - 3, kw, 3, k[2]);
-      text(k[0], x + kw / 2, y - 16, 7, { bold: true, color: C.grey, align: 'center' }); text(fit(k[1], 13, kw - 8, B), x + kw / 2, y - 37, 13, { bold: true, color: k[2], align: 'center' });
+      text(k[0], x + kw / 2, y - 16, 7, { bold: true, color: C.grey, align: 'center' }); text(fit(k[1], 10.5, kw - 6, B), x + kw / 2, y - 37, 10.5, { bold: true, color: k[2], align: 'center' });
     });
     y -= 68;
     section('Crédits (' + credits.length + ')');
@@ -344,15 +380,15 @@ function buildGroupReport(PDFLib, input) {
         rect(M, y - 62, W - 2 * M, 62, C.navy); let lx = M + 16;
         if (lg) { const lh = 46, lw = Math.min(120, lh * lg.width / lg.height); page.drawImage(lg, { x: M + 8, y: y - 54, width: lw, height: lh }); lx = M + 8 + lw + 10; }
         text(g.name || 'Groupe', lx, y - 28, 22, { bold: true, color: C.white });
-        text(ORG + ' · Rapport du groupe · chef : ' + (g.leaderName || g.id || ''), lx, y - 48, 11, { color: [0.85, 0.9, 1] });
+        text(ORG + ' · Rapport du groupe · chef : ' + (g.leaderName || g.id || ''), lx, y - 48, 11, { color: [0.8, 0.93, 0.88] });
         text('Situation au ' + frDate(today) + ' à ' + hh, W - M - 16, y - 28, 10.5, { align: 'right', color: C.white });
-        text('Document PDF non modifiable', W - M - 16, y - 46, 9, { align: 'right', color: [0.85, 0.9, 1] });
+        text('Document PDF non modifiable', W - M - 16, y - 46, 9, { align: 'right', color: [0.8, 0.93, 0.88] });
         y -= 78;
       } else { rect(M, y - 26, W - 2 * M, 26, C.navy); text(g.name || 'Groupe', M + 12, y - 18, 12, { bold: true, color: C.white }); y -= 40; }
     };
     const section = t => { if (y < M + 90) newPage(false); text(t, M, y - 10, 12, { bold: true, color: C.navy }); page.drawLine({ start: { x: M, y: y - 15 }, end: { x: W - M, y: y - 15 }, thickness: 1, color: col(C.blue) }); y -= 26; };
     function table(cols, rows, empty, total) {
-      const tw = W - 2 * M, sw = cols.reduce((t, c) => t + c.w, 0), ws = cols.map(c => c.w / sw * tw), rh = 17;
+      const tw = W - 2 * M, sw = cols.reduce((t, c) => t + c.w, 0), ws = cols.map(c => c.w / sw * tw), rh = 17, fs = cols.length >= 7 ? 7.6 : 8.5;
       const head = () => { rect(M, y - rh - 3, tw, rh + 3, C.blue); let x = M; cols.forEach((c, i) => { text(fit(c.h, 8.5, ws[i] - 8, B), x + ws[i] / 2, y - 13, 8.5, { bold: true, color: C.white, align: 'center' }); x += ws[i]; }); y -= rh + 3; };
       if (!rows.length) { text(empty, M, y - 12, 10, { italic: true, color: C.grey }); y -= 26; return; }
       if (y - rh * 3 < M + 14) newPage(false);
@@ -360,11 +396,11 @@ function buildGroupReport(PDFLib, input) {
       rows.concat(total ? [total] : []).forEach((r, ri) => {
         const isTot = total && ri === rows.length;
         if (y - rh < M + 14) { newPage(false); head(); }
-        rect(M, y - rh, tw, rh, isTot ? [0.878, 0.906, 1] : (ri % 2 ? C.band : C.white));
+        rect(M, y - rh, tw, rh, isTot ? [0.86, 0.945, 0.905] : (ri % 2 ? C.band : C.white));
         let x = M;
-        r.forEach((v, i) => { const c = cols[i], s = fit(v, 8.5, ws[i] - 8, isTot ? B : F), o = { bold: isTot, color: isTot ? C.navy : C.ink };
+        r.forEach((v, i) => { const c = cols[i], s = fit(v, fs, ws[i] - 8, isTot ? B : F), o = { bold: isTot, color: isTot ? C.navy : C.ink };
           const tn = c.st && !isTot ? tone(v) : null; if (tn) rect(x + 1, y - rh + 1, ws[i] - 2, rh - 2, tn);
-          if (c.a === 'r') text(s, x + ws[i] - 4, y - 12, 8.5, Object.assign({ align: 'right' }, o)); else if (c.a === 'c' || c.st) text(s, x + ws[i] / 2, y - 12, 8.5, Object.assign({ align: 'center' }, o)); else text(s, x + 4, y - 12, 8.5, o); x += ws[i]; });
+          if (c.a === 'r') text(s, x + ws[i] - 4, y - 12, fs, Object.assign({ align: 'right' }, o)); else if (c.a === 'c' || c.st) text(s, x + ws[i] / 2, y - 12, fs, Object.assign({ align: 'center' }, o)); else text(s, x + 4, y - 12, fs, o); x += ws[i]; });
         page.drawLine({ start: { x: M, y: y - rh }, end: { x: W - M, y: y - rh }, thickness: 0.4, color: col(C.line) });
         y -= rh;
       });
@@ -376,7 +412,7 @@ function buildGroupReport(PDFLib, input) {
     [['MEMBRES', String(members.length), C.blue], ['ÉPARGNE ($)', fmt(sum(members, m => sav(m, 'USD')), 'USD'), C.green], ['ÉPARGNE (FC)', fmt(sum(members, m => sav(m, 'FC')), 'FC'), C.green],
       ['CRÉDITS EN COURS ($)', fmt(sum(members, m => outstanding(m, 'USD')), 'USD'), C.amber], ['CRÉDITS EN COURS (FC)', fmt(sum(members, m => outstanding(m, 'FC')), 'FC'), C.amber], ['CRÉDITS EN RETARD', String(late.length), C.red]].forEach((k, i) => {
       const x = M + i * (kw + 8); rect(x, y - 50, kw, 50, C.band); rect(x, y - 3, kw, 3, k[2]);
-      text(k[0], x + kw / 2, y - 16, 7, { bold: true, color: C.grey, align: 'center' }); text(fit(k[1], 13, kw - 8, B), x + kw / 2, y - 37, 13, { bold: true, color: k[2], align: 'center' }); });
+      text(k[0], x + kw / 2, y - 16, 7, { bold: true, color: C.grey, align: 'center' }); text(fit(k[1], 10.5, kw - 6, B), x + kw / 2, y - 37, 10.5, { bold: true, color: k[2], align: 'center' }); });
     y -= 70;
     section('Membres du groupe (' + members.length + ')');
     table([{ h: 'ID', w: 1.2, a: 'c' }, { h: 'Nom', w: 3.2 }, { h: 'Téléphone', w: 2 }, { h: 'Épargne ($)', w: 1.8, a: 'r' }, { h: 'Épargne (FC)', w: 2, a: 'r' }, { h: 'Crédit ($)', w: 1.8, a: 'r' }, { h: 'Crédit (FC)', w: 2, a: 'r' }, { h: 'Crédit', w: 1.5, st: true }],
@@ -429,7 +465,7 @@ function buildReceipt(PDFLib, input) {
     let lx = M + 12;
     if (lg) { const lh = 40, lw = Math.min(90, lh * lg.width / lg.height); page.drawImage(lg, { x: M + 8, y: y - 48, width: lw, height: lh }); lx = M + 8 + lw + 8; }
     text(ORG, lx, y - 26, 16, { bold: true, color: C.white });
-    text(k[0], lx, y - 44, 9.5, { bold: true, color: [0.85, 0.9, 1] });
+    text(k[0], lx, y - 44, 9.5, { bold: true, color: [0.8, 0.93, 0.88] });
     y -= 76;
     const rows = [['Référence', ref], ['Date', frDate(e.date)], ['Heure de l\'opération', e.time || '—'], ['Membre', (m.name || '') + ' (' + (m.id || '') + ')'], ['Opération', k[1]]];
     if (e.note && e.note !== 'Épargne initiale') rows.push(['Détail', e.note]);
