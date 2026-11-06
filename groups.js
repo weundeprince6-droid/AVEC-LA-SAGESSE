@@ -12,7 +12,7 @@ let grpMine = null;        // chef : son groupe (null si ce membre n'est pas che
 let grpMembers = [];       // chef : fiches des membres de son groupe
 let grpReqs = [], grpClaims = []; // chef : demandes et réclamations de ses membres
 let grpMemberGroup = null; // membre : le groupe auquel il appartient (nom, chef)
-let grpWatchedId = '', grpStopDoc = null, grpOpenId = '', grpDraft = {};
+let grpWatchedId = '', grpStopDoc = null, grpOpenId = '', grpCreateOpen = false, grpDraft = {};
 
 function grpReset() { grpGroups = []; grpOps = []; grpMine = null; grpMembers = []; grpReqs = []; grpClaims = []; grpMemberGroup = null; grpWatchedId = ''; if (grpStopDoc) { grpStopDoc(); grpStopDoc = null; } grpOpenId = ''; }
 const grpOnAdmin = { groups: l => { grpGroups = l; grpRefresh(); }, ops: l => { grpOps = l; grpRefresh(); } };
@@ -24,9 +24,10 @@ const grpOnLeader = {
     ops: l => { grpOps = l; grpRefresh(); }
 };
 function grpIsAdmin() { return !!currentUser && isAdmin(currentUser) && !currentUser.leader; }
+function grpTabOpen() { const a = document.getElementById('panel-membres'), b = document.getElementById('memSub-groupes'); return !!a && !!b && !a.classList.contains('hidden') && !b.classList.contains('hidden'); }
 function grpRefresh() {
     if (!currentUser) return;
-    if (grpIsAdmin()) { grpRenderAdmin(); grpAdminBadge(); } else if (currentUser.leader) { renderGrpInfo(); if (typeof currentTab !== 'undefined' && currentTab === 'groupes') grpRenderMember(); } else { renderGrpInfo(); grpRenderMember(); }
+    if (grpIsAdmin()) { grpRenderAdmin(); grpAdminBadge(); } else if (currentUser.leader) { renderGrpInfo(); if (grpTabOpen()) grpRenderMember(); } else { renderGrpInfo(); grpRenderMember(); }
 }
 // Un membre non chef regarde le groupe auquel il appartient (nom du groupe et du chef)
 function grpOnMemberRender(m) {
@@ -77,37 +78,45 @@ function grpAdminBadge() {
 }
 function grpRenderAdmin() {
     const box = document.getElementById('grpAdminBox');
-    if (!box || document.getElementById('panel-groupes').classList.contains('hidden')) return;
+    if (!box || !grpTabOpen()) return;
     const E = escapeHtml, fgid = currentUser && currentUser.focusGid;
     const leaders = new Set(grpGroups.map(g => g.id));
     const cand = members.filter(m => !leaders.has(m.id)).sort((a, b) => String(a.name).localeCompare(String(b.name)));
-    let h = fgid ? '' : '<section class="card"><div class="card-header"><i class="fa-solid fa-people-group"></i><h3>Créer un sous-groupe</h3></div>' +
+    const openG = fgid ? null : grpGroups.find(g0 => g0.id === grpOpenId), showPend = !fgid && !openG;
+    let h = (fgid || openG || !grpCreateOpen) ? '' : '<section class="card"><div class="card-header"><i class="fa-solid fa-people-group"></i><h3>Créer un groupe</h3></div>' +
         '<p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Choisissez un membre comme <strong>chef de groupe</strong>. Il aura son propre réseau de membres, qu\'il suit et dont il propose les opérations ; l\'équipe valide tout.</p>' +
         '<form onsubmit="grpCreate(event)" style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));align-items:end;">' +
         '<div class="form-group" style="margin:0;"><label>Chef de groupe</label><select id="grpLeader" required><option value="">-- Choisir un membre --</option>' + cand.map(m => '<option value="' + E(m.id) + '">' + E(m.name) + ' (' + E(m.id) + ')</option>').join('') + '</select></div>' +
         '<div class="form-group" style="margin:0;"><label>Nom du groupe</label><input type="text" id="grpName" maxlength="60" required placeholder="Ex : Groupe des commerçants"></div>' +
-        '<button type="submit" class="btn" style="width:auto;"><i class="fa-solid fa-plus"></i> Créer le groupe</button></form>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;"><button type="submit" class="btn" style="width:auto;"><i class="fa-solid fa-plus"></i> Créer le groupe</button><button type="button" class="btn-small" onclick="grpToggleCreate()">Annuler</button></div></form>' +
         '<div id="grpCreateMsg" class="alert" style="margin-top:10px;display:none;"></div></section>';
     // propositions à valider
-    const pend = fgid ? [] : grpOps.filter(o => o.status === 'à valider').sort((a, b) => String(a.date).localeCompare(String(b.date)));
-    if (!fgid) h += '<section class="card"><div class="card-header"><i class="fa-solid fa-clipboard-check"></i><h3>Opérations proposées à valider (' + pend.length + ')</h3></div>';
-    if (!fgid) h += pend.length ? '<div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Groupe</th><th>Membre</th><th>Opération</th><th>Montant</th><th>Détail</th><th></th></tr></thead><tbody>' + pend.map(o => {
+    const pend = !showPend ? [] : grpOps.filter(o => o.status === 'à valider').sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    if (showPend) h += '<section class="card"><div class="card-header"><i class="fa-solid fa-clipboard-check"></i><h3>Opérations proposées à valider (' + pend.length + ')</h3></div>';
+    if (showPend) h += pend.length ? '<div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Groupe</th><th>Membre</th><th>Opération</th><th>Montant</th><th>Détail</th><th></th></tr></thead><tbody>' + pend.map(o => {
         const m = members.find(x => x.id === o.memberId);
         const cr = o.type === 'remboursement' && m ? (m.credits || []).find(c => c.id === o.creditId) : null;
         return '<tr><td>' + E(formatISOtoFR(String(o.date).slice(0, 10))) + '</td><td>' + E(grpName(o.groupId) || o.groupId) + '<br><small style="color:var(--text-muted);">chef : ' + E(o.leaderName || '') + '</small></td><td>' + E(o.memberName || '') + ' <small>(' + E(o.memberId) + ')</small></td><td>' + grpOpLabel(o) +
             '</td><td><strong>' + grpMoney(o.amount, o.devise) + '</strong></td><td>' + E(o.note || '') + (cr ? '<br><small style="color:var(--text-muted);">Crédit du ' + E(cr.date || '') + ' : reste ' + grpMoney(creditRemaining(cr), devOf(cr)) + '</small>' : '') +
             '</td><td style="white-space:nowrap;"><button type="button" class="btn-small" onclick="grpDecide(\'' + E(o.id) + '\',true)"><i class="fa-solid fa-check"></i> Valider</button> <button type="button" class="btn-small danger" onclick="grpDecide(\'' + E(o.id) + '\',false)"><i class="fa-solid fa-xmark"></i> Refuser</button></td></tr>';
     }).join('') + '</tbody></table></div>' : '<p style="color:var(--text-muted);font-size:0.9rem;">Aucune opération en attente.</p>';
-    if (!fgid) h += '</section>';
+    if (showPend) h += '</section>';
     // groupes
-    h += '<section class="card"><div class="card-header"><i class="fa-solid fa-diagram-project"></i><h3>Les groupes (' + grpGroups.length + ')</h3></div>';
-    if (!grpGroups.length) h += '<p style="color:var(--text-muted);font-size:0.9rem;">Aucun groupe pour le moment.</p>';
-    grpGroups.filter(g0 => !fgid || g0.id === fgid).sort((a, b) => String(a.name).localeCompare(String(b.name))).forEach(g => {
-        const list = members.filter(m => m.groupId === g.id), s = grpStats(list), open = fgid ? true : grpOpenId === g.id;
+    if (openG) h += '<button type="button" class="btn-small" style="margin-bottom:12px;" onclick="grpOpenGroup(\'\')"><i class="fa-solid fa-arrow-left"></i> Retour à la liste des groupes</button>';
+    h += '<section class="card"><div class="card-header" style="justify-content:space-between;flex-wrap:wrap;gap:8px;"><span style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-diagram-project"></i><h3>' + (openG ? 'Groupe : ' + E(openG.name) : 'Les groupes (' + grpGroups.length + ')') + '</h3></span>' + ((fgid || openG) ? '' : '<button type="button" class="btn-small" onclick="grpToggleCreate()"><i class="fa-solid fa-plus"></i> Créer un groupe</button>') + '</div>';
+    if (!fgid && !openG) {
+        if (!grpGroups.length) h += '<p style="color:var(--text-muted);font-size:0.9rem;">Aucun groupe pour le moment.</p>';
+        else h += '<div style="overflow-x:auto;"><table class="grp-table"><thead><tr><th>Groupe</th><th>Chef</th><th>Membres</th><th>Épargne</th><th>Crédits en cours</th><th>Statut</th></tr></thead><tbody>' +
+            grpGroups.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).map(g => {
+                const list = members.filter(m => m.groupId === g.id), s = grpStats(list);
+                return '<tr class="grp-row" style="cursor:pointer;" onclick="grpOpenGroup(\'' + E(g.id) + '\')" title="Ouvrir le groupe"><td><strong>' + E(g.name) + '</strong></td><td>' + E(g.leaderName || '') + '</td><td>' + s.n + '</td><td>' + grpMoney(s.sUSD, 'USD') + '<br><small style="color:var(--text-muted);">' + grpMoney(s.sFC, 'FC') + '</small></td><td>' + grpMoney(s.cUSD, 'USD') + '<br><small style="color:var(--text-muted);">' + grpMoney(s.cFC, 'FC') + '</small>' + (s.late ? '<br><small style="color:#b91c1c;">' + s.late + ' en retard</small>' : '') + '</td><td>' + (g.status === 'suspendu' ? '<span class="badge badge-due">Suspendu</span>' : '<span class="badge badge-ok">Actif</span>') + '</td></tr>';
+            }).join('') + '</tbody></table></div>';
+    }
+    grpGroups.filter(g0 => fgid ? g0.id === fgid : (!!openG && g0.id === openG.id)).sort((a, b) => String(a.name).localeCompare(String(b.name))).forEach(g => {
+        const list = members.filter(m => m.groupId === g.id), s = grpStats(list), open = true;
         h += '<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;">' +
             '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><div style="flex:1;min-width:200px;"><strong>' + E(g.name) + '</strong> ' + (g.status === 'suspendu' ? '<span class="badge badge-due">Suspendu</span>' : '') + '<br><small style="color:var(--text-muted);">Chef : ' + E(g.leaderName || '') + ' (' + E(g.id) + ')</small></div>' +
             (fgid ? '' : '<button type="button" class="btn-small" onclick="grpFocus(\'' + E(g.id) + '\')" title="Gros plan : voir le groupe comme son chef"><i class="fa-solid fa-magnifying-glass-plus"></i> Gros plan</button>') +
-            (fgid ? '' : '<button type="button" class="btn-small" onclick="grpToggle(\'' + E(g.id) + '\')"><i class="fa-solid fa-' + (open ? 'chevron-up' : 'chevron-down') + '"></i> ' + (open ? 'Réduire' : 'Voir tout') + '</button>') +
             '<button type="button" class="btn-small" onclick="grpExportPdf(\'' + E(g.id) + '\')" title="Rapport PDF du groupe"><i class="fa-solid fa-file-pdf"></i> PDF</button>' +
             '<button type="button" class="btn-small" onclick="grpSuspend(\'' + E(g.id) + '\')" title="' + (g.status === 'suspendu' ? 'Réactiver' : 'Suspendre') + '"><i class="fa-solid fa-' + (g.status === 'suspendu' ? 'play' : 'pause') + '"></i></button>' +
             (canDelete(currentUser) ? '<button type="button" class="btn-small danger" onclick="grpDissolve(\'' + E(g.id) + '\')" title="Dissoudre le groupe"><i class="fa-solid fa-trash"></i></button>' : '') + '</div>' +
@@ -126,7 +135,7 @@ function grpRenderAdmin() {
     h += '</section>';
     // historique
     const done = grpOps.filter(o => o.status !== 'à valider').sort((a, b) => String(b.decidedAt || b.date).localeCompare(String(a.decidedAt || a.date))).slice(0, 30);
-    if (done.length) h += '<section class="card"><div class="card-header"><i class="fa-solid fa-clock-rotate-left"></i><h3>Dernières décisions</h3></div><div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Groupe</th><th>Membre</th><th>Opération</th><th>Montant</th><th>Statut</th></tr></thead><tbody>' +
+    if (done.length && !openG) h += '<section class="card"><div class="card-header"><i class="fa-solid fa-clock-rotate-left"></i><h3>Dernières décisions</h3></div><div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Groupe</th><th>Membre</th><th>Opération</th><th>Montant</th><th>Statut</th></tr></thead><tbody>' +
         done.map(o => '<tr><td>' + E(formatISOtoFR(String(o.decidedAt || o.date).slice(0, 10))) + '</td><td>' + E(grpName(o.groupId) || o.groupId) + '</td><td>' + E(o.memberName || '') + '</td><td>' + grpOpLabel(o) + '</td><td>' + grpMoney(o.amount, o.devise) + '</td><td>' + (GRP_ST[o.status] || '') + '</td></tr>').join('') + '</tbody></table></div></section>';
     const a = document.activeElement, keep = a && a.id ? [a.id, a.value] : null;
     box.innerHTML = h;
@@ -160,6 +169,8 @@ function grpDetailHtml(gid) {
     return h;
 }
 function grpToggle(id) { grpOpenId = grpOpenId === id ? '' : id; grpRenderAdmin(); }
+function grpOpenGroup(id) { grpOpenId = id || ''; grpRenderAdmin(); try { window.scrollTo(0, 0); } catch (e) {} }
+function grpToggleCreate() { grpCreateOpen = !grpCreateOpen; grpRenderAdmin(); }
 
 async function grpCreate(e) {
     e.preventDefault();
@@ -172,7 +183,7 @@ async function grpCreate(e) {
     try {
         await F().write('groups', [{ id: id, data: data }], []);
         m.groupId = id; store.set('avec_members', members);
-        e.target.reset(); grpMsg('grpCreateMsg', 'Groupe « ' + name + ' » créé. ' + m.name + ' en est le chef : il voit maintenant l\'onglet « Mon groupe ».', true);
+        e.target.reset(); grpCreateOpen = false; grpMsg('grpCreateMsg', 'Groupe « ' + name + ' » créé. ' + m.name + ' en est le chef : il voit maintenant l\'onglet « Mon groupe ».', true);
         logActivity('Groupe créé : ' + name + ' (chef : ' + m.name + ')', m.id);
     } catch (err) { grpMsg('grpCreateMsg', 'Création impossible : ' + errText(err) + ' (les règles Firestore sont-elles republiées ?)', false); }
 }
@@ -453,7 +464,7 @@ function grpEnterManage() {
     setHidden('dashboardSection', false);
     document.getElementById('currentUserDisplay').textContent = (me.username || me.memberId) + ' · Chef de groupe';
     setHidden('btnExportXlsx', true);
-    setHidden('tabBtnGroupes', false);
+    setHidden('subBtn-groupes', false);
     showTab('dashboard');
     updateDashboard();
     setSync('connecting');

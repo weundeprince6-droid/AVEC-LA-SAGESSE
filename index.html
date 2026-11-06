@@ -956,6 +956,8 @@
         :root[data-theme="dark"] .member-simple .badge-late{background:rgba(239,68,68,.24);color:#fca5a5}
         @media(max-width:640px){.member-simple th:nth-child(n+2),.member-simple td:nth-child(n+2){width:74px}.member-simple .badge{min-width:0;padding:2px 5px;font-size:.66rem}}
         .member-filter{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface,#fff);color:var(--text-main);font-size:.85rem;font-family:inherit;max-width:100%}
+        .grp-table{width:100%}
+        .grp-row:hover{background:var(--primary-soft,rgba(23,107,85,.08))}
         .member-simple{width:100%}
         .member-simple td{border-bottom:1px solid var(--border)}
         .header-lock-btn{display:none!important}
@@ -1086,7 +1088,6 @@
         <nav class="dtabs" id="dashTabs">
             <button class="dtab active" data-tab="dashboard" onclick="showTab('dashboard')"><i class="fa-solid fa-chart-pie"></i> Tableau de bord</button>
             <button class="dtab" data-tab="membres" onclick="showTab('membres')"><i class="fa-solid fa-users"></i> Membres <span class="tab-badge hidden" id="tabBadgeMembres">0</span></button>
-            <button class="dtab hidden" id="tabBtnGroupes" data-tab="groupes" onclick="showTab('groupes')"><i class="fa-solid fa-people-group"></i> Groupes <span class="tab-badge hidden" id="tabBadgeGrp">0</span></button>
             <button class="dtab" data-tab="operations" onclick="showTab('operations')"><i class="fa-solid fa-money-bill-transfer"></i> Opérations &amp; cas sociaux</button>
             <button class="dtab hidden" id="tabBtnEquipe" data-tab="equipe" onclick="showTab('equipe')"><i class="fa-solid fa-user-shield"></i> Équipe</button>
             <button class="dtab hidden" id="tabBtnBoutique" data-tab="boutique" onclick="showTab('boutique')"><i class="fa-solid fa-store"></i> Boutique <span class="tab-badge hidden" id="bqAdminBadge">0</span></button>
@@ -1204,6 +1205,7 @@
         <div class="dpanel hidden" id="panel-membres">
             <div class="subtabs">
                 <button type="button" class="subtab active" id="subBtn-repertoire" onclick="showMemberSub('repertoire')"><i class="fa-solid fa-users"></i> Répertoire</button>
+                <button type="button" class="subtab hidden" id="subBtn-groupes" onclick="showMemberSub('groupes')"><i class="fa-solid fa-people-group"></i> Groupes <span class="tab-badge hidden" id="tabBadgeGrp">0</span></button>
                 <button type="button" class="subtab" id="subBtn-inscriptions" onclick="showMemberSub('inscriptions')"><i class="fa-solid fa-user-plus"></i> Inscriptions <span class="tab-badge hidden" id="subBadgeInsc">0</span></button>
             </div>
             <div id="memSub-repertoire">
@@ -1272,6 +1274,7 @@
                 </div>
             </div>
             </div>
+            <div id="memSub-groupes" class="hidden"><div id="grpAdminBox"></div></div>
             <div id="memSub-inscriptions" class="hidden">
             <section class="card">
                 <div class="card-header"><i class="fa-solid fa-link"></i><h3>Lien d'inscription à partager</h3></div>
@@ -1719,10 +1722,6 @@
                     </form>
                     <div id="reportMsg" class="alert hidden"></div>
                 </section>
-        </div>
-
-        <div class="dpanel hidden" id="panel-groupes">
-            <div id="grpAdminBox"></div>
         </div>
 
         <div class="dpanel hidden" id="panel-pub">
@@ -2590,7 +2589,7 @@
             if (isAdmin(currentUser)) {
                 if (name === 'members') { normalizeMembers(); leaderWatchProfiles(); maybeImportLocal(); if (typeof bqBackfill === 'function') bqBackfill(); }
                 updateDashboard();
-                try { if (currentTab === 'groupes' && typeof grpRefresh === 'function') grpRefresh(); } catch (e) {}
+                try { if (typeof grpTabOpen === 'function' && grpTabOpen() && typeof grpRefresh === 'function') grpRefresh(); } catch (e) {}
             } else {
                 renderMemberPortal();
             }
@@ -2833,7 +2832,7 @@
                     setHidden('reportSection', level !== 'total');
                     setHidden('activitySection', level !== 'total');
                     setHidden('tabBtnBoutique', false);
-                    setHidden('tabBtnGroupes', !CLOUD);
+                    setHidden('subBtn-groupes', !CLOUD);
                     setHidden('tabBtnEquipe', level !== 'total');
                     showTab('dashboard');
                     setHidden('orgSection', level !== 'total');
@@ -4578,12 +4577,13 @@
             window.addEventListener('load', syncHeaderHeight);
         }
         function showMemberSub(which) {
-            setHidden('memSub-repertoire', which !== 'repertoire');
-            setHidden('memSub-inscriptions', which !== 'inscriptions');
-            const a = document.getElementById('subBtn-repertoire'), b = document.getElementById('subBtn-inscriptions');
-            if (a && a.classList) { if (which === 'repertoire') a.classList.add('active'); else a.classList.remove('active'); }
-            if (b && b.classList) { if (which === 'inscriptions') b.classList.add('active'); else b.classList.remove('active'); }
+            ['repertoire', 'groupes', 'inscriptions'].forEach(k => {
+                setHidden('memSub-' + k, which !== k);
+                const b = document.getElementById('subBtn-' + k);
+                if (b && b.classList) { if (which === k) b.classList.add('active'); else b.classList.remove('active'); }
+            });
             if (which === 'inscriptions') { try { renderRegistrations(); } catch (e) {} }
+            if (which === 'groupes') { try { if (currentUser && currentUser.leader) grpRenderMember(); else if (typeof grpRenderAdmin === 'function') grpRenderAdmin(); } catch (e) {} }
         }
         // ---------- Onglets regroupés : « Membres & groupes », « Demandes & réclamations », « Galerie & exposition » ----------
         const TAB_GROUPS = {
@@ -4621,28 +4621,29 @@
             });
         }
         function syncMainBadges() {
-            setBadge('tabBadgeMembres', tabCnt.insc);
             setBadge('tabBadgeGrp', tabCnt.grp);
+            setBadge('tabBadgeMembres', tabCnt.insc + tabCnt.grp);
             setBadge('tabBadgeReq', tabCnt.req + tabCnt.claims);
             if (typeof currentTab !== 'undefined' && currentTab) buildTabBars(currentTab);
         }
         function showTab(name) {
             if (name === 'inscriptions') { name = 'membres'; showMemberSub('inscriptions'); }
+            if (name === 'groupes') { name = 'membres'; showMemberSub('groupes'); }
             // Équipe et Journal : réservés à l'accès total (en ligne)
             if ((name === 'equipe' || name === 'journal') && (!CLOUD || !currentUser || currentUser.level !== 'total')) name = 'dashboard';
-            if ((name === 'boutique' || name === 'pub' || name === 'groupes') && !CLOUD) name = 'dashboard';
+            if ((name === 'boutique' || name === 'pub') && !CLOUD) name = 'dashboard';
             if (currentUser && (currentUser.leader || currentUser.focusGid) && ['boutique', 'pub', 'annonces', 'equipe', 'journal'].indexOf(name) >= 0) name = 'dashboard';
             currentTab = name;
             if (name === 'galerie') { try { renderGallery(); } catch (e) {} }
             if (name === 'boutique' && typeof bqRenderAdmin === 'function') bqRenderAdmin();
             syncHeaderHeight();
             labelTables();
-            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'boutique', 'pub', 'groupes', 'equipe', 'journal', 'reglages'].forEach(t => {
+            ['dashboard', 'membres', 'membre', 'operations', 'social', 'annonces', 'galerie', 'demandes', 'reclamations', 'boutique', 'pub', 'equipe', 'journal', 'reglages'].forEach(t => {
                 setHidden('panel-' + t, t !== name);
             });
             buildTabBars(name);
+            if (name === 'membres' && typeof grpTabOpen === 'function' && grpTabOpen()) { try { if (currentUser && currentUser.leader) grpRenderMember(); else grpRenderAdmin(); } catch (e) {} }
             if (name === 'pub' && typeof pubRenderAdmin === 'function') pubRenderAdmin();
-            if (name === 'groupes' && typeof grpRenderAdmin === 'function') { if (currentUser && currentUser.leader) grpRenderMember(); else grpRenderAdmin(); }
             if (document.querySelectorAll) {
                 document.querySelectorAll('.dtab').forEach(b => {
                     if (typeof b.getAttribute !== 'function') return;
@@ -6256,7 +6257,7 @@
     </script>
     <script src="org.js?v=20261070"></script>
 <script src="pub.js?v=20261118"></script>
-<script src="groups.js?v=20261124"></script>
+<script src="groups.js?v=20261160"></script>
 <script src="report-notes.js?v=20261032"></script>
     <script src="boutique.js?v=20261142"></script>
     <script>
