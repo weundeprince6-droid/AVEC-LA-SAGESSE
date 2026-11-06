@@ -955,6 +955,7 @@
         :root[data-theme="dark"] .member-simple .badge-due{background:rgba(245,158,11,.22);color:#fcd34d}
         :root[data-theme="dark"] .member-simple .badge-late{background:rgba(239,68,68,.24);color:#fca5a5}
         @media(max-width:640px){.member-simple th:nth-child(n+2),.member-simple td:nth-child(n+2){width:74px}.member-simple .badge{min-width:0;padding:2px 5px;font-size:.66rem}}
+        .member-filter{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface,#fff);color:var(--text-main);font-size:.85rem;font-family:inherit;max-width:100%}
         .member-simple{width:100%}
         .member-simple td{border-bottom:1px solid var(--border)}
         .header-lock-btn{display:none!important}
@@ -1248,8 +1249,16 @@
                     <div class="search-row">
                         <input type="search" id="memberSearch" placeholder="Rechercher un membre (nom, ID, téléphone)…" oninput="updateDashboard()" onkeydown="if(event.key==='Enter'){event.preventDefault();updateDashboard();}" autocomplete="off">
                         <button type="button" class="btn-small" onclick="updateDashboard()" title="Rechercher"><i class="fa-solid fa-magnifying-glass"></i> Rechercher</button>
+                        
                         <button type="button" class="btn-small" onclick="clearMemberSearch()" title="Effacer la recherche"><i class="fa-solid fa-xmark"></i></button>
                     </div>
+                    <div style="margin-bottom:10px;"><select id="memberFilter" class="member-filter" onchange="updateDashboard()" title="Filtrer la liste des membres">
+     <option value="">Filtrer : tous les membres</option>
+     <option value="credit">Crédit en cours</option>
+     <option value="epargne">Épargne</option>
+     <option value="inactif">Membres inactifs</option>
+     <option value="echeance">Échéance dépassée</option>
+ </select></div>
                     <p id="memberSearchInfo" class="hidden" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;"></p>
                                     <div style="overflow-x: auto;">
                                         <table class="member-simple">
@@ -3309,7 +3318,7 @@
             return q.split(/\s+/).every(w => hay.indexOf(w) > -1);
         }
         function clearMemberSearch() {
-            document.getElementById('memberSearch').value = '';
+            document.getElementById('memberSearch').value = ''; var f = document.getElementById('memberFilter'); if (f) f.value = '';
             updateDashboard();
         }
 
@@ -3386,6 +3395,9 @@
                 const lateCr = openCr.some(c => c.dueDate && c.dueDate < today);
                 const crBadge = !openCr.length ? '<span style="color:var(--text-muted);">–</span>' : (lateCr ? '<span class="badge badge-late">En retard</span>' : '<span class="badge badge-due">En cours</span>');
                 const epBadge = (Number(m.epargne) > 0 || Number(sav(m, 'FC')) > 0) ? '<span class="badge badge-ok">En cours</span>' : '<span style="color:var(--text-muted);">–</span>';
+                const flt = (document.getElementById('memberFilter') || {}).value || '';
+                const hasEp = Number(m.epargne) > 0 || Number(sav(m, 'FC')) > 0;
+                if ((flt === 'credit' && !openCr.length) || (flt === 'epargne' && !hasEp) || (flt === 'inactif' && hasAccess) || (flt === 'echeance' && !lateCr)) { shown--; return; }
                 rows += '<tr class="member-row" onclick="openMemberDetail(\'' + idAttr + '\')" style="cursor:pointer;" title="Voir toutes les informations de ' + escapeHtml(m.name) + '">' +
                     '<td style="padding:10px 12px;"><div style="display:flex;align-items:center;gap:12px;">' + avatarHtml(m, 40) + '<a href="#" class="member-link" style="font-weight:700;font-size:1rem;" onclick="openMemberDetail(\'' + idAttr + '\'); return false;">' + escapeHtml(m.name) + '</a></div></td>' +
                     '<td>' + (hasAccess ? '<span class="badge badge-ok">Actif</span>' : '<span class="badge badge-due">Inactif</span>') + '</td>' +
@@ -3395,11 +3407,11 @@
             });
 
             tbody.innerHTML = rows || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">' +
-                (query ? 'Aucun membre ne correspond à cette recherche.' : 'Aucun membre enregistré.') + '</td></tr>';
+                (query || (document.getElementById('memberFilter') || {}).value ? 'Aucun membre ne correspond à cette recherche.' : 'Aucun membre enregistré.') + '</td></tr>';
             const info = document.getElementById('memberSearchInfo');
             if (info) {
                 info.textContent = shown + ' membre(s) trouvé(s) sur ' + members.length;
-                setHidden('memberSearchInfo', !query);
+                setHidden('memberSearchInfo', !query && !((document.getElementById('memberFilter') || {}).value));
             }
 
             fillMemberSelect('creditMemberSelect', true);
