@@ -1244,7 +1244,7 @@
                     <p id="memberSearchInfo" class="hidden" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;"></p>
                                     <div style="overflow-x: auto;">
                                         <table class="member-simple">
-                                            <thead></thead>
+                                            <thead><tr><th>Membre</th><th>Statut</th><th>Crédit</th><th>Épargne</th></tr></thead>
                                             <tbody id="membersTableBody">
                                                 <!-- Données chargées dynamiquement -->
                                             </tbody>
@@ -3373,12 +3373,19 @@
                 const accessBadge = hasAccess
                     ? '<span class="badge badge-ok">Accès actif</span>'
                     : '<span class="badge badge-due">Pas d\'accès</span>';
+                const openCr = (m.credits || []).filter(c => creditRemaining(c) > 0);
+                const lateCr = openCr.some(c => c.dueDate && c.dueDate < today);
+                const crBadge = !openCr.length ? '<span style="color:var(--text-muted);">–</span>' : (lateCr ? '<span class="badge badge-late">En retard</span>' : '<span class="badge badge-due">En cours</span>');
+                const epBadge = (Number(m.epargne) > 0 || Number(sav(m, 'FC')) > 0) ? '<span class="badge badge-ok">En cours</span>' : '<span style="color:var(--text-muted);">–</span>';
                 rows += '<tr class="member-row" onclick="openMemberDetail(\'' + idAttr + '\')" style="cursor:pointer;" title="Voir toutes les informations de ' + escapeHtml(m.name) + '">' +
                     '<td style="padding:10px 12px;"><div style="display:flex;align-items:center;gap:12px;">' + avatarHtml(m, 40) + '<a href="#" class="member-link" style="font-weight:700;font-size:1rem;" onclick="openMemberDetail(\'' + idAttr + '\'); return false;">' + escapeHtml(m.name) + '</a></div></td>' +
+                    '<td>' + (hasAccess ? '<span class="badge badge-ok">Actif</span>' : '<span class="badge badge-due">Inactif</span>') + '</td>' +
+                    '<td>' + crBadge + '</td>' +
+                    '<td>' + epBadge + '</td>' +
                     '</tr>';
             });
 
-            tbody.innerHTML = rows || '<tr><td colspan="1" style="text-align:center;color:var(--text-muted);">' +
+            tbody.innerHTML = rows || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">' +
                 (query ? 'Aucun membre ne correspond à cette recherche.' : 'Aucun membre enregistré.') + '</td></tr>';
             const info = document.getElementById('memberSearchInfo');
             if (info) {
