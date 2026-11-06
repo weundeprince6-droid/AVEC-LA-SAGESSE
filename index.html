@@ -942,6 +942,31 @@
 
         /* Espace membre : tous les panneaux se décalent à droite de la barre d'onglets */
         @media(min-width:1001px){#memberSection>.mpanel,#memberSection>#memberPwdNotice{margin-left:276px!important;width:calc(100% - 276px)!important;max-width:none!important;box-sizing:border-box!important}}
+
+        /* Accueil membre : graphiques, annonces compactes, dernières opérations */
+        .mgrid-charts{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px}
+        .mgrid-two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start}
+        .mgrid-charts .card,.mgrid-two .card{margin:0;min-width:0}
+        @media(max-width:900px){.mgrid-charts,.mgrid-two{grid-template-columns:1fr}}
+        #memberAnnList>div{cursor:pointer;margin-bottom:8px!important;padding:10px 12px!important}
+        #memberAnnList p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:4px!important;font-size:.88rem!important}
+        #memberAnnList>div.open p{-webkit-line-clamp:unset;display:block}
+        .mrecent{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--border)}
+        .mrecent:last-child{border-bottom:0}
+        .mrecent .mr-ic{flex:0 0 32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.85rem}
+        .mrecent .mr-t{flex:1;min-width:0;font-size:.88rem;font-weight:650;line-height:1.25}
+        .mrecent .mr-t small{display:block;font-weight:400;color:var(--text-muted);font-size:.76rem}
+        .mrecent .mr-a{font-weight:800;font-size:.9rem;white-space:nowrap}
+        .mchart-empty{color:var(--text-muted);font-size:.88rem;padding:18px 4px;text-align:center}
+        .mchart-svg{width:100%;height:auto;max-height:230px;display:block}
+        .mchart-svg text{fill:var(--text-muted);font-size:10px;font-family:inherit}
+        .mdonut-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;justify-content:center}
+        .mdonut-leg{font-size:.84rem;line-height:1.7}
+        .mdonut-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+        .mrules{margin-bottom:16px}
+        .mrules>summary{cursor:pointer;font-weight:700;padding:12px 16px;border:1px solid var(--border);border-radius:12px;background:var(--card);list-style:none}
+        .mrules[open]>summary{margin-bottom:14px}
+        .mrules>summary i{color:var(--primary);margin-right:6px}
         /* En-tête vert fixe + bouton de déconnexion */
         .avec-dash-welcome{position:sticky!important;top:8px;z-index:60;margin-bottom:16px!important}
         .avec-dash-side{display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;max-width:520px}
@@ -1985,12 +2010,25 @@
                     </div>
                 </div>
             </div>
+            <div class="mgrid-charts">
+                <section class="card mchart-card"><div class="card-header"><i class="fa-solid fa-chart-column"></i><h3>Mon activité (6 derniers mois)</h3></div><div id="mChartActivity"></div></section>
+                <section class="card mchart-card"><div class="card-header"><i class="fa-solid fa-chart-pie"></i><h3>Mon remboursement</h3></div><div id="mChartDonut"></div></section>
+            </div>
             <div class="mprogress hidden" id="mProgress"></div>
                 <div class="alert" id="mSocialBox" style="margin-bottom:16px;background:var(--card);border:1px solid var(--border);"></div>
-                <section class="card hidden" id="memberAnnSection" style="margin-bottom:16px;">
-                <div class="card-header"><i class="fa-solid fa-bullhorn"></i><h3>Annonces</h3></div>
-                <div id="memberAnnList"></div>
-            </section>
+                <div class="mgrid-two">
+                <section class="card hidden" id="memberAnnSection">
+                    <div class="card-header"><i class="fa-solid fa-bullhorn"></i><h3>Annonces</h3></div>
+                    <div id="memberAnnList"></div>
+                    <button type="button" class="btn-small hidden" id="memberAnnMore" onclick="toggleMemberAnn()" style="margin-top:4px;"></button>
+                </section>
+                <section class="card" id="memberRecentSection">
+                    <div class="card-header"><i class="fa-solid fa-clock-rotate-left"></i><h3>Dernières opérations</h3></div>
+                    <div id="memberRecentList"></div>
+                    <button type="button" class="btn-small" onclick="showMemberTab('credits')" style="margin-top:8px;">Voir tout l'historique</button>
+                </section>
+                </div>
+                <details class="mrules"><summary><i class="fa-solid fa-circle-info"></i> Règles de l'épargne, du crédit et des cas sociaux</summary>
                 <div class="grid-2">
                     <section class="card">
                         <div class="card-header"><i class="fa-solid fa-scale-balanced"></i><h3>Règles de l'épargne et du crédit</h3></div>
@@ -2014,6 +2052,7 @@
                         </ul>
                     </section>
                 </div>
+                </details>
             </div>
             <div class="mpanel hidden" id="mp-credits">
                 <div class="grid-2">
@@ -4156,6 +4195,8 @@
         function annSorted() {
             return announcements.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
         }
+        let memberAnnAll = false;
+        function toggleMemberAnn() { memberAnnAll = !memberAnnAll; try { renderAnnouncements(); } catch (e) {} }
         function annHtml(a, admin) {
             const d = new Date(a.date);
             const when = isNaN(d) ? '' : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -4314,8 +4355,11 @@
                 '<p style="color:var(--text-muted);font-size:0.88rem;">Aucune annonce publiée.</p>';
             const box = document.getElementById('memberAnnList');
             if (box) {
-                box.innerHTML = list.slice(0, 10).map(a => annHtml(a, false)).join('');
+                box.innerHTML = list.slice(0, memberAnnAll ? 10 : 2).map(a => annHtml(a, false)).join('');
+                box.onclick = e => { const it = e.target.closest('#memberAnnList>div'); if (it) it.classList.toggle('open'); };
                 setHidden('memberAnnSection', list.length === 0);
+                const mb = document.getElementById('memberAnnMore');
+                if (mb) { mb.textContent = memberAnnAll ? 'Réduire' : 'Voir toutes les annonces (' + Math.min(list.length, 10) + ')'; setHidden('memberAnnMore', list.length <= 2); }
             }
         }
         function handleAnnouncement(e) {
@@ -5745,6 +5789,63 @@
             }
             syncHeaderHeight();
         }
+        // ---------- Accueil membre : graphiques et dernières opérations ----------
+        function renderMemberCharts(m) {
+            try {
+                const now = new Date(), months = [];
+                for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ k: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'), l: d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', ''), dep: 0, rem: 0 }); }
+                (m.history || []).forEach(h => {
+                    if (devOf(h) !== 'USD') return;
+                    const mo = months.find(x => x.k === String(h.date).slice(0, 7)); if (!mo) return;
+                    const a = Math.abs(Number(h.amount) || 0);
+                    if (h.type === 'epargne') mo.dep += a; else if (h.type === 'remboursement') mo.rem += a;
+                });
+                const max = Math.max(1, ...months.map(x => Math.max(x.dep, x.rem)));
+                const box = document.getElementById('mChartActivity');
+                if (box) {
+                    if (months.every(x => !x.dep && !x.rem)) box.innerHTML = '<div class="mchart-empty"><i class="fa-solid fa-chart-column" style="font-size:1.6rem;opacity:.4;display:block;margin-bottom:6px;"></i>Aucun versement ni remboursement en dollars sur les 6 derniers mois.</div>';
+                    else {
+                        const bh = v => Math.round(v / max * 110);
+                        let g = '<line x1="14" y1="150" x2="346" y2="150" stroke="var(--border)"/>';
+                        months.forEach((x, i) => {
+                            const x0 = 24 + i * 54;
+                            if (x.dep) g += '<rect x="' + x0 + '" y="' + (150 - bh(x.dep)) + '" width="17" height="' + bh(x.dep) + '" rx="3" fill="#10b981"/><text x="' + (x0 + 8) + '" y="' + (146 - bh(x.dep)) + '" text-anchor="middle">' + Math.round(x.dep) + '</text>';
+                            if (x.rem) g += '<rect x="' + (x0 + 19) + '" y="' + (150 - bh(x.rem)) + '" width="17" height="' + bh(x.rem) + '" rx="3" fill="#f59e0b"/><text x="' + (x0 + 27) + '" y="' + (146 - bh(x.rem)) + '" text-anchor="middle">' + Math.round(x.rem) + '</text>';
+                            g += '<text x="' + (x0 + 18) + '" y="166" text-anchor="middle">' + escapeHtml(x.l) + '</text>';
+                        });
+                        box.innerHTML = '<svg class="mchart-svg" viewBox="0 0 360 176" role="img" aria-label="Versements et remboursements des 6 derniers mois">' + g + '</svg>' +
+                            '<div class="mdonut-leg" style="text-align:center;margin-top:4px;"><span style="margin-right:14px;"><i style="background:#10b981"></i>Versements d\'épargne ($)</span><span><i style="background:#f59e0b"></i>Remboursements ($)</span></div>';
+                    }
+                }
+                const dn = document.getElementById('mChartDonut');
+                if (dn) {
+                    const cs = (m.credits || []).filter(c => devOf(c) === 'USD');
+                    const open = cs.filter(c => creditRemaining(c) > 0);
+                    if (!cs.length) dn.innerHTML = '<div class="mchart-empty"><i class="fa-solid fa-circle-check" style="font-size:1.6rem;color:#10b981;display:block;margin-bottom:6px;"></i>Aucun crédit en dollars pour le moment.</div>';
+                    else {
+                        const base = open.length ? open : cs;
+                        const total = base.reduce((a, c) => a + (Number(c.amount) || 0), 0), paid = base.reduce((a, c) => a + Math.min(Number(c.repaid) || 0, Number(c.amount) || 0), 0);
+                        const pct = total > 0 ? Math.max(0, Math.min(100, Math.round(paid / total * 100))) : 0, C2 = 2 * Math.PI * 48;
+                        dn.innerHTML = '<div class="mdonut-wrap"><svg width="130" height="130" viewBox="0 0 130 130" role="img" aria-label="Remboursement ' + pct + ' pour cent">' +
+                            '<circle cx="65" cy="65" r="48" fill="none" stroke="var(--border)" stroke-width="16"/>' +
+                            '<circle cx="65" cy="65" r="48" fill="none" stroke="#10b981" stroke-width="16" stroke-linecap="round" stroke-dasharray="' + (C2 * pct / 100).toFixed(1) + ' ' + C2.toFixed(1) + '" transform="rotate(-90 65 65)"/>' +
+                            '<text x="65" y="63" text-anchor="middle" style="font-size:24px;font-weight:800;fill:var(--text-main)">' + pct + '%</text><text x="65" y="80" text-anchor="middle" style="font-size:10px">remboursé</text></svg>' +
+                            '<div class="mdonut-leg"><div><i style="background:#10b981"></i>Remboursé : <strong>' + fmt(paid, 'USD') + '</strong></div><div><i style="background:var(--border)"></i>Reste : <strong>' + fmt(Math.max(0, total - paid), 'USD') + '</strong></div>' +
+                            (open.length ? '<div style="color:var(--text-muted);font-size:.78rem;">Échéance : ' + escapeHtml(formatISOtoFR(open.map(c => c.dueDate).filter(Boolean).sort()[0] || '')) + '</div>' : '<div style="color:#10b981;font-weight:700;">Crédits entièrement remboursés</div>') + '</div></div>';
+                    }
+                }
+                const rc = document.getElementById('memberRecentList');
+                if (rc) {
+                    const icons = { epargne: ['fa-piggy-bank', '#10b981'], credit: ['fa-hand-holding-dollar', '#f59e0b'], retrait: ['fa-arrow-up-from-bracket', '#ef4444'], remboursement: ['fa-rotate-left', '#3b82f6'] };
+                    const last = (m.history || []).filter(h => h.note !== 'Épargne initiale').slice(-5).reverse();
+                    rc.innerHTML = last.length ? last.map(h => {
+                        const ic = icons[h.type] || ['fa-receipt', '#8b5cf6'], amt = Math.abs(Number(h.amount) || 0);
+                        return '<div class="mrecent"><span class="mr-ic" style="background:' + ic[1] + '22;color:' + ic[1] + ';"><i class="fa-solid ' + ic[0] + '"></i></span><div class="mr-t">' + escapeHtml(OP_LABELS[h.type] || 'Opération') + '<small>' + escapeHtml(formatISOtoFR(h.date)) + '</small></div><div class="mr-a">' + fmt(amt, devOf(h)) + '</div></div>';
+                    }).join('') : '<div class="mchart-empty">Aucune opération pour le moment.</div>';
+                }
+            } catch (e) { console.warn('graphiques membre', e); }
+        }
+
         function renderMemberPortal() {
             const user = currentUser;
             const m = user && members.find(x => x.id === user.memberId);
@@ -5828,6 +5929,7 @@
                 setHidden('mProgress', !bars);
             }
 
+            renderMemberCharts(m);
             const hist = (m.history || []).slice().reverse();
             let hrows = '';
             hist.forEach(h => {
