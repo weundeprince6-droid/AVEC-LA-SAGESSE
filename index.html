@@ -921,6 +921,18 @@
         .settings-menu .dashboard-header p{display:block}
         #panel-reglages .dashboard-header{margin:0!important;width:100%!important;display:flex!important;flex-wrap:wrap!important}
         #panel-reglages .header-actions{justify-content:flex-start!important}
+
+        /* En-tête vert fixe + bouton de déconnexion */
+        .avec-dash-welcome{position:sticky!important;top:8px;z-index:60;margin-bottom:16px!important}
+        .avec-dash-side{display:flex;align-items:center;gap:12px;flex-shrink:0}
+        .avec-dash-logout{border:1px solid #ffffff55;background:#ffffff1c;color:#fff;border-radius:10px;padding:9px 13px;font-weight:750;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit}
+        .avec-dash-logout:hover{background:#dc2626;border-color:#dc2626}
+        .avec-dash-welcome,.avec-dash-welcome *{transition:padding .2s,font-size .2s}
+        .avec-dash-welcome.compact{padding:12px 22px!important}
+        .avec-dash-welcome.compact p,.avec-dash-welcome.compact .avec-dash-eyebrow,.avec-dash-welcome.compact .avec-dash-cloud{display:none!important}
+        .avec-dash-welcome.compact h1{font-size:18px!important;margin-bottom:8px}
+        @media(max-width:1000px){.avec-dash-welcome{top:84px}.avec-dash-welcome p,.avec-dash-welcome .avec-dash-eyebrow{display:none!important}.avec-dash-welcome{padding:12px 14px!important}.avec-dash-welcome h1{font-size:17px!important;margin-bottom:8px}.avec-dash-actions{flex-wrap:nowrap;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}.avec-dash-actions button{white-space:nowrap;flex:0 0 auto}.avec-dash-welcome-copy{min-width:0;max-width:100%}}
+        @media(max-width:560px){.avec-dash-welcome{flex-direction:row!important;align-items:flex-start!important}.avec-dash-side{position:absolute;top:10px;right:10px}.avec-dash-logout{padding:6px 9px;font-size:0}.avec-dash-logout i{font-size:13px;margin:0}.avec-dash-welcome h1{padding-right:44px}.avec-dash-welcome-copy{width:100%}}
         .avec-dash-welcome{margin-top:0!important}
         @media(min-width:1001px){.avec-dash-welcome{margin-top:16px!important}}
         @media(max-width:1000px){.avec-dash-welcome{margin-left:0!important;width:100%!important;box-sizing:border-box}}
@@ -1045,12 +1057,13 @@
         <section class="avec-dash-welcome">
             <div class="avec-dash-welcome-copy"><span class="avec-dash-eyebrow">ESPACE DE PILOTAGE</span><h1>Bienvenue dans votre espace de gestion</h1><p>Suivez en un seul regard l’épargne, les crédits, la trésorerie et la vie de votre communauté.</p>
                 <div class="avec-dash-actions">
+                    <button type="button" onclick="showTab('dashboard')"><i class="fa-solid fa-chart-pie"></i> Tableau de bord</button>
                     <button type="button" onclick="showTab('membres')"><i class="fa-solid fa-user-plus"></i> Membres</button>
                     <button type="button" onclick="showTab('operations')"><i class="fa-solid fa-arrow-right-arrow-left"></i> Opérations</button>
                     <button type="button" onclick="showTab('demandes')"><i class="fa-solid fa-inbox"></i> Demandes</button>
                     <button type="button" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
                 </div>
-            </div><div class="avec-dash-cloud"><i class="fa-solid fa-cloud-arrow-up"></i><span>ESPACE SYNCHRONISÉ</span><strong id="dashModeLabel">Suivi en temps réel</strong></div>
+            </div><div class="avec-dash-side"><div class="avec-dash-cloud"><i class="fa-solid fa-cloud-arrow-up"></i><span>ESPACE SYNCHRONISÉ</span><strong id="dashModeLabel">Suivi en temps réel</strong></div><button type="button" class="avec-dash-logout" onclick="logout()" title="Se déconnecter"><i class="fa-solid fa-power-off"></i> Déconnexion</button></div>
         </section>
 
 
@@ -6254,5 +6267,17 @@
         })();
     
 </script>
+
+    <script>
+    (function(){
+        var on=false;
+        window.addEventListener('scroll',function(){
+            var b=document.querySelector('.avec-dash-welcome');if(!b)return;
+            var y=window.pageYOffset||document.documentElement.scrollTop||0;
+            if(!on&&y>140){on=true;b.classList.add('compact')}
+            else if(on&&y<20){on=false;b.classList.remove('compact')}
+        },{passive:true});
+    })();
+    </script>
 </body>
 </html>
