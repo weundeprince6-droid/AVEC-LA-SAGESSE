@@ -3345,6 +3345,24 @@
             try { renderRegistrations(); } catch (e) {}
             try { fillDefaultPassword(); } catch (e) {}
             try { renderGallery(); } catch (e) {}
+            try {
+                const fs = document.getElementById('memberFilter');
+                if (fs && typeof grpGroups !== 'undefined') {
+                    const cur = fs.value, gs = grpGroups.slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+                    const sig = gs.map(g => g.id + g.name).join('|');
+                    if (fs.getAttribute('data-sig') !== sig) {
+                        fs.querySelectorAll('optgroup').forEach(o => o.remove());
+                        if (gs.length) {
+                            const og = document.createElement('optgroup'); og.label = 'Par groupe';
+                            gs.forEach(g => { const o = document.createElement('option'); o.value = 'grp:' + g.id; o.textContent = 'Groupe : ' + g.name; og.appendChild(o); });
+                            fs.appendChild(og);
+                        }
+                        fs.setAttribute('data-sig', sig);
+                        fs.value = cur;
+                        if (fs.value !== cur) fs.value = '';
+                    }
+                }
+            } catch (e) {}
             const searchBox = document.getElementById('memberSearch');
             const query = normText(searchBox ? searchBox.value : '');
             let shown = 0;
@@ -3396,7 +3414,7 @@
                 const epBadge = (Number(m.epargne) > 0 || Number(sav(m, 'FC')) > 0) ? '<span class="badge badge-ok">En cours</span>' : '<span style="color:var(--text-muted);">–</span>';
                 const flt = (document.getElementById('memberFilter') || {}).value || '';
                 const hasEp = Number(m.epargne) > 0 || Number(sav(m, 'FC')) > 0;
-                if ((flt === 'credit' && !openCr.length) || (flt === 'epargne' && !hasEp) || (flt === 'inactif' && hasAccess) || (flt === 'echeance' && !lateCr)) { shown--; return; }
+                if ((flt === 'credit' && !openCr.length) || (flt === 'epargne' && !hasEp) || (flt === 'inactif' && hasAccess) || (flt === 'echeance' && !lateCr) || (flt.indexOf('grp:') === 0 && m.groupId !== flt.slice(4))) { shown--; return; }
                 rows += '<tr class="member-row" onclick="openMemberDetail(\'' + idAttr + '\')" style="cursor:pointer;" title="Voir toutes les informations de ' + escapeHtml(m.name) + '">' +
                     '<td style="padding:10px 12px;"><div style="display:flex;align-items:center;gap:12px;">' + avatarHtml(m, 40) + '<a href="#" class="member-link" style="font-weight:700;font-size:1rem;" onclick="openMemberDetail(\'' + idAttr + '\'); return false;">' + escapeHtml(m.name) + '</a></div></td>' +
                     '<td>' + (hasAccess ? '<span class="badge badge-ok">Actif</span>' : '<span class="badge badge-due">Inactif</span>') + '</td>' +
