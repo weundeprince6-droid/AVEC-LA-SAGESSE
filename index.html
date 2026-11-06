@@ -946,6 +946,15 @@
         }
 
         .member-simple tr.member-row:hover{background:var(--primary-soft,rgba(23,107,85,.08))}
+        .member-simple{table-layout:fixed}
+        .member-simple th:nth-child(1){width:auto;text-align:left}
+        .member-simple th:nth-child(n+2),.member-simple td:nth-child(n+2){width:112px;text-align:center!important;vertical-align:middle}
+        .member-simple td{vertical-align:middle}
+        .member-simple .badge{min-width:76px;text-align:center;box-sizing:border-box}
+        :root[data-theme="dark"] .member-simple .badge-ok{background:rgba(16,185,129,.22);color:#6ee7b7}
+        :root[data-theme="dark"] .member-simple .badge-due{background:rgba(245,158,11,.22);color:#fcd34d}
+        :root[data-theme="dark"] .member-simple .badge-late{background:rgba(239,68,68,.24);color:#fca5a5}
+        @media(max-width:640px){.member-simple th:nth-child(n+2),.member-simple td:nth-child(n+2){width:74px}.member-simple .badge{min-width:0;padding:2px 5px;font-size:.66rem}}
         .member-simple{width:100%}
         .member-simple td{border-bottom:1px solid var(--border)}
         .header-lock-btn{display:none!important}
